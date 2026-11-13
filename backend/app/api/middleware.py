@@ -1,10 +1,11 @@
-"""兩個全域中介層：Bearer token 驗證（todo 0.4）與 Idempotency-Key（todo 0.5）。
+"""全域中介層：未預期例外（最外層）、Bearer token 驗證（todo 0.4）、Idempotency-Key（todo 0.5）。
 
-執行順序：先驗 token，再處理冪等，所以未授權的請求拿不到重送結果。
+執行順序：先攔例外，再驗 token，最後處理冪等，所以未授權的請求拿不到重送結果。
 """
 
 import hmac
 import json
+import logging
 from datetime import timedelta
 
 from starlette.concurrency import run_in_threadpool
@@ -16,6 +17,8 @@ from app.clock import get_clock
 from app.db.repo import misc_repo
 from app.errors import DomainError
 
+log = logging.getLogger("g4")
+
 API_PREFIX = "/api/v1"
 IDEMPOTENT_METHODS = {"POST", "PUT", "PATCH"}
 IDEMPOTENCY_TTL = timedelta(hours=24)
@@ -24,6 +27,21 @@ IDEMPOTENCY_TTL = timedelta(hours=24)
 def _error(code: str, message: str | None = None) -> JSONResponse:
     err = DomainError(code, message)
     return JSONResponse(err.to_body(), status_code=err.status)
+
+
+class UnhandledErrorMiddleware(BaseHTTPMiddleware):
+    """攔下所有未預期的例外：只記錄例外類型，回 500 INTERNAL_ERROR，不再往外拋。
+
+    例外訊息可能含使用者內容（例如 PostgreSQL 的錯誤訊息會引用輸入值），
+    往外拋會讓 uvicorn 把完整 traceback 寫進 log（CLAUDE.md 資安 3）。
+    """
+
+    async def dispatch(self, request: Request, call_next):
+        try:
+            return await call_next(request)
+        except Exception as exc:  # noqa: BLE001 最外層統一處理，避免例外內容進 log
+            log.error("unhandled error: %s", type(exc).__name__)
+            return _error("INTERNAL_ERROR")
 
 
 class BearerTokenMiddleware(BaseHTTPMiddleware):

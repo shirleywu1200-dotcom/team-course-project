@@ -5,7 +5,7 @@
 ## 給產品負責人：待複核
 
 1. **DA-01 PostgreSQL 版 DDL**：spec 4.2、6.8、8.1–8.3 與 todo 0.7、1.3、1.6 已改寫；原版是 `main` 上的 `docs/spec.md`、`docs/todo.md`，可直接看 PR 的 diff。開工會簽核 DDL 契約前請先看。
-2. **DA-03～DA-23**：契約新增（`adjust_due` 兩個參數、`POST /tasks/{id}/status`、`MARK_IGNORED` 警告碼、`INTERNAL_ERROR` 錯誤碼）與規格歧義的暫定做法。
+2. **DA-03～DA-25**：契約新增（`adjust_due` 兩個參數、`POST /tasks/{id}/status`、`MARK_IGNORED` 警告碼、`INTERNAL_ERROR` 錯誤碼）與規格歧義的暫定做法。
 3. **`docs/metrics.md` 的兩個缺口**：週報對帳結果與每日確認時間目前無法從資料算出。
 
 ## 給 Dev-B
@@ -34,6 +34,7 @@
   | `src/styles/tokens.css`、`base.css`（亮暗兩套 CSS 變數） | 11.4 |
   | `src/components/standin/`（註記面板、原因下拉、錯誤橫幅） | 11.5 |
   | `src/test/server.tsx`（MSW） | 11.7 |
+- **OpenAPI 與型別產生（0.8）**：OpenAPI 在 `/api/v1/openapi.json`，需要 token；`/docs`、`/redoc` 已關閉（DA-24）。產生型別時不必啟動伺服器，在 `backend/` 下執行 `.venv/bin/python -m app.export_openapi > ../frontend/openapi.json` 即可。
 - **12.3 任務詳情頁**：請把 `AdjustDuePanel`（12.2）與 `BaselineCorrectionLink`（12.5）放進去；之後 `src/features/due-adjust/TaskDuePage.tsx` 就可以刪掉。
 - **Phase 10 週報**：`docs/metrics.md` 缺口 1 建議 `reports` 加 `validated` 與 `items`，需要新遷移（DDL 擁有者 Dev-A 審）。
 

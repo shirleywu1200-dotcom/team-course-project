@@ -89,6 +89,6 @@
 
 | 項目 | 影響 |
 | --- | --- |
-| Dev-A 的決定紀錄 DA-01～DA-23（PostgreSQL 版 DDL、契約新增、規格歧義） | `docs/decisions.md`；交接重點見 `docs/dev-a-handoff.md` |
+| Dev-A 的決定紀錄 DA-01～DA-25（PostgreSQL 版 DDL、契約新增、規格歧義） | `docs/decisions.md`；交接重點見 `docs/dev-a-handoff.md` |
 | 衡量值缺口：週報對帳結果、每日確認時間無法從資料算出 | `docs/metrics.md`；Phase 7、10 |
 | spec 9.1 的 D-01、D-03 至 D-07 | 見 todo第 3 節 |

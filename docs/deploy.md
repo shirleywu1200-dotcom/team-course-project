@@ -86,4 +86,6 @@ cd backend && .venv/bin/python -m app.main      # 只綁 G4_BIND_HOST:G4_PORT
 ## 8. 日誌
 
 - 後端日誌只記錯誤類型與 ID，不記文件內容、摘錄原文或 token（CLAUDE.md 資安 3）。
+- 未預期的例外只記錄類型名稱，不留 traceback；資料庫例外訊息也不帶 SQL 參數值（DA-25）。除錯時請在本機用測試重現。
+- API 文件：`/docs`、`/redoc` 已關閉；OpenAPI 在 `/api/v1/openapi.json`，需要 token（DA-24）。
 - 不接任何第三方遙測或錯誤回報服務（CLAUDE.md 資安 2）。

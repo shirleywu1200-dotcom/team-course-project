@@ -7,7 +7,7 @@ from fastapi import APIRouter, FastAPI
 
 from app.ai.client import AIClient, FakeAIClient
 from app.api import error_handlers, routes_events, routes_projects, routes_tasks
-from app.api.middleware import API_PREFIX, BearerTokenMiddleware, IdempotencyMiddleware
+from app.api.middleware import API_PREFIX, BearerTokenMiddleware, IdempotencyMiddleware, UnhandledErrorMiddleware
 from app.config import Settings, load_settings
 from app.db.database import Database
 
@@ -15,7 +15,10 @@ from app.db.database import Database
 def create_app(settings: Settings | None = None, db: Database | None = None,
                ai: AIClient | None = None) -> FastAPI:
     settings = settings or load_settings()
-    app = FastAPI(title="個人大總管 APP", version="0.1.0")
+    # OpenAPI 放在 /api/v1 底下，與其他 API 一樣要 token；/docs、/redoc 在瀏覽器帶不了 token，直接關閉。
+    # 不啟動伺服器也能匯出：python -m app.export_openapi > openapi.json
+    app = FastAPI(title="個人大總管 APP", version="0.1.0", openapi_url=f"{API_PREFIX}/openapi.json",
+                  docs_url=None, redoc_url=None)
     app.state.settings = settings
     app.state.db = db or Database(settings.database_url)
     # 真實供應商在 Phase 13.4 由 Dev-B 接入；在那之前一律用不可用的假實作，所有 AI 端點走退路。
@@ -23,7 +26,8 @@ def create_app(settings: Settings | None = None, db: Database | None = None,
 
     error_handlers.install(app)
     app.add_middleware(IdempotencyMiddleware)
-    app.add_middleware(BearerTokenMiddleware)   # 後加的在外層，先執行
+    app.add_middleware(BearerTokenMiddleware)
+    app.add_middleware(UnhandledErrorMiddleware)   # 後加的在外層、先執行，所以它在最外層
 
     api = APIRouter(prefix=API_PREFIX)
     for r in (routes_projects.router, routes_tasks.router, routes_events.router):

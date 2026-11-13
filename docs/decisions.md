@@ -117,3 +117,19 @@ AC-20 寫「資料庫未變」。決定：解讀為 `tasks` 與 `events` 不變�
 ## DA-23 `idempotency_keys` 每次寫入時清除超過 24 小時的列 【待複核：規格歧義】
 
 回應本文可能含原句（例如候選端點），不能無限期保存。Dev-B 做「刪除所有來源原文」（todo 8.6）時，清除範圍也要包含這張表。
+
+## DA-24 OpenAPI 文件需要 token，關閉 `/docs`、`/redoc` 【待複核：規格歧義】
+
+資安審查建議的硬化項目。spec 8.1 依賴 FastAPI 自動產生的 OpenAPI，所以不整個關閉：
+
+- `openapi.json` 改放在 `/api/v1/openapi.json`，與其他 API 一樣需要 Bearer token。
+- `/docs`、`/redoc` 關閉：瀏覽器開這兩頁時帶不了 token，放在受保護路徑下也無法使用。
+- 不啟動伺服器也能匯出：在 `backend/` 下執行 `.venv/bin/python -m app.export_openapi > ../frontend/openapi.json`，供 todo 0.8 產生前端型別。
+
+## DA-25 未預期例外不寫入錯誤訊息與 traceback 【待複核：規格歧義】
+
+資安審查發現：PostgreSQL 的錯誤訊息會原文引用輸入值，例如 `invalid input syntax for type integer: "<使用者輸入>"`。原本的做法是用 `exception_handler(Exception)` 回 500，但 Starlette 回應後會把例外再拋出，uvicorn 就把含這段訊息的完整 traceback 寫進 log，違反 CLAUDE.md 資安 3。
+
+- 新增最外層的 `UnhandledErrorMiddleware`：只記錄例外類型名稱，回 500 `INTERNAL_ERROR`，不再往外拋。
+- 資料庫引擎設 `hide_parameters=True`，SQLAlchemy 的例外訊息不帶 SQL 參數值。
+- 取捨：除錯時看不到完整 traceback。需要時在本機用測試重現，不在正式環境開啟。

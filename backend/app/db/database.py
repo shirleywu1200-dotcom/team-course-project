@@ -19,10 +19,12 @@ RETRY_SLEEP_S = 0.05
 
 
 def make_engine(url: str):
+    # hide_parameters：資料庫例外訊息不帶 SQL 參數值，避免任務標題、備註等使用者內容進入 log（CLAUDE.md 資安 3）
     return create_engine(
         url,
         connect_args={"options": "-c timezone=Asia/Taipei"},
         pool_pre_ping=True,
+        hide_parameters=True,
     )
 
 

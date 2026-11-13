@@ -39,7 +39,7 @@
 
 ## 測試數字
 
-- 後端 pytest：195 個通過（約 16 秒），含 todo 6.2 的契約保護測試（`test_contract_guards.py`）。
+- 後端 pytest：202 個通過（約 17 秒），含 todo 6.2 的契約保護測試（`test_contract_guards.py`）與 log 不含使用者內容的測試。
 - 前端 Vitest：18 個通過。
 - ruff：無問題。
 - 前端 tsc：無錯誤。

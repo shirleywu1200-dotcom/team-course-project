@@ -66,6 +66,56 @@ def test_unexpected_exception_returns_internal_error_without_detail(app, db):
     assert "內部祕密" not in r.text
 
 
+@pytest.mark.parametrize("path", ["/docs", "/redoc", "/openapi.json"])
+def test_public_api_docs_are_disabled(app, path):
+    with TestClient(app) as anon:
+        r = anon.get(path)
+    assert r.status_code == 404 and r.json()["error"]["code"] == "NOT_FOUND"
+
+
+def test_openapi_requires_token(app, client):
+    with TestClient(app) as anon:
+        assert anon.get("/api/v1/openapi.json").status_code == 401
+    spec = client.get("/api/v1/openapi.json").json()
+    assert "/api/v1/tasks/{task_id}/adjust-due" in spec["paths"]
+
+
+def test_export_openapi_without_server():
+    from app.export_openapi import build_openapi
+    assert "/api/v1/projects/{project_id}/bulk-shift/commit" in build_openapi()["paths"]
+
+
+def test_sqlalchemy_hides_parameters(db):
+    from sqlalchemy import text
+    from sqlalchemy.exc import DBAPIError
+    with pytest.raises(DBAPIError) as e:
+        db.run(lambda c: c.execute(text("SELECT CAST(:v AS integer)"), {"v": "abc"}))
+    assert db.engine.hide_parameters is True
+    assert "SQL parameters hidden" in str(e.value)
+
+
+def test_db_error_content_never_reaches_logs_or_response(app, db, caplog):
+    """CLAUDE.md 資安 3：PostgreSQL 的錯誤訊息會引用輸入值，這類例外不可往外拋進 uvicorn 的 traceback。"""
+    import logging
+
+    from sqlalchemy import text
+    secret = "使用者的機密備註-XYZ"
+    router = APIRouter()
+
+    @router.get("/api/v1/_dberror")
+    def dberror():
+        db.run(lambda c: c.execute(text("SELECT CAST(:v AS integer)"), {"v": secret}))
+
+    app.include_router(router)
+    caplog.set_level(logging.DEBUG)
+    # raise_server_exceptions=True：若例外仍往外拋，這裡會直接失敗
+    with TestClient(app, headers={"Authorization": "Bearer test-token"}) as c:
+        r = c.get("/api/v1/_dberror")
+    assert r.status_code == 500 and r.json()["error"]["code"] == "INTERNAL_ERROR"
+    assert secret not in r.text
+    assert secret not in caplog.text and "DataError" in caplog.text
+
+
 def test_health_reports_db_and_ai(client, ai):
     assert client.get("/api/v1/meta/health").json() == {"db": "ok", "ai": "ok"}
     ai.available = False

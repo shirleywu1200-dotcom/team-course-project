@@ -3,16 +3,12 @@
 錯誤回應只放欄位名稱與 ID，不回傳使用者送來的內容（CLAUDE.md 資安 3）。
 """
 
-import logging
-
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.errors import DomainError
-
-log = logging.getLogger("g4")
 
 
 def _json(err: DomainError) -> JSONResponse:
@@ -38,7 +34,6 @@ def install(app: FastAPI) -> None:
         return JSONResponse({"error": {"code": "HTTP_ERROR", "message": str(exc.detail), "details": {}}},
                             status_code=exc.status_code)
 
-    @app.exception_handler(Exception)
-    async def unexpected(_: Request, exc: Exception):
-        log.error("unhandled error: %s", type(exc).__name__)   # 只記類型，不記內容
-        return _json(DomainError("INTERNAL_ERROR"))
+    # 未預期的例外由 app.api.middleware.UnhandledErrorMiddleware 處理：
+    # 用 exception_handler(Exception) 的話，Starlette 會在回應後把例外再拋出，
+    # uvicorn 會把含錯誤訊息的完整 traceback 寫進 log。
