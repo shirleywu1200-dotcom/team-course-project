@@ -7,6 +7,7 @@
 1. **DA-01 PostgreSQL 版 DDL**：spec 4.2、6.8、8.1–8.3 與 todo 0.7、1.3、1.6 已改寫；原版是 `main` 上的 `docs/spec.md`、`docs/todo.md`，可直接看 PR 的 diff。開工會簽核 DDL 契約前請先看。
 2. **DA-03～DA-25**：契約新增（`adjust_due` 兩個參數、`POST /tasks/{id}/status`、`MARK_IGNORED` 警告碼、`INTERNAL_ERROR` 錯誤碼）與規格歧義的暫定做法。
 3. **`docs/metrics.md` 的兩個缺口**：週報對帳結果與每日確認時間目前無法從資料算出。
+4. **`docs/platform-settings.md`**：這是私人 repo，Free 方案很可能無法強制分支保護與 CODEOWNERS；請在開工會決定選 A（升級 Pro）、B（改公開）或 C（維持現狀靠 CI 與約定），並提供各角色的 GitHub 帳號名稱。
 
 ## 給 Dev-B
 
