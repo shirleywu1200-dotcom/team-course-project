@@ -1,0 +1,70 @@
+# CI（todo 0.9）：後端 pytest＋ruff；前端型別檢查與 Vitest；gitleaks 掃描祕密。
+name: ci
+on:
+  push:
+  pull_request:
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: g4
+          POSTGRES_PASSWORD: g4ci
+          POSTGRES_DB: g4
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U g4" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      G4_TEST_ADMIN_URL: postgresql+psycopg://g4:g4ci@127.0.0.1:5432/postgres
+      G4_DATABASE_URL: postgresql+psycopg://g4:g4ci@127.0.0.1:5432/g4
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync
+      - run: uv run ruff check .
+      - run: uv run pytest
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+
+  secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # todo 6.2：既有遷移檔只能新增、不能修改或刪除；DDL 變更一律用新遷移。
+  migration-guard:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: 既有遷移檔未被修改
+        run: |
+          changed=$(git diff --name-status --diff-filter=MDR "origin/${{ github.base_ref }}...HEAD" -- backend/app/db/migrations/versions/)
+          if [ -n "$changed" ]; then
+            echo "既有遷移檔被修改或刪除，請改用新的遷移：" && echo "$changed" && exit 1
+          fi

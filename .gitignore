@@ -1,0 +1,36 @@
+# 個人設定與備份
+CLAUDE.local.md
+*.v0
+
+# 祕密
+env/local.env
+*.pem
+*.key
+
+# 作業系統
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Node／前端
+node_modules/
+dist/
+coverage/
+playwright-report/
+test-results/
+
+# 本機資料與暫存
+*.db
+*.sqlite
+*.dump
+backups/
+.scratch/
