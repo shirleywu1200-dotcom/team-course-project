@@ -1,0 +1,58 @@
+/* 暫代 Dev-C todo 11.x 的基礎樣式。只引用 tokens.css 的變數，不寫死色碼。 */
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: var(--font-size);
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+main { max-width: 960px; margin: 0 auto; padding: var(--space-4); }
+h1 { font-size: 18px; margin: 0 0 var(--space-3); }
+h2 { font-size: 15px; margin: var(--space-4) 0 var(--space-2); }
+
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-3);
+}
+
+.field { margin: var(--space-2) 0; border: 0; padding: 0; }
+.field > label, .field > legend { display: block; color: var(--color-muted); margin-bottom: var(--space-1); }
+.choices { display: flex; flex-wrap: wrap; gap: var(--space-3); }
+.choice { display: inline-flex; align-items: center; gap: var(--space-1); }
+
+input, select, textarea, button {
+  font: inherit;
+  color: inherit;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: var(--space-1) var(--space-2);
+}
+
+button.primary { background: var(--color-accent); color: var(--color-accent-text); border-color: var(--color-accent); }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+.link-button { border: 0; background: none; padding: 0; color: var(--color-accent); text-decoration: underline; font-size: 12px; cursor: pointer; }
+
+.actions { display: flex; gap: var(--space-2); margin-top: var(--space-3); }
+.muted { color: var(--color-muted); }
+.hint { color: var(--color-warn-text); background: var(--color-warn-bg); padding: var(--space-1) var(--space-2); border-radius: var(--radius); }
+
+.banner { padding: var(--space-2) var(--space-3); border-radius: var(--radius); margin: var(--space-2) 0; }
+.banner-error { background: var(--color-error-bg); color: var(--color-error-text); }
+.banner-ok { background: var(--color-ok-bg); color: var(--color-ok-text); }
+.banner-warn { background: var(--color-warn-bg); color: var(--color-warn-text); }
+
+table { width: 100%; border-collapse: collapse; }
+th, td { text-align: left; padding: var(--space-1) var(--space-2); border-bottom: 1px solid var(--color-border); }
+th { color: var(--color-muted); font-weight: 500; }
+
+dl.summary { display: grid; grid-template-columns: max-content 1fr; gap: var(--space-1) var(--space-3); margin: 0; }
+dl.summary dt { color: var(--color-muted); }
+dl.summary dd { margin: 0; }
