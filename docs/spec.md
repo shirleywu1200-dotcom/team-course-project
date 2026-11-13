@@ -1,0 +1,1229 @@
+# 個人大總管 APP 功能規格（spec.md）
+
+| 項目 | 內容 |
+| --- | --- |
+| 版本 | v0.1（對應互動原型 v4、序列圖 1–7、AI 節點盤點 v0.1） |
+| 日期 | 2026-11-12 |
+| 技術棧 | Python 3.12 + FastAPI、React 18 + TypeScript、SQLite |
+| 使用者 | 單一使用者（個人使用），不建帳號；負責人以名字表示 |
+| 階段 | P1 專案閉環＋單點＋每日；P2 完成回報與精力；P3 目標與精力分析 |
+
+文件中的標記：**〔假設〕** 是我暫定的數值或做法，要在實測（關卡 G2）或決策後校正；**〔待決〕** 是需要你裁定的事，列在第 9 章。
+
+---
+
+## 1. 功能概述／目標
+
+### 1.1 要解決的問題
+
+一位能獨立負責專案、或負責專案中一個 WBS 的專業工作者，每天的承諾散在三個地方：群組對話裡別人說「延到 11/18」、自己手上的單點事項、專案計畫表裡的日期。結果是：
+
+1. 專案進度靠人工從對話裡撈，漏了就失真，週報要重新拼湊。
+2. 預計完成日改了很多次，卻不知道原本承諾是哪天，也說不清自己的時間管理到底變好還是變差。
+3. 事情做完沒有留下「做得好不好、花了多少精力」，無法回頭看精力與目標的關係。
+
+### 1.2 產品定位
+
+這是一本**由你確認的承諾帳**。AI 只提議，你決定，系統寫入。
+
+三條不可破的原則，後面所有需求都從它們推出來：
+
+| 原則 | 意思 |
+| --- | --- |
+| 確認前不入統計 | AI 產生的候選與草稿，在你確認前不改任何正式紀錄，也不進任何統計。 |
+| 原訂日期不因改期覆寫 | 改期只改「最新預計」。唯一例外是「基準更正」，需二次確認，且舊值永久留在歷程。 |
+| 歷程只增不改 | 所有變更寫成一筆事件；更正也是新增一筆，不改舊事件。 |
+
+### 1.3 目標與衡量
+
+| 目標 | 衡量（〔假設〕，G2 校正） |
+| --- | --- |
+| 專案進度可信 | 週報中每個延期與完成，100% 對得上歷程事件 |
+| 確認成本可控 | 每日確認時間不超過設定上限（預設 5 分鐘） |
+| AI 候選有用 | 候選確認率（含修改後確認）≥ 70% |
+| 時間管理可盤點 | 負責人是我的日期調整，註記完成率 ≥ 80% |
+| 完成回報不成負擔 | 完成事件中，完成回報填寫率 ≥ 70% |
+
+### 1.4 範圍
+
+**包含（P1–P3）**：啟用設定與星數量表；專案建立、匯入；單點任務；候選抽取與確認；預計完成日調整與時間管理註記；整批順延；基準更正；專案修改歷程；甘特圖；完成回報（星數、精力）；目標與精力；週報與目標回報草稿。
+
+**不包含**：多人協作與帳號權限；會議錄音與轉逐字稿（以逐字稿文字入口取代，逐字稿入口屬後續階段）；行事曆雙向同步；週報由系統代發；任務相依關係；基準版本化。
+
+---
+
+## 2. 使用情境／使用者故事
+
+角色固定為「我」（使用者）。其他負責人只是名字。
+
+### 2.1 啟用與設定
+
+- US-01 作為新使用者，我想用三個問題讓系統產生我自己的星數量表，這樣之後評「達成度」有符合我標準的定義。
+- US-02 作為新使用者，我想綁定專案群組或只用貼上入口，這樣不必依賴 bot 也能用。
+- US-03 作為使用者，我想定義「精力高／中／低」對我的意思，這樣之後自評有一致標準。
+
+### 2.2 專案與任務
+
+- US-04 作為專案負責人，我想貼上試算表匯入 WBS，並在保存前看到診斷，這樣不會把壞資料帶進基準。
+- US-05 作為專案負責人，我想在匯入後逐項改最新預計日，且原訂日期保持不變，這樣我看得到每項延了多少。
+- US-06 作為專案負責人，客戶改需求導致整個專案順延 3 天，我想一次勾選多項任務順延，而不是逐項改。
+- US-07 作為使用者，我想新增單點任務（含完成條件、預設星數、提醒），並同樣能改預計完成日。
+- US-08 作為專案負責人，我發現匯入時原訂日期寫錯，想更正基準，但要有足夠的阻力，避免我事後把延期改小。
+
+### 2.3 收件與確認
+
+- US-09 作為使用者，我想貼上群組對話，由 AI 找出「延期、完成、卡住」的候選，並附原句，我逐項確認。
+- US-10 作為使用者，疑問句或「可能」這類話不應被當成延期，我只想在「待釐清」區裁定。
+- US-11 作為使用者，我想把每天要確認的候選合併成一次處理，上限在我設定的分鐘數內。
+
+### 2.4 時間管理與精力
+
+- US-12 作為使用者，每次提前或延後我自己負責的任務，我想被問「要不要計入時間管理變好／變差」，也可以先調整、晚點再註記。
+- US-13 作為使用者，因客戶造成的延後，我想標「不計入」，這樣統計不會把我控制不了的事算成我的問題。
+- US-14 作為使用者，完成事件時，我想回報實際達成星數與自評精力，這樣事後能對照事前預設。
+- US-15 作為使用者，我想看時間管理統計，並看到被標「變差」的任務完成時的精力分布。
+
+### 2.5 目標與週報
+
+- US-16 作為使用者，我想把完成事件關聯到能力成長、時間配置、績效期待三類目標，並看到目標與精力的對照。
+- US-17 作為使用者，樣本太少時，我想只看分布，不要被系統下結論。
+- US-18 作為專案負責人，我想拿到週報初稿，每一項都能追到歷程，再自己改成人工版並決定是否送出。
+
+### 2.6 歷程與資料控制
+
+- US-19 作為使用者，我想依專案、類型、任務篩選修改歷程，看到前值、後值、原因與來源。
+- US-20 作為使用者，我想設定原文保存期限、匯出資料、刪除原文，且刪除後任務與歷程仍保留。
+
+---
+
+## 3. 功能需求
+
+編號規則：`FR-<模組>-<序號>`。每條都要有對應驗收標準（第 7 章）。階段標在模組標題。
+
+### 3.1 FR-SET 啟用與設定（P1）
+
+- FR-SET-01 首次啟動進入啟用精靈，共 6 步：歡迎、角色與範圍、收件來源、星數量表、目標與精力、確認節奏。可「略過」，略過時採預設值並使用量表 v0。
+- FR-SET-02 設定項目：預設範圍（工作／私人）、角色、週報對象（主管／客戶／不需要）、每日確認時間（12:00／18:00／21:00）、確認時間上限（3／5／10 分鐘）、提醒時機、原文保存期限（30／90／180 天）、精力高中低的定義文字、啟用的目標類型。
+- FR-SET-03 設定隨時可重新調整。調整量表會產生新版本，不修改舊版本。
+- FR-SET-04 預設星數量表 v0 為五級：未達成、部分達成、符合預設、優於預設、遠超預設。
+
+### 3.2 FR-RUB 星數量表（P1，AI-06）
+
+- FR-RUB-01 量表由 5 句描述組成，依序對應 1–5 星，版本號遞增，**已確認的版本不可修改**。
+- FR-RUB-02 量表訪談為三個選擇題：什麼程度算符合預設、什麼情況給 5 顆星、不同類型任務是否用不同標準。
+- FR-RUB-03 AI 依三個回答產生量表草稿；草稿逐句可改；你確認後才成為新版本。不確認則沿用目前版本。
+- FR-RUB-04 「依任務類型分開量表」本版只記錄回答，不實作（所有任務共用同一套）。
+- FR-RUB-05 每筆完成回報記錄當時使用的 `rubric_id`；跨版本的星數不直接合併比較。
+
+### 3.3 FR-PRJ 專案（P1）
+
+- FR-PRJ-01 建立專案：名稱必填；範圍、週報對象；收件來源可為「貼上入口」或已告知成員的 LINE 群組。
+- FR-PRJ-02 編輯專案（名稱、範圍、週報對象）。**每個變更欄位各寫一筆 `project` 事件**，記前值與後值。沒有實際變更時不寫事件。
+- FR-PRJ-03 專案不刪除，只封存（`archived_at`）。封存後預設不出現在列表，歷程保留。
+- FR-PRJ-04 專案現況頁顯示：完成數、已延期數（最新預計 > 原訂）、待確認候選數（註明不計入下方數字）、甘特圖、任務表。
+- FR-PRJ-05 甘特圖每列有「進行區間」（開始到最新預計）、「原訂基準框」（開始到原訂，固定）、「延後區間」（原訂之後到最新預計）；已完成任務以完成日為終點；今天以直線標示。最新預計早於原訂時，仍顯示基準框，並在列標籤標「提前 n 天」。
+
+### 3.4 FR-IMP 專案匯入（P1，AI-07）
+
+- FR-IMP-01 匯入入口為貼上表格（逗號或 Tab 分隔，首列表頭）。檔案上傳列為後續。單次最多 500 列、50,000 字元。
+- FR-IMP-02 表頭先由規則比對（任務／名稱、負責人、開始、結束／期限／完成）；規則辨認不出時才呼叫 AI-07 建議對應，並顯示對應預覽由你確認。
+- FR-IMP-03 日期格式接受 `YYYY-MM-DD`、`M/D`（無年份時依專案期間推年）。無法解析視為缺日期。
+- FR-IMP-04 診斷規則：
+  - 錯誤（該列不匯入，除非補正或略過）：缺任務名稱；缺結束日期；結束日期早於開始日期。
+  - 注意（可匯入）：缺負責人，預設為「我」；缺開始日期，以結束前 3 天代入；名稱與前列重複，由你決定是否保留。
+- FR-IMP-05 未處理的錯誤列**不匯入也不猜測**。保存時至少要有 1 列可匯入。
+- FR-IMP-06 保存時為每列建立任務，`orig_due = latest_due = 結束日期`，`star_source = import_default`，並寫一筆 `baseline` 事件（匯入項數、略過列數）。保存是單一交易，全成功或全失敗。
+- FR-IMP-07 可匯入到既有專案或新建專案。
+
+### 3.5 FR-TSK 任務（P1）
+
+- FR-TSK-01 建立任務欄位：標題（必填）、負責人（名字，預設「我」）、期限（必填）、範圍、專案（可空，空為單點任務）、完成條件（選填）、提醒、關聯目標（選填）、預設星數（1–5，預設 3）。
+- FR-TSK-02 建立時 `orig_due = latest_due = 期限`，並寫 `task` 事件。
+- FR-TSK-03 預設星數來源 `star_source` 由伺服器判定：沒有 AI 建議時為 `self`；有 AI 建議且未改為 `ai_accepted`；有 AI 建議但改了為 `ai_edited`；匯入為 `import_default`。前端不可直接指定來源。
+- FR-TSK-04 狀態為 `todo`、`doing`、`done`；另有獨立旗標 `blocked`。狀態變化寫 `status` 事件。
+- FR-TSK-05 任務詳情顯示：負責人、原訂（固定）、最新預計、與原訂差距、預設星數與來源、完成回報、此任務的歷程。
+- FR-TSK-06 更改負責人（名字）寫一筆 `task` 事件。更改後，**過去事件的「是否為我的任務」判斷不變**。
+- FR-TSK-07 已完成任務：不可調整預計完成日、不可更正基準、不可再標卡住。
+
+### 3.6 FR-DUE 預計完成日調整（P1）
+
+- FR-DUE-01 任何未完成任務都可調整「最新預計日」。入口：專案現況表格的調整欄、任務詳情、確認延期候選後。
+- FR-DUE-02 調整**只改 `latest_due`**，不動 `orig_due`。
+- FR-DUE-03 驗證：任務已完成拒絕（`TASK_DONE`）；新日期等於目前值拒絕（`NO_CHANGE`）；日期超出「今天前 365 天到後 730 天」拒絕（`DATE_OUT_OF_RANGE`）；新日期早於開始日只回警告，不阻擋。
+- FR-DUE-04 每次調整寫一筆 `due` 事件：前值、後值、`delta_days`（提前為負、延後為正）、原因、備註、是否為我的任務、時間管理註記。
+- FR-DUE-05 原因為固定選項。提前：提早完成條件達成、工作量比預期少、前置工作提早到位、其他。延後：估計不準（我低估）、被其他事插隊（我自己排程）、等對方或客戶回覆（外部）、需求變更（外部）、資源或環境未到位（外部）、其他。
+- FR-DUE-05a 原因與註記**只由使用者選擇**。系統與 AI 都不預填、不推測。確認延期候選時，AI-01 只提供新日期與原句，原因欄位一律為空待選。
+- FR-DUE-06 並行保護：請求帶 `expected_version`（任務版本號），不符回 `STALE_VERSION`。
+
+### 3.7 FR-MRK 時間管理註記（P1）
+
+- FR-MRK-01 **負責人為「我」**的任務，調整日期時必須回答註記：`better`（變好）、`worse`（變差）、`none`（不計入）；或明確選「稍後註記」（`defer_mark=true`，註記留空）。兩者皆無時拒絕（`MARK_REQUIRED`）。
+- FR-MRK-02 **負責人不是我**的任務，不詢問註記；事件記 `mine=0`，不進時間管理統計。請求中帶了註記時忽略並回警告。
+- FR-MRK-03 原因屬外部（以「外部」標記的原因）時，介面提示建議「不計入」。**這只是提示，系統不預選、不代判。**
+- FR-MRK-04 補註記與改註記：對 `mine=1` 且 `delta_days≠0` 的日期事件，新增一筆 `annotation` 事件，`ref_event_id` 指向原事件。原事件不改。
+- FR-MRK-05 有效註記 = 指向該日期事件的最新一筆 `annotation`；沒有則取原事件的註記；皆空為「未註記」。
+- FR-MRK-06 時間管理統計口徑：只算 `mine=1`、`delta_days≠0`、有效註記非空的日期事件。輸出變好次數與提前總天數、變差次數與延後總天數、不計入次數、未註記次數；**未註記與不計入不進變好／變差**。
+- FR-MRK-07 統計另輸出「被標變差的任務完成時的精力分布」（高、中、低、尚未完成），供時間與精力盤點。樣本少於 5 筆時，只回計數，`judgement=null`。
+- FR-MRK-08 整批順延與基準更正產生的事件，都依本節規則處理註記。
+
+### 3.8 FR-BLK 整批順延（P1）
+
+- FR-BLK-01 入口在專案現況。流程：預覽 → 確認。預覽列出被勾選任務與新日期，不寫入。
+- FR-BLK-02 輸入：專案、任務清單（每項帶 `expected_version`）、天數（非 0 整數，絕對值 ≤ 365，負為提前）、原因、備註、註記（套用到清單中「負責人是我」的任務）或 `defer_mark`。
+- FR-BLK-03 預設全選未完成任務；**不自動推論相依**，由你勾選（本版沒有相依資料）。
+- FR-BLK-04 清單含已完成任務拒絕（`INCLUDES_DONE_TASK`，列出任務）；含不屬於該專案的任務拒絕；清單為空拒絕。
+- FR-BLK-05 預覽標示新日期早於今天、早於開始日的任務（警告，不阻擋）。
+- FR-BLK-06 確認為**單一交易**：建立批次記錄，逐項寫 `due` 事件（共用 `batch_id`），更新 `latest_due`；任一項失敗全部回滾。
+- FR-BLK-07 同一批次的「我的任務」套用同一個註記；要逐項不同，之後在歷程對單項補註記（FR-MRK-04）。
+- FR-BLK-08 歷程中同批次事件可辨識，並可依批次篩選。
+
+### 3.9 FR-BAS 基準更正（P1）
+
+- FR-BAS-01 入口為任務詳情內的小連結，不放在主要操作區。
+- FR-BAS-02 只允許兩種類型：`correction`（更正錯誤）、`rebaseline`（客戶或主管正式改變承諾日）。原因必選：匯入或輸入錯誤、原計畫日期寫錯、客戶或主管正式改變承諾日、其他。
+- FR-BAS-03 **兩段式確認**：第一步（preview）回傳影響說明與一個確認憑證；第二步（commit）必須帶憑證與 `ack=true`（聲明「這不是為了讓延期看起來比較小」）。
+- FR-BAS-04 影響說明包含：此任務與基準的差距變化（舊 → 新）；專案「已延期」數量變化；此任務過去的日期調整事件數（保留，不重算）；舊原訂日將永久留在歷程。
+- FR-BAS-05 確認憑證綁定「任務、新日期、類型、原因、當時的原訂日與任務版本」，10 分鐘過期（〔假設〕）；任務在期間內有變動則憑證失效（`CONFIRMATION_INVALID`）。
+- FR-BAS-06 commit 時覆蓋 `orig_due`，寫一筆 `baseline` 事件（欄位 `orig_due`，前值、後值、類型、原因、「二次確認」）。**舊的原訂日只留在歷程，不做基準版本。**
+- FR-BAS-07 更正後：甘特基準框、已延期數、週報延期事項依新基準重算；**既有日期事件與註記不重算**。
+- FR-BAS-08 已完成任務拒絕（`TASK_DONE`）；新日期等於目前原訂日拒絕（`NO_CHANGE`）。
+
+### 3.10 FR-HIS 專案修改歷程（P1）
+
+- FR-HIS-01 所有變更都是 `events` 的一筆。**資料庫層禁止 UPDATE 與 DELETE**（觸發器擋下）。
+- FR-HIS-02 事件類型：`due`（日期）、`annotation`（註記）、`status`（狀態）、`task`（任務）、`feedback`（完成回報）、`goal`（目標關聯）、`baseline`（基準）、`project`（專案）。
+- FR-HIS-03 歷程頁可依專案（含「單點任務」）、類型、任務篩選；回傳筆數。
+- FR-HIS-04 每筆顯示：時間、操作者、專案、任務、類型、前值 → 後值、時間管理註記（日期事件）、依據（原句或操作來源）。
+- FR-HIS-05 原句不存在事件本身，而是引用 `sources`；來源原文被刪除後，事件仍在，原句顯示「（原文已依設定刪除）」。
+- FR-HIS-06 任務詳情顯示該任務的歷程；手機的專案標題旁可開專案歷程。
+- FR-HIS-07 事件快照任務標題（`task_title`），改名或改負責人不影響舊事件。
+
+### 3.11 FR-INB 收件、候選與確認（P1，AI-01）
+
+- FR-INB-01 入口：貼上文字（預設）；LINE webhook（P1b，需已綁定且已告知成員的群組）。
+- FR-INB-02 R1 規則：LINE 群組未綁定或未確認告知成員者一律丟棄，不存原文。
+- FR-INB-03 只存必要摘錄（`sources.excerpt`），不存整段對話；依保存期限到期清除。
+- FR-INB-04 重複訊息以「時間＋發言者＋內容」雜湊判斷，**只回報重複數，不自動合併**。
+- FR-INB-05 解析規模：不超過 30 行同步處理；超過則建立背景工作，回傳工作編號，前端輪詢（每 3 秒，最多 60 秒）。〔假設〕
+- FR-INB-06 AI-01 輸出候選：種類（`delay`、`done`、`stuck`）、對應任務、新值、原句、確定度。AI 原始輸出先保存為中間產物。
+- FR-INB-07 R2 規則（程式，不由 AI 決定）：驗證輸出格式；日期轉值；問句、含「可能、大概、應該、也許」者降級為 `unclear`（待釐清）；認不出任務的承接語句為 `unmatched`（待配對），**不猜**；無關訊息略過並計數。
+- FR-INB-08 AI 逾時或輸出不合格式：從 AI-01 續跑最多重試 2 次；仍失敗則工作標為 `failed`，保留摘錄，提示可手動建立任務。
+- FR-INB-09 候選狀態：`open`、`confirmed`、`ignored`。`open` 候選**不進任何正式統計、甘特圖或週報**。
+- FR-INB-10 確認 `delay` 候選：可先改日期；寫 `due` 事件（依據為該候選與原句）；更新 `latest_due`；若任務負責人是我，回傳 `needs_mark=true` 與事件 id，前端接著開註記面板（FR-MRK）。
+- FR-INB-11 確認 `done` 候選：任務標為完成、記完成日，並開啟完成回報（FR-FBK）。
+- FR-INB-12 確認 `stuck` 候選：任務 `blocked=1`，寫 `status` 事件。
+- FR-INB-13 `unclear` 候選：提供「我確認」（依建議值，事件依據註記為「待釐清，你確認」）與「忽略」。
+- FR-INB-14 `unmatched` 候選：可「建立新任務」（標題、負責人為發言者、期限由你確認）或「忽略」。
+- FR-INB-15 忽略保留紀錄，作為評估資料。
+- FR-INB-16 每日合併確認：在設定時間推播待確認數；確認時間以使用者設定上限為準，超過不強迫，但記錄實際使用時間供校正。
+
+### 3.12 FR-FBK 完成回報（P2）
+
+- FR-FBK-01 任務完成（今日頁按完成，或確認完成候選）後開啟完成回報。
+- FR-FBK-02 必填：實際達成星數（1–5）、自評精力（高／中／低）。選填：投入時間相對預期（少於／如期／多於）、關聯目標。
+- FR-FBK-03 逾期天數 `overdue_days = max(0, 完成日 − 原訂日)` **由伺服器計算**，前端送來的值忽略。以原訂日為基準。
+- FR-FBK-04 儲存時記錄當時 `rubric_id`；顯示事前預設與其來源。
+- FR-FBK-05 可「稍後補」：任務保持完成狀態，列入今日頁「待補完成回報」，直到填寫。
+- FR-FBK-06 一個任務最多一筆完成回報；之後修改以新增一筆 `feedback` 更正事件，統計取最新一筆。〔待決：是否允許修改〕
+- FR-FBK-07 精力永遠由你自評，**AI 不估、不代填**。
+
+### 3.13 FR-GOL 目標與精力（P2–P3，AI-03、AI-04）
+
+- FR-GOL-01 目標三類：能力成長（衡量：完成事件數）、時間配置（衡量：每週確認分鐘數；未知時段不算 0）、績效期待（衡量：對應專案的完成比）。
+- FR-GOL-02 每個目標有預期精力投入（高／中／低），用來和實際完成事件的精力對照，**不是考核**。
+- FR-GOL-03 關聯：完成事件關聯到目標，**由你確認**。AI-03 只提議；改選、不關聯記為修正事件。
+- FR-GOL-04 目標統計：關聯事件數、實際平均星數、事前預設平均、逾期件數、精力分布。
+- FR-GOL-05 判讀：關聯事件少於 5 筆只顯示分布，`judgement=null`（〔假設〕門檻，G2 驗證）；5 筆以上：實際主要精力等級與預期相同為「一致」，否則「建議檢視」。判讀由程式規則計算，非 AI。
+- FR-GOL-06 工作目標回報：AI-04 以已確認關聯的完成事件與統計產生對內草稿；人工版與草稿分開保存。
+- FR-GOL-07 R3 規則：草稿中的數字必須等於程式統計，不符時不顯示草稿，改顯示統計表。
+
+### 3.14 FR-RPT 週報（P1，AI-05）
+
+- FR-RPT-01 週報只讀「工作」範圍、已確認的事件；**私人範圍在送進 AI 前就排除**，並顯示排除項數。
+- FR-RPT-02 內容段落：本週完成、延期事項（原訂 → 最新，附依據）、下週重點與風險（卡住，或期限在下週的任務）。
+- FR-RPT-03 R4 規則：初稿中每個完成與延期都要對應一筆歷程事件；對不上者不顯示初稿，改顯示事件清單。
+- FR-RPT-04 AI 初稿與人工版分開保存。人工版由你修改。
+- FR-RPT-05 **P1 系統不代發週報**，只提供文字供你複製；送出功能為預留〔待決〕。
+
+### 3.15 FR-GOV 資料控制（P1）
+
+- FR-GOV-01 來源原文依保存期限自動清除（每日排程）。
+- FR-GOV-02 匯出：產生包含所有表的 JSON 檔供下載。
+- FR-GOV-03 刪除所有來源原文：二次確認；刪除後任務、事件仍保留，原句顯示為已刪除。
+- FR-GOV-04 LINE 群組解除綁定即停止處理該群組，不追溯刪除已確認的紀錄。
+- FR-GOV-05 送進 AI 的內容只含必要摘錄；是否遮蔽姓名〔待決〕。
+
+### 3.16 FR-AI AI 節點通則
+
+- FR-AI-01 所有 AI 節點為 L1：輸出只成為候選或草稿，**不直接寫入正式紀錄**。
+- FR-AI-02 每個 AI 呼叫記錄於 `ai_runs`：節點、狀態、嘗試次數、延遲、錯誤。
+- FR-AI-03 每個 AI 節點必須有不依賴 AI 的退路（第 6.6 節）。AI 不可用時，主流程仍可完成。
+- FR-AI-04 AI 的結果被接受、修改、忽略、改選，都記入 `ai_feedback`，供評估。
+- FR-AI-06 **AI 不得參與對使用者自己的評價**：延期原因、時間管理註記、自評精力、實際達成星數皆由使用者判斷，不設預填或建議。AI-02（預設星數）因屬事前預設而非事後評價，是否採用另見 D-01。
+- FR-AI-05 AI 供應商以介面隔離（`AIClient`），可替換；單次呼叫逾時預設 20 秒〔假設〕。
+
+---
+
+## 4. 資料模型
+
+SQLite 3.40+。通則：`PRAGMA foreign_keys=ON`、`PRAGMA journal_mode=WAL`；日期用 `TEXT`（`YYYY-MM-DD`），時間戳用 `TEXT`（ISO 8601，含時區 `+08:00`）；布林用 `INTEGER` 0/1；JSON 用 `TEXT` 並加 `json_valid` 檢查；主鍵為 `INTEGER PRIMARY KEY`。時區固定為 Asia/Taipei。
+
+### 4.1 實體關係
+
+```
+settings(1) ─ rubrics(n)
+projects(1) ─ tasks(n) ─ completion_feedback(0..1)
+tasks(n) ─ goals(0..1)
+sources(1) ─ candidates(n)
+events(n) ─ projects / tasks / sources / batches
+events.ref_event_id ─ events (註記指向日期事件)
+batches(1) ─ events(n)
+ai_runs(n) ─ jobs(1)
+```
+
+### 4.2 DDL
+
+```sql
+-- 設定（單列）
+CREATE TABLE settings (
+  id                 INTEGER PRIMARY KEY CHECK (id = 1),
+  default_scope      TEXT NOT NULL DEFAULT 'work' CHECK (default_scope IN ('work','private')),
+  role               TEXT NOT NULL DEFAULT 'project_owner'
+                     CHECK (role IN ('project_owner','wbs_owner','both')),
+  report_audience    TEXT NOT NULL DEFAULT 'manager'
+                     CHECK (report_audience IN ('manager','client','none')),
+  confirm_time       TEXT NOT NULL DEFAULT '18:00',
+  confirm_cap_min    INTEGER NOT NULL DEFAULT 5 CHECK (confirm_cap_min IN (3,5,10)),
+  remind_default     TEXT NOT NULL DEFAULT 'morning'
+                     CHECK (remind_default IN ('morning','eve_before','none')),
+  retention_days     INTEGER NOT NULL DEFAULT 30 CHECK (retention_days IN (30,90,180)),
+  energy_def_high    TEXT NOT NULL,
+  energy_def_mid     TEXT NOT NULL,
+  energy_def_low     TEXT NOT NULL,
+  goal_types_enabled TEXT NOT NULL DEFAULT '["growth","time","expectation"]' CHECK (json_valid(goal_types_enabled)),
+  onboarded_at       TEXT
+);
+
+-- 星數量表（版本不可變）
+CREATE TABLE rubrics (
+  id          INTEGER PRIMARY KEY,
+  version     INTEGER NOT NULL UNIQUE,
+  levels      TEXT NOT NULL CHECK (json_valid(levels) AND json_array_length(levels) = 5),
+  source      TEXT NOT NULL CHECK (source IN ('default','interview')),
+  interview   TEXT CHECK (interview IS NULL OR json_valid(interview)),
+  created_at  TEXT NOT NULL
+);
+
+CREATE TABLE line_groups (
+  id           INTEGER PRIMARY KEY,
+  name         TEXT NOT NULL,
+  kind         TEXT NOT NULL CHECK (kind IN ('self','client')),
+  line_ref     TEXT UNIQUE,
+  notified     INTEGER NOT NULL DEFAULT 0,
+  bound        INTEGER NOT NULL DEFAULT 0,
+  CHECK (bound = 0 OR notified = 1)           -- 未告知成員不可綁定
+);
+
+CREATE TABLE projects (
+  id           INTEGER PRIMARY KEY,
+  name         TEXT NOT NULL CHECK (length(trim(name)) > 0),
+  scope        TEXT NOT NULL CHECK (scope IN ('work','private')),
+  audience     TEXT NOT NULL CHECK (audience IN ('manager','client','none')),
+  line_group_id INTEGER REFERENCES line_groups(id),
+  created_at   TEXT NOT NULL,
+  updated_at   TEXT NOT NULL,
+  archived_at  TEXT
+);
+
+CREATE TABLE goals (
+  id           INTEGER PRIMARY KEY,
+  type         TEXT NOT NULL CHECK (type IN ('growth','time','expectation')),
+  title        TEXT NOT NULL,
+  period       TEXT NOT NULL,
+  definition   TEXT NOT NULL DEFAULT '',
+  target       INTEGER NOT NULL DEFAULT 0,        -- growth：件數；time：分鐘／週；expectation：未用
+  energy_plan  TEXT NOT NULL CHECK (energy_plan IN ('high','mid','low')),
+  project_id   INTEGER REFERENCES projects(id),   -- expectation 類型使用
+  created_at   TEXT NOT NULL,
+  archived_at  TEXT
+);
+
+CREATE TABLE tasks (
+  id            INTEGER PRIMARY KEY,
+  project_id    INTEGER REFERENCES projects(id),  -- NULL = 單點任務
+  title         TEXT NOT NULL CHECK (length(trim(title)) > 0),
+  owner_name    TEXT NOT NULL DEFAULT '我',        -- 名字；'我' 代表使用者本人
+  scope         TEXT NOT NULL CHECK (scope IN ('work','private')),
+  start_date    TEXT NOT NULL,
+  orig_due      TEXT NOT NULL,                     -- 基準，僅基準更正可改
+  latest_due    TEXT NOT NULL,
+  status        TEXT NOT NULL DEFAULT 'todo' CHECK (status IN ('todo','doing','done')),
+  blocked       INTEGER NOT NULL DEFAULT 0,
+  done_date     TEXT,
+  done_when     TEXT NOT NULL DEFAULT '',
+  remind        TEXT NOT NULL DEFAULT 'morning' CHECK (remind IN ('morning','eve_before','none')),
+  expected_stars INTEGER NOT NULL DEFAULT 3 CHECK (expected_stars BETWEEN 1 AND 5),
+  star_source   TEXT NOT NULL DEFAULT 'self'
+                CHECK (star_source IN ('self','ai_accepted','ai_edited','import_default')),
+  rubric_id     INTEGER REFERENCES rubrics(id),
+  goal_id       INTEGER REFERENCES goals(id),
+  version       INTEGER NOT NULL DEFAULT 1,        -- 樂觀鎖
+  created_at    TEXT NOT NULL,
+  updated_at    TEXT NOT NULL,
+  CHECK (status <> 'done' OR done_date IS NOT NULL)
+);
+CREATE INDEX ix_tasks_project ON tasks(project_id, status);
+CREATE INDEX ix_tasks_owner_due ON tasks(owner_name, latest_due);
+
+CREATE TABLE completion_feedback (
+  id            INTEGER PRIMARY KEY,
+  task_id       INTEGER NOT NULL UNIQUE REFERENCES tasks(id),
+  actual_stars  INTEGER NOT NULL CHECK (actual_stars BETWEEN 1 AND 5),
+  energy        TEXT NOT NULL CHECK (energy IN ('high','mid','low')),
+  invest_vs_expected TEXT CHECK (invest_vs_expected IN ('less','as_expected','more')),
+  overdue_days  INTEGER NOT NULL CHECK (overdue_days >= 0),   -- 伺服器計算
+  rubric_id     INTEGER NOT NULL REFERENCES rubrics(id),
+  created_at    TEXT NOT NULL
+);
+
+-- 來源（原文摘錄；可被保存期限清除）
+CREATE TABLE sources (
+  id            INTEGER PRIMARY KEY,
+  channel       TEXT NOT NULL CHECK (channel IN ('paste','line')),
+  line_group_id INTEGER REFERENCES line_groups(id),
+  speaker       TEXT NOT NULL,
+  spoken_at     TEXT,
+  excerpt       TEXT,                              -- 清除後為 NULL
+  excerpt_hash  TEXT NOT NULL UNIQUE,              -- 時間＋發言者＋內容
+  received_at   TEXT NOT NULL,
+  expires_at    TEXT NOT NULL,
+  purged_at     TEXT
+);
+
+CREATE TABLE jobs (
+  id          INTEGER PRIMARY KEY,
+  kind        TEXT NOT NULL CHECK (kind IN ('ingest')),
+  status      TEXT NOT NULL CHECK (status IN ('queued','running','succeeded','failed')),
+  attempts    INTEGER NOT NULL DEFAULT 0,
+  payload     TEXT NOT NULL CHECK (json_valid(payload)),
+  result      TEXT CHECK (result IS NULL OR json_valid(result)),   -- 新增候選數、略過數、重複數
+  error       TEXT,
+  created_at  TEXT NOT NULL,
+  updated_at  TEXT NOT NULL
+);
+
+CREATE TABLE ai_runs (
+  id          INTEGER PRIMARY KEY,
+  node_id     TEXT NOT NULL CHECK (node_id IN ('AI-01','AI-02','AI-03','AI-04','AI-05','AI-06','AI-07','AI-08')),
+  job_id      INTEGER REFERENCES jobs(id),
+  status      TEXT NOT NULL CHECK (status IN ('ok','timeout','invalid_output','error')),
+  attempt     INTEGER NOT NULL DEFAULT 1,
+  latency_ms  INTEGER,
+  raw_output  TEXT,                                -- 中間產物，供續跑與除錯
+  error       TEXT,
+  created_at  TEXT NOT NULL
+);
+
+CREATE TABLE candidates (
+  id          INTEGER PRIMARY KEY,
+  source_id   INTEGER NOT NULL REFERENCES sources(id),
+  kind        TEXT NOT NULL CHECK (kind IN ('delay','done','stuck','unclear','unmatched')),
+  certainty   TEXT NOT NULL CHECK (certainty IN ('sure','to_clarify','to_match')),
+  task_id     INTEGER REFERENCES tasks(id),
+  proposed    TEXT CHECK (proposed IS NULL OR json_valid(proposed)),  -- 例：{"new_due":"2026-11-18"}
+  suggest     TEXT CHECK (suggest IS NULL OR json_valid(suggest)),    -- 待釐清時的建議動作
+  note        TEXT,
+  state       TEXT NOT NULL DEFAULT 'open' CHECK (state IN ('open','confirmed','ignored')),
+  decision    TEXT,
+  decided_at  TEXT,
+  ai_run_id   INTEGER REFERENCES ai_runs(id),
+  created_at  TEXT NOT NULL
+);
+CREATE INDEX ix_candidates_state ON candidates(state);
+
+CREATE TABLE batches (
+  id          INTEGER PRIMARY KEY,
+  project_id  INTEGER NOT NULL REFERENCES projects(id),
+  days        INTEGER NOT NULL CHECK (days <> 0),
+  reason      TEXT,
+  note        TEXT,
+  task_count  INTEGER NOT NULL,
+  created_at  TEXT NOT NULL
+);
+
+-- 歷程（只增不改）
+CREATE TABLE events (
+  id            INTEGER PRIMARY KEY,
+  ts            TEXT NOT NULL,
+  project_id    INTEGER REFERENCES projects(id),
+  task_id       INTEGER REFERENCES tasks(id),
+  task_title    TEXT NOT NULL,                     -- 快照
+  kind          TEXT NOT NULL CHECK (kind IN
+                ('due','annotation','status','task','feedback','goal','baseline','project')),
+  field         TEXT NOT NULL,
+  from_value    TEXT,
+  to_value      TEXT,
+  origin        TEXT NOT NULL CHECK (origin IN
+                ('candidate','manual','bulk','import','baseline_correction','system')),
+  origin_ref    INTEGER,                           -- candidate id 或 batch id
+  source_id     INTEGER REFERENCES sources(id),    -- 原句來源
+  reason        TEXT,
+  note          TEXT,
+  delta_days    INTEGER,                           -- due 事件：提前為負、延後為正
+  mark          TEXT CHECK (mark IS NULL OR mark IN ('better','worse','none')),
+  mine          INTEGER NOT NULL DEFAULT 0,        -- 事件發生時，負責人是否為我
+  ref_event_id  INTEGER REFERENCES events(id),     -- annotation 指向 due 事件
+  batch_id      INTEGER REFERENCES batches(id),
+  actor         TEXT NOT NULL DEFAULT 'me',
+  extra         TEXT CHECK (extra IS NULL OR json_valid(extra))
+);
+CREATE INDEX ix_events_project ON events(project_id, ts DESC);
+CREATE INDEX ix_events_task    ON events(task_id, ts DESC);
+CREATE INDEX ix_events_ref     ON events(ref_event_id);
+CREATE INDEX ix_events_batch   ON events(batch_id);
+
+CREATE TRIGGER events_no_update BEFORE UPDATE ON events
+BEGIN SELECT RAISE(ABORT, 'events are append-only'); END;
+CREATE TRIGGER events_no_delete BEFORE DELETE ON events
+BEGIN SELECT RAISE(ABORT, 'events are append-only'); END;
+
+CREATE TABLE ai_feedback (
+  id          INTEGER PRIMARY KEY,
+  node_id     TEXT NOT NULL,
+  target_type TEXT NOT NULL,                       -- candidate／task／goal_link／rubric／import_map
+  target_id   INTEGER NOT NULL,
+  outcome     TEXT NOT NULL CHECK (outcome IN ('accepted','edited','ignored','changed')),
+  detail      TEXT CHECK (detail IS NULL OR json_valid(detail)),
+  created_at  TEXT NOT NULL
+);
+
+CREATE TABLE reports (
+  id          INTEGER PRIMARY KEY,
+  kind        TEXT NOT NULL CHECK (kind IN ('weekly','goal')),
+  period_start TEXT,
+  goal_id     INTEGER REFERENCES goals(id),
+  ai_draft    TEXT,
+  manual_text TEXT,                                -- 與 AI 草稿分開保存
+  excluded_private INTEGER NOT NULL DEFAULT 0,
+  created_at  TEXT NOT NULL,
+  updated_at  TEXT NOT NULL
+);
+
+CREATE TABLE confirmations (                       -- 基準更正的確認憑證
+  token       TEXT PRIMARY KEY,
+  task_id     INTEGER NOT NULL REFERENCES tasks(id),
+  payload     TEXT NOT NULL CHECK (json_valid(payload)),
+  task_version INTEGER NOT NULL,
+  expires_at  TEXT NOT NULL,
+  used_at     TEXT
+);
+
+CREATE TABLE idempotency_keys (
+  key         TEXT PRIMARY KEY,
+  endpoint    TEXT NOT NULL,
+  response    TEXT NOT NULL,
+  created_at  TEXT NOT NULL                        -- 保存 24 小時
+);
+```
+
+### 4.3 列舉值
+
+| 列舉 | 值 |
+| --- | --- |
+| 註記 `mark` | `better` 變好、`worse` 變差、`none` 不計入 |
+| 候選種類 | `delay`、`done`、`stuck`、`unclear`、`unmatched` |
+| 確定度 | `sure`、`to_clarify`、`to_match` |
+| 星數來源 | `self`、`ai_accepted`、`ai_edited`、`import_default` |
+| 日期調整原因（提前） | `finished_early`、`less_work`、`prereq_early`、`other` |
+| 日期調整原因（延後） | `underestimated`、`self_interrupt`、`wait_external`*、`scope_change_external`*、`resource_external`*、`other` |
+| 基準更正類型 | `correction`、`rebaseline` |
+| 基準更正原因 | `input_error`、`plan_date_wrong`、`formal_commitment_change`、`other` |
+
+\* 標星號者為外部原因（`external=true`），介面據此提示建議「不計入」。
+
+### 4.4 衍生計算（不存欄位，查詢時算）
+
+| 項目 | 規則 |
+| --- | --- |
+| 已延期 | `latest_due > orig_due` 且未完成 |
+| 與基準差距 | `latest_due − orig_due`（天） |
+| 逾期天數 | `max(0, done_date − orig_due)`，完成時寫入 `completion_feedback` |
+| 有效註記 | 指向該日期事件的最新 `annotation.mark`，否則取該事件的 `mark` |
+| 時間管理統計 | 見 FR-MRK-06 |
+
+---
+
+## 5. 介面／API 定義
+
+### 5.1 通則
+
+- Base URL：`/api/v1`。格式 JSON，UTF-8。日期 `YYYY-MM-DD`，時間戳 ISO 8601。
+- 認證：單使用者；以環境變數設定的 Bearer token 保護（`Authorization: Bearer …`），僅用於避免意外對外暴露；預設只綁定 `127.0.0.1`。
+- 冪等：所有「確認／提交」類 POST 接受 `Idempotency-Key` 標頭，相同鍵 24 小時內回傳首次結果。
+- 樂觀鎖：修改任務的請求帶 `expected_version`；不符回 409 `STALE_VERSION`。
+- 成功回應：直接回資源或 `{ "data": … }`；列表回 `{ "items": […], "total": n }`。
+- 錯誤回應格式：
+
+```json
+{ "error": { "code": "TASK_DONE", "message": "已完成的任務不可調整預計完成日", "details": { "task_id": 12 } } }
+```
+
+### 5.2 錯誤碼
+
+| HTTP | code | 情況 |
+| --- | --- | --- |
+| 401 | `UNAUTHORIZED` | token 缺失或錯誤 |
+| 404 | `NOT_FOUND` | 資源不存在 |
+| 409 | `TASK_DONE` | 對已完成任務做日期調整、基準更正、標卡住 |
+| 409 | `STALE_VERSION` | `expected_version` 與目前不符 |
+| 409 | `CONFIRMATION_INVALID` | 基準更正憑證過期、已使用或任務已變動 |
+| 409 | `CANDIDATE_NOT_OPEN` | 候選已處理 |
+| 413 | `PAYLOAD_TOO_LARGE` | 貼上文字超過 20,000 字，或匯入超過 500 列 |
+| 422 | `VALIDATION_ERROR` | 欄位缺漏或格式錯誤（`details` 列出欄位） |
+| 422 | `NO_CHANGE` | 新值等於目前值 |
+| 422 | `DATE_OUT_OF_RANGE` | 日期超出允許範圍 |
+| 422 | `MARK_REQUIRED` | 負責人是我，卻沒給註記也沒選稍後註記 |
+| 422 | `INCLUDES_DONE_TASK` | 整批順延清單含已完成任務 |
+| 422 | `EMPTY_SELECTION` | 清單或可匯入列為空 |
+| 422 | `ACK_REQUIRED` | 基準更正缺少聲明 |
+| 422 | `ANNOTATION_NOT_ALLOWED` | 對非「我的任務」或無日期差的事件補註記 |
+| 503 | `AI_UNAVAILABLE` | 僅限沒有退路的 AI 端點（量表訪談）；其餘端點降級，見 5.3 |
+
+### 5.3 AI 降級約定
+
+凡會呼叫 AI 的端點，回應都帶 `ai_status`：`ok`、`unavailable`、`invalid_output`。`unavailable` 與 `invalid_output` 時，端點仍回 200 並提供退路內容（例如不含建議的表單、統計表），不回錯誤。
+
+### 5.4 設定與量表
+
+| Method | Path | 說明 |
+| --- | --- | --- |
+| GET | `/settings` | 取得設定 |
+| PUT | `/settings` | 更新設定（部分欄位） |
+| POST | `/settings/onboarding/complete` | 完成啟用（略過時帶 `skipped=true`） |
+| GET | `/rubrics` | 列出所有量表版本；`?active=true` 取目前版本 |
+| POST | `/rubrics/interview` | AI-06：輸入三題回答，回草稿 |
+| POST | `/rubrics` | 確認草稿為新版本 |
+
+`POST /rubrics/interview` 輸入：
+
+```json
+{ "q1": "交付完成且品質達標", "q2": "超出範圍或品質明顯突出", "q3": "否，同一套標準" }
+```
+
+輸出：`{ "ai_status": "ok", "draft": ["未達成：…", "部分達成：…", "符合預設：…", "優於預設：…", "遠超預設：…"] }`。AI 不可用時回 503 `AI_UNAVAILABLE`，前端保留目前版本。
+
+`POST /rubrics` 輸入：`{ "levels": [5 句], "interview": {…} }`；輸出新版本 `{ "id", "version" }`。`levels` 必須剛好 5 句且皆非空，否則 `VALIDATION_ERROR`。
+
+### 5.5 專案
+
+| Method | Path | 說明 |
+| --- | --- | --- |
+| GET | `/projects` | 列表；`?include_archived=false` |
+| POST | `/projects` | 建立 |
+| GET | `/projects/{id}` | 取得，含任務數、基準保存日 |
+| PATCH | `/projects/{id}` | 編輯名稱、範圍、週報對象；逐欄寫 `project` 事件 |
+| POST | `/projects/{id}/archive` | 封存 |
+| GET | `/projects/{id}/gantt` | 甘特資料 |
+| GET | `/projects/{id}/history` | 該專案歷程（同 `/events`，預設帶 `project_id`） |
+
+`PATCH /projects/{id}` 輸入：`{ "name": "…", "scope": "private", "audience": "client" }`；輸出：專案與 `changes`（寫入的事件列表）。無變更回 `changes=[]`，不寫事件。
+
+`GET /projects/{id}/gantt` 輸出：
+
+```json
+{
+  "range": { "from": "2026-11-09", "to": "2026-12-11" },
+  "today": "2026-11-11",
+  "summary": { "done": 1, "total": 6, "delayed": 2, "open_candidates": 3 },
+  "rows": [{
+    "task_id": 3, "title": "API 介面定義", "owner": "小薇", "status": "doing",
+    "start": "2026-11-09", "orig_due": "2026-11-12", "latest_due": "2026-11-15",
+    "delta_days": 3, "done_date": null, "blocked": false, "version": 4
+  }]
+}
+```
+
+### 5.6 匯入
+
+| Method | Path | 說明 |
+| --- | --- | --- |
+| POST | `/projects/import/preview` | 解析、診斷，不寫入 |
+| POST | `/projects/import/commit` | 保存基準 |
+
+`preview` 輸入：`{ "text": "任務,負責人,開始,結束\n…", "target": "new" | <project_id>, "new_name": "…" }`。
+
+`preview` 輸出：
+
+```json
+{
+  "ai_status": "ok",
+  "column_map": { "title": 0, "owner": 1, "start": 2, "end": 3, "mapped_by": "rule" },
+  "rows": [{
+    "index": 0, "title": "需求確認", "owner": "我", "start": "2026-11-16", "end": "2026-11-18",
+    "issues": [{ "level": "warn", "code": "OWNER_MISSING", "message": "缺負責人，匯入時預設為「我」" }],
+    "blocking": false
+  }],
+  "summary": { "importable": 5, "blocking": 1 }
+}
+```
+
+`mapped_by` 為 `rule` 或 `ai`；`ai` 時前端須顯示對應預覽由你確認。
+
+`commit` 輸入：`{ "target": …, "new_name": "…", "rows": [{ "index": 0, "title": "…", "owner": "…", "start": "…", "end": "…", "skip": false }] }`。伺服器**重新驗證**每列，有 `blocking` 且未略過者拒絕（`VALIDATION_ERROR`，列出列號）。輸出：`{ "project_id", "created": n, "skipped": m, "event_id" }`。
+
+### 5.7 任務
+
+| Method | Path | 說明 |
+| --- | --- | --- |
+| GET | `/tasks` | 篩選：`project_id`、`owner`、`status`、`scope`、`due_before`；`project_id=none` 為單點任務 |
+| POST | `/tasks` | 建立 |
+| GET | `/tasks/{id}` | 詳情，含最近歷程 |
+| PATCH | `/tasks/{id}/owner` | 改負責人 |
+| POST | `/tasks/{id}/adjust-due` | 調整最新預計日 |
+| POST | `/tasks/{id}/block` | 標為卡住／取消 |
+| POST | `/tasks/{id}/complete` | 標為完成並回傳是否需要完成回報 |
+| POST | `/tasks/suggest-stars` | AI-02 提議預設星數 |
+
+`POST /tasks` 輸入：
+
+```json
+{
+  "title": "確認驗收條件", "owner": "我", "due": "2026-11-18", "scope": "work",
+  "project_id": null, "done_when": "客戶回覆確認", "remind": "morning", "goal_id": null,
+  "expected_stars": 3, "suggested_stars": 3
+}
+```
+
+`suggested_stars` 為先前 `suggest-stars` 回傳的建議值（沒用 AI 則省略）。伺服器依 FR-TSK-03 判定 `star_source`。輸出：任務；寫 `task` 事件。
+
+`POST /tasks/suggest-stars` 輸入：`{ "title", "done_when", "project_id" }`；輸出：`{ "ai_status": "ok", "stars": 3, "rubric_version": 2 }`；AI 不可用時 `{ "ai_status": "unavailable", "stars": null }`。
+
+`POST /tasks/{id}/adjust-due` 輸入：
+
+```json
+{
+  "new_due": "2026-11-20",
+  "expected_version": 4,
+  "reason": "scope_change_external",
+  "note": "客戶改需求，等新版畫面",
+  "mark": "none",
+  "defer_mark": false
+}
+```
+
+輸出：
+
+```json
+{
+  "task": { "id": 3, "latest_due": "2026-11-20", "orig_due": "2026-11-12", "version": 5 },
+  "event": { "id": 88, "kind": "due", "from_value": "2026-11-15", "to_value": "2026-11-20",
+             "delta_days": 5, "mark": "none", "mine": true },
+  "warnings": [],
+  "needs_mark": false
+}
+```
+
+錯誤：`TASK_DONE`、`NO_CHANGE`、`DATE_OUT_OF_RANGE`、`MARK_REQUIRED`、`STALE_VERSION`、`VALIDATION_ERROR`（原因不在該方向的選項內，例如提前時選了延後原因）。`warnings` 可含 `BEFORE_START`。`needs_mark` 為 `true` 表示我的任務且選了稍後註記，註記留空。
+
+`POST /tasks/{id}/complete` 輸入：`{ "expected_version": 4, "done_date": "2026-11-12" }`（`done_date` 預設為今天，不可晚於今天）。輸出：`{ "task", "event", "feedback_required": true }`。
+
+### 5.8 註記與歷程
+
+| Method | Path | 說明 |
+| --- | --- | --- |
+| POST | `/events/{id}/annotations` | 對日期事件補註記或改註記 |
+| GET | `/events` | 歷程查詢 |
+| GET | `/stats/time-management` | 時間管理統計 |
+| GET | `/meta/reasons` | 原因選項（含 `external` 標記、所屬方向） |
+
+`POST /events/{id}/annotations` 輸入：`{ "mark": "worse", "reason": "underestimated", "note": "…" }`。`mark` 必填且為三值之一。輸出：新增的 `annotation` 事件，與更新後的有效註記。錯誤：`NOT_FOUND`、`ANNOTATION_NOT_ALLOWED`、`VALIDATION_ERROR`。
+
+`GET /events` 參數：`project_id`（或 `none`）、`kind`、`task_id`、`batch_id`、`from`、`to`、`limit`（預設 100，最大 500）、`offset`。輸出：
+
+```json
+{
+  "total": 4,
+  "items": [{
+    "id": 88, "ts": "2026-11-11T10:48:00+08:00", "project_id": 1, "project_name": "會員系統 2.0 改版",
+    "task_id": 3, "task_title": "API 介面定義", "kind": "due", "field": "latest_due",
+    "from_value": "2026-11-15", "to_value": "2026-11-20", "delta_days": 5,
+    "effective_mark": "none", "mine": true, "reason": "scope_change_external", "note": "…",
+    "origin": "candidate", "batch_id": null,
+    "source": { "label": "候選 #12", "quote": "畫面規格 v1 確定延到 11/18", "purged": false }
+  }]
+}
+```
+
+`source.purged=true` 時 `quote` 為 `null`，前端顯示「原文已依設定刪除」。
+
+`GET /stats/time-management` 參數：`from`、`to`（選填）。輸出：
+
+```json
+{
+  "better": { "count": 1, "days": 1 },
+  "worse":  { "count": 2, "days": 3 },
+  "none": 1,
+  "unmarked": 0,
+  "worse_by_energy": { "high": 0, "mid": 1, "low": 0, "not_done": 1 },
+  "min_sample": 5,
+  "judgement": null
+}
+```
+
+### 5.9 整批順延
+
+| Method | Path | 說明 |
+| --- | --- | --- |
+| POST | `/projects/{id}/bulk-shift/preview` | 預覽，不寫入 |
+| POST | `/projects/{id}/bulk-shift/commit` | 單一交易寫入 |
+
+輸入（兩端點相同，`commit` 另需註記）：
+
+```json
+{
+  "items": [{ "task_id": 3, "expected_version": 4 }, { "task_id": 4, "expected_version": 2 }],
+  "days": 3,
+  "reason": "scope_change_external",
+  "note": "客戶延後驗收會議",
+  "mark": "none",
+  "defer_mark": false
+}
+```
+
+`preview` 輸出：每項 `{ task_id, title, owner, from, to, mine, warnings[] }`，加上 `mine_count`、`mark_required`（`mine_count>0` 為真）。
+
+`commit` 輸出：`{ "batch_id": 7, "updated": 2, "mine_marked": 1, "events": [event ids] }`。錯誤：`INCLUDES_DONE_TASK`、`EMPTY_SELECTION`、`STALE_VERSION`（`details` 列出過期任務，整批不寫入）、`MARK_REQUIRED`、`VALIDATION_ERROR`（`days=0` 或任務不屬於該專案）。
+
+### 5.10 基準更正
+
+| Method | Path | 說明 |
+| --- | --- | --- |
+| POST | `/tasks/{id}/baseline-correction/preview` | 第一步：驗證並回影響說明與憑證 |
+| POST | `/tasks/{id}/baseline-correction/commit` | 第二步：憑證加聲明，才寫入 |
+
+`preview` 輸入：`{ "new_orig_due": "2026-11-14", "type": "correction", "reason": "plan_date_wrong", "expected_version": 4 }`。
+
+`preview` 輸出：
+
+```json
+{
+  "confirmation_token": "c0f3…", "expires_at": "2026-11-11T11:00:00+08:00",
+  "impact": {
+    "orig_due": { "from": "2026-11-12", "to": "2026-11-14" },
+    "gap_days": { "from": 3, "to": 1 },
+    "project_delayed_count": { "from": 2, "to": 1 },
+    "past_due_events_kept": 2,
+    "old_value_kept_in_history": true
+  }
+}
+```
+
+`commit` 輸入：`{ "confirmation_token": "c0f3…", "ack": true }`。輸出：任務與 `baseline` 事件。錯誤：`ACK_REQUIRED`、`CONFIRMATION_INVALID`、`TASK_DONE`、`NO_CHANGE`。
+
+### 5.11 收件與候選
+
+| Method | Path | 說明 |
+| --- | --- | --- |
+| POST | `/ingest` | 貼上文字；小量同步，大量建背景工作 |
+| POST | `/webhooks/line` | LINE webhook（P1b） |
+| GET | `/ingest/jobs/{id}` | 查工作狀態 |
+| GET | `/candidates` | `?state=open` |
+| POST | `/candidates/{id}/confirm` | 確認（`delay` 可帶 `new_due`） |
+| POST | `/candidates/{id}/clarify` | 待釐清：採用建議 |
+| POST | `/candidates/{id}/ignore` | 忽略 |
+| POST | `/candidates/{id}/create-task` | 待配對：建立新任務 |
+
+`POST /ingest` 輸入：`{ "text": "[10:12] 阿德：畫面規格 v1 確定延到 11/18", "project_id": 1 }`。
+
+輸出（同步完成）：
+
+```json
+{ "mode": "sync", "ai_status": "ok",
+  "result": { "created": 3, "skipped": 1, "duplicates": 0 }, "candidates": [ … ] }
+```
+
+輸出（背景）：`{ "mode": "async", "job_id": 15, "status": "queued" }`。
+
+`GET /ingest/jobs/{id}` 輸出：`{ "status": "running|succeeded|failed", "attempts": 1, "result": {…}, "error": null }`。`failed` 時 `error` 為可顯示訊息，並說明可手動建立任務。
+
+候選物件：
+
+```json
+{
+  "id": 12, "kind": "delay", "certainty": "sure", "state": "open",
+  "task": { "id": 2, "title": "畫面規格 v1", "latest_due": "2026-11-13", "orig_due": "2026-11-13" },
+  "proposed": { "new_due": "2026-11-18" },
+  "quote": "畫面規格 v1 確定延到 11/18", "speaker": "阿德", "spoken_at": "10:12",
+  "note": null, "suggest": null
+}
+```
+
+`POST /candidates/{id}/confirm` 輸入（`delay`）：`{ "new_due": "2026-11-18", "expected_version": 3 }`；輸出：`{ "candidate", "task", "event", "needs_mark": true }`。`needs_mark=true` 表示負責人是我，前端接著呼叫 `POST /events/{event_id}/annotations` 或選擇稍後。錯誤：`CANDIDATE_NOT_OPEN`、`TASK_DONE`、`STALE_VERSION`、`DATE_OUT_OF_RANGE`。
+
+`confirm` 對 `done` 候選：輸出含 `feedback_required=true`。對 `unclear`、`unmatched` 使用專用端點；用錯端點回 `VALIDATION_ERROR`。
+
+`POST /candidates/{id}/create-task` 輸入：`{ "title": "報表處理", "owner": "阿德", "due": "2026-12-20", "project_id": 1 }`。
+
+### 5.12 完成回報
+
+| Method | Path | 說明 |
+| --- | --- | --- |
+| PUT | `/tasks/{id}/feedback` | 儲存完成回報 |
+| GET | `/feedback/pending` | 待補完成回報的任務 |
+
+`PUT /tasks/{id}/feedback` 輸入：`{ "actual_stars": 4, "energy": "mid", "invest_vs_expected": "as_expected", "goal_id": 3 }`。任務須為 `done`，否則 `VALIDATION_ERROR`。輸出：回報（含伺服器算出的 `overdue_days`、`rubric_id`）；寫 `feedback` 事件；有 `goal_id` 時另寫 `goal` 事件。
+
+### 5.13 目標
+
+| Method | Path | 說明 |
+| --- | --- | --- |
+| GET / POST | `/goals` | 列表、建立 |
+| GET / PATCH | `/goals/{id}` | 取得、編輯 |
+| GET | `/goals/{id}/stats` | 統計與判讀 |
+| GET | `/goals/matrix` | 目標 × 精力矩陣 |
+| GET | `/goal-links/pending` | 已完成回報但未關聯目標的事件，含 AI-03 建議 |
+| POST | `/tasks/{id}/goal-link` | 你確認關聯（或 `goal_id=null` 表示不關聯） |
+| POST | `/goals/{id}/report/draft` | AI-04 草稿 |
+| PUT | `/goals/{id}/report/manual` | 儲存人工版 |
+
+`GET /goals/{id}/stats` 輸出：
+
+```json
+{
+  "progress": { "text": "3 ／ 3 件完成事件", "pct": 100 },
+  "linked": 3, "avg_actual": 4.0, "avg_expected": 3.3, "overdue_count": 1,
+  "energy": { "high": 2, "mid": 1, "low": 0 },
+  "energy_plan": "high",
+  "min_sample": 5,
+  "judgement": null,
+  "judgement_note": "樣本 3 筆，不到 5 筆，只顯示不下結論"
+}
+```
+
+`POST /goal-links` 的 AI-03 建議由 `GET /goal-links/pending` 回傳 `suggestion: { goal_id, reason }`；使用者確認或改選時，伺服器寫 `ai_feedback`（`accepted` 或 `changed`）。
+
+### 5.14 週報
+
+| Method | Path | 說明 |
+| --- | --- | --- |
+| POST | `/reports/weekly/draft` | 產生 AI 初稿 |
+| GET | `/reports/weekly/{id}` | 取得 |
+| PUT | `/reports/weekly/{id}/manual` | 儲存人工版 |
+
+`POST /reports/weekly/draft` 輸入：`{ "week_start": "2026-11-09" }`。輸出：
+
+```json
+{
+  "id": 4, "ai_status": "ok", "excluded_private": 1,
+  "draft": "本週（11/09–11/15）工作進度\n【本週完成】…",
+  "items": [{ "section": "delay", "task_id": 2, "event_id": 41 }],
+  "validated": true
+}
+```
+
+`validated=false`（R4 對不上）時 `draft=null`，回 `items` 事件清單供手動撰寫。
+
+### 5.15 資料控制與維運
+
+| Method | Path | 說明 |
+| --- | --- | --- |
+| POST | `/export` | 產生匯出檔 |
+| POST | `/sources/purge` | 刪除所有來源原文；需 `{ "confirm": true }` |
+| GET | `/meta/health` | 健康檢查（DB、AI 供應商可用性） |
+
+---
+
+## 6. 流程與邊界條件
+
+### 6.1 收件到確認（對應序列 A1）
+
+正常流程：
+
+1. 提交文字 → 規則檢查（R1 綁定；大小限制）。
+2. 摘錄寫入 `sources`（只存必要摘錄），去重。
+3. ≤ 30 行：同步呼叫 AI-01；> 30 行：寫 `jobs(queued)`，回 `job_id`。
+4. AI-01 輸出先存 `ai_runs.raw_output`。
+5. R2 規則檢查與降級，寫入 `candidates(state=open)`。
+6. 使用者在收件匣逐項確認，伺服器寫事件並更新任務。
+
+例外處理：
+
+| 情況 | 處理 |
+| --- | --- |
+| AI 逾時／輸出不合格式 | 從 AI-01 續跑，最多重試 2 次；仍失敗 → `jobs.failed`，保留摘錄，前端提示可手動建立任務 |
+| 部分行無法解析 | 該行略過並計入 `skipped`，不影響其他行 |
+| 全部行都被略過 | 回 `created=0`，提示「沒有找到可處理的訊息」 |
+| 重複訊息 | 計入 `duplicates`，不重複建候選 |
+| 候選對應任務在確認前已完成 | 確認時回 `TASK_DONE`，候選維持 `open`，前端提示改為忽略 |
+| 候選對應任務在確認前被改期 | `expected_version` 不符回 `STALE_VERSION`，前端重新載入候選與任務 |
+| 同一則訊息同時含延期與完成 | 本版只取一種：完成優先於延期；另一個留給使用者手動處理〔假設〕 |
+| 輪詢超過 60 秒 | 前端停止輪詢，顯示「仍在處理，稍後回收件匣查看」，工作持續 |
+| 服務重啟時有 `running` 工作 | 啟動時將 `running` 重設為 `queued` 續跑，嘗試次數保留 |
+
+### 6.2 預計完成日調整與註記（對應圖 5）
+
+正常流程：驗證 → 回傳確認面板內容（前值、後值、天數、相對原訂）→ 使用者選原因與註記 → 單一交易：寫 `due` 事件、更新 `latest_due`、`version+1`。
+
+| 情況 | 處理 |
+| --- | --- |
+| 任務已完成 | `TASK_DONE` |
+| 新日期等於目前 | `NO_CHANGE` |
+| 新日期早於開始日 | 允許，回警告 `BEFORE_START` |
+| 新日期早於今天 | 允許（可能補登），不警告 |
+| 負責人是我，沒給註記 | `MARK_REQUIRED`；除非 `defer_mark=true` |
+| 先調整、稍後註記 | 事件 `mark=NULL`；統計列為「未註記」；歷程顯示「補註記」 |
+| 事後補註記 | 新增 `annotation` 事件；原事件不變；統計取有效註記 |
+| 兩處同時調整同一任務 | 後到者 `STALE_VERSION`，前端重新載入 |
+| 在調整與補註記之間，負責人被改為別人 | 補註記仍可進行（依事件的 `mine`，不依現在的負責人） |
+| 提前時選了延後原因 | `VALIDATION_ERROR` |
+
+### 6.3 整批順延（對應圖 6）
+
+| 情況 | 處理 |
+| --- | --- |
+| 清單含已完成任務 | `INCLUDES_DONE_TASK`，不寫入 |
+| 其中一項 `STALE_VERSION` | 整批回滾，回報過期的任務；前端重新預覽 |
+| 其中一項寫入失敗 | 整批回滾；不留下部分批次 |
+| 天數使新日期早於今天 | 預覽警告；允許 |
+| 同批次要逐項不同註記 | 先套用統一註記或稍後註記，之後逐項補註記 |
+| 清單中沒有我的任務 | 不要求註記；`mine_marked=0` |
+| 重複提交（重新整理、連點） | 以 `Idempotency-Key` 回傳首次結果，不重複順延 |
+
+### 6.4 基準更正（對應圖 7）
+
+| 情況 | 處理 |
+| --- | --- |
+| 任務已完成 | `TASK_DONE` |
+| 新日期等於目前原訂日 | `NO_CHANGE` |
+| 缺原因 | `VALIDATION_ERROR` |
+| commit 未帶聲明 | `ACK_REQUIRED` |
+| 憑證過期、已使用、或任務在 preview 後變動 | `CONFIRMATION_INVALID`，需重新 preview |
+| 更正後 `orig_due` 晚於 `latest_due` | 允許，差距為負（顯示「早於基準」）；甘特圖仍顯示基準框 |
+| 更正後對過去註記的影響 | 無；過去事件與註記不重算 |
+| 想再改回舊值 | 視為另一次基準更正，須再走兩段式，並再寫一筆事件 |
+
+### 6.5 完成與完成回報
+
+| 情況 | 處理 |
+| --- | --- |
+| 完成日晚於今天 | `VALIDATION_ERROR` |
+| 完成日早於開始日 | 允許，逾期天數為 0 |
+| 沒選星數或精力 | 不可儲存；可「稍後補」 |
+| 稍後補 | 任務維持 `done`，進入待補清單；統計不計入該任務的完成回報 |
+| 量表在填寫期間換版本 | 使用開啟面板時的版本；寫入該版本 id |
+| 對非完成任務送回報 | `VALIDATION_ERROR` |
+
+### 6.6 AI 失敗時的退路
+
+| 節點 | AI 失敗時 | 不可用也不影響 |
+| --- | --- | --- |
+| AI-01 候選抽取 | 工作標失敗，提示手動建立任務 | 手動建立與調整所有任務 |
+| AI-02 星數提議 | 不提議，使用者自選 | 建立任務 |
+| AI-03 目標關聯 | 不提議，使用者手選或不關聯 | 完成回報 |
+| AI-04 目標回報草稿 | 顯示統計表 | 目標統計與矩陣 |
+| AI-05 週報初稿 | 顯示事件清單，使用者自己寫 | 歷程與所有統計 |
+| AI-06 量表訪談 | 沿用目前量表（回 503，前端保留） | 完成回報（以舊版量表） |
+| AI-07 欄位對應 | 使用者手動指定欄位對應 | 匯入 |
+
+### 6.7 資料保存與清除
+
+- 每日排程（預設凌晨 03:00）：將 `expires_at` 已過的 `sources.excerpt` 設為 NULL，寫 `purged_at`。`events`、`candidates` 不動。
+- 「刪除所有來源原文」同樣只清除 `excerpt`，事件的原句顯示改為已刪除。
+- 匯出檔包含全部表；`sources.excerpt` 已清除者匯出為 `null`。
+
+### 6.8 並行與一致性
+
+- 所有寫入在單一交易內完成「事件＋任務狀態」兩件事，不可只寫其中一邊。
+- SQLite 使用 WAL；寫入遇 `SQLITE_BUSY` 重試最多 3 次（間隔 50 ms）；單一寫入連線序列化（見 8.2）。
+- 前端以 `version` 偵測過期；收到 `STALE_VERSION` 一律重新載入再讓使用者重做，不自動重送。
+
+---
+
+## 7. 驗收標準
+
+格式為 Given／When／Then。「事件」皆指 `events` 資料列。
+
+### 7.1 預計完成日與註記
+
+- AC-01 Given 匯入專案的任務 A（負責人阿德，未完成）；When 呼叫 `adjust-due` 新日期晚 3 天且不帶註記；Then 回 200，`latest_due` 更新、`orig_due` 不變，事件 `mine=0`、`mark=NULL`，不回 `MARK_REQUIRED`。
+- AC-02 Given 任務 B（負責人我）；When 調整日期且沒有 `mark` 也沒有 `defer_mark`；Then 回 422 `MARK_REQUIRED`，任務與事件都沒變。
+- AC-03 Given 同上；When 帶 `mark=none`；Then 事件 `mark='none'`，`delta_days` 等於新舊日期差，`orig_due` 不變。
+- AC-04 Given 同上；When 帶 `defer_mark=true`；Then 事件 `mark=NULL`，回 `needs_mark=true`，時間管理統計的「未註記」加 1。
+- AC-05 Given 單點任務（無專案）；When 調整日期；Then 與專案任務一樣成功，事件的 `project_id` 為 NULL，歷程以「單點任務」篩選找得到。
+- AC-06 Given 已完成任務；When 調整日期；Then 回 409 `TASK_DONE`。
+- AC-07 Given 新日期等於目前值；Then 422 `NO_CHANGE`。
+- AC-08 Given 一個 `mark=NULL` 的日期事件；When `POST /events/{id}/annotations` `mark=worse`；Then 新增 `annotation` 事件，原事件的列內容完全未變，統計「變差」加 1、「未註記」減 1。
+- AC-09 Given 已有註記 `worse`；When 再補註記 `none`；Then 有效註記為 `none`，歷程仍保留兩筆註記事件。
+- AC-10 Given `mine=0` 的日期事件；When 補註記；Then 422 `ANNOTATION_NOT_ALLOWED`。
+- AC-11 Given 事件資料列；When 直接對 `events` 執行 UPDATE 或 DELETE；Then 資料庫拒絕（觸發器 ABORT）。
+- AC-12a Given 確認一筆 `delay` 候選；Then 回應與介面的 `reason`、`mark` 皆為空，AI 輸出中即使含原因推測也不被採用或顯示。
+- AC-12 Given 負責人是我、原因為 `wait_external`；When 取得原因選項與調整面板資料；Then `external=true`，介面顯示「建議不計入」；伺服器**不**因此自動設定註記。
+- AC-13 Given 時間管理統計；When 事件有效註記分別為 `better`、`worse`、`none`、NULL 各 1 筆且皆 `mine=1`；Then 統計為變好 1、變差 1、不計入 1、未註記 1；`mine=0` 的事件不計入任何一項。
+
+### 7.2 整批順延
+
+- AC-14 Given 專案內 5 項未完成任務，勾選其中 4 項；When commit 延後 3 天；Then 4 項 `latest_due` 各 +3、`orig_due` 不變，產生 4 筆 `due` 事件且 `batch_id` 相同，另 1 項不變。
+- AC-15 Given 勾選的任務中有 2 項是我的；When commit 帶 `mark=none`；Then 這 2 項的事件 `mark='none'`，其餘事件 `mine=0`、無註記。
+- AC-16 Given 勾選的任務含 1 項已完成；Then 422 `INCLUDES_DONE_TASK`，沒有任何任務被改。
+- AC-17 Given 勾選中有 1 項的 `expected_version` 過期；Then 409 `STALE_VERSION`，**4 項全部**未變、無批次記錄。
+- AC-18 Given 同一 `Idempotency-Key` 連送兩次；Then 第二次回傳首次結果，批次與事件只有一份。
+- AC-19 Given 預覽；Then 不寫入任何資料；新日期早於今天的項目有 warnings。
+
+### 7.3 基準更正
+
+- AC-20 Given 任務 `orig_due=11/12`；When preview 新原訂日 11/14；Then 回確認憑證與影響說明（差距與已延期數的前後值、過去日期事件數），資料庫未變。
+- AC-21 Given 有效憑證；When commit 不帶 `ack=true`；Then 422 `ACK_REQUIRED`，`orig_due` 不變。
+- AC-22 Given 有效憑證與 `ack=true`；When commit；Then `orig_due=11/14`，新增 `baseline` 事件含前值 11/12、後值 11/14、類型與原因；該任務過去的 `due` 事件與註記完全未變。
+- AC-23 Given 憑證已使用或超過 10 分鐘，或任務在 preview 後被改；Then 409 `CONFIRMATION_INVALID`。
+- AC-24 Given 已完成任務；Then preview 與 commit 都回 409 `TASK_DONE`。
+- AC-25 Given 基準更正後；Then 甘特圖基準框、專案「已延期」數、週報的延期段落都以新原訂日計算。
+
+### 7.4 專案與歷程
+
+- AC-26 Given 專案；When 同時改名稱與範圍；Then 產生 2 筆 `project` 事件，各記前值與後值；When 未改任何欄位；Then 不產生事件。
+- AC-27 Given 多個專案與多種事件；When `GET /events` 帶 `project_id`、`kind`、`task_id` 組合；Then 結果只含符合者，`total` 正確；`project_id=none` 只回單點任務事件。
+- AC-28 Given 事件來自某則訊息；When 來源原文已過保存期限被清除；Then 事件仍在，`source.purged=true`、`quote=null`。
+- AC-29 Given 任務被改名或改負責人；Then 舊事件的 `task_title`、`mine` 不變。
+
+### 7.5 匯入
+
+- AC-30 Given 含 7 列的表格，其中 1 列缺結束日期、1 列結束早於開始、1 列重複名稱、1 列缺負責人；When preview；Then 兩個錯誤列標 `blocking`，重複與缺負責人為警告，`importable` 數正確。
+- AC-31 Given 有未略過的錯誤列；When commit；Then 422，不匯入任何列。
+- AC-32 Given 全部合法；When commit；Then 建立對應任務，`orig_due=latest_due=結束日期`、`star_source='import_default'`，並有 1 筆 `baseline` 事件；交易失敗時一列都不留。
+- AC-33 Given 表頭非標準名稱；Then 規則無法對應時才呼叫 AI-07，回 `mapped_by='ai'`；AI 不可用時回 `mapped_by=null`，使用者可手動指定。
+
+### 7.6 收件與候選
+
+- AC-34 Given 候選為 `open`；When 查詢甘特圖、統計、週報；Then 這些結果都不含該候選的影響。
+- AC-35 Given 訊息為「下週測試如果環境沒好，會不會卡住？」；Then 不產生 `stuck`，而產生 `unclear`（待釐清）；確認前任務 `blocked` 不變。
+- AC-36 Given 訊息含「可能」的延期；Then 候選為 `unclear`，不是 `delay`。
+- AC-37 Given 訊息認不出對應任務；Then 候選為 `unmatched`，系統不自行猜測任務。
+- AC-38 Given 貼上同一段文字兩次；Then 第二次 `duplicates` 計數，不新增候選。
+- AC-39 Given 確認 `delay` 候選，任務負責人是我；Then 回 `needs_mark=true`；負責人不是我則 `false`。
+- AC-40 Given AI-01 回傳不合格式；Then 重試至多 2 次，仍失敗工作為 `failed`，摘錄保留，沒有任何候選或事件被寫入。
+- AC-41 Given 超過 30 行；Then 回 `mode=async` 與 `job_id`，工作狀態可查詢。
+- AC-42 Given 未綁定的 LINE 群組訊息；Then 丟棄，不寫 `sources`。
+
+### 7.7 完成回報與目標
+
+- AC-43 Given 完成任務；When 儲存回報缺星數或缺精力；Then 422。
+- AC-44 Given 完成日晚於原訂日 2 天；When 儲存回報；Then `overdue_days=2`；前端送來的 `overdue_days` 被忽略。
+- AC-45 Given 回報儲存；Then 記錄 `rubric_id` 為當時版本；量表之後換版不改既有回報。
+- AC-46 Given 目標關聯事件 3 筆；Then 統計回傳分布，`judgement=null` 與樣本不足說明；Given 5 筆以上；Then 回判讀，且判讀為程式規則結果。
+- AC-47 Given AI-03 建議目標 A，使用者改選 B；Then 關聯為 B，`ai_feedback.outcome='changed'`。
+
+### 7.8 週報與 AI
+
+- AC-48 Given 含私人範圍任務；When 產生週報；Then 私人範圍任務不出現在送給 AI 的輸入與初稿中，`excluded_private` 為其數量。
+- AC-49 Given 初稿中有一項延期在歷程中找不到事件；Then `validated=false`，不顯示初稿，改回事件清單。
+- AC-50 Given AI 供應商不可用；Then 週報、目標回報、星數提議、關聯建議端點皆回 200 並附退路內容；量表訪談回 503；所有非 AI 功能照常。
+- AC-51 Given 週報人工版已修改；When 重新產生 AI 初稿；Then 人工版內容不被覆蓋。
+
+### 7.9 資料控制與非功能
+
+- AC-52 Given 保存期限 30 天；When 每日排程執行；Then 超過期限的 `excerpt` 為 NULL，事件與候選仍在。
+- AC-53 Given 「刪除所有來源原文」；When 未帶 `confirm=true`；Then 拒絕；帶了則所有 `excerpt` 為 NULL。
+- AC-54 Given 匯出；Then 檔案為合法 JSON，含所有表，且表的筆數與資料庫一致。
+- AC-55 Given 500 列匯入；Then preview 在 2 秒內完成（不含 AI-07）〔假設〕。
+- AC-56 Given 1,000 個任務、10,000 筆事件；Then `GET /events`（含篩選）在 300 ms 內回應〔假設〕。
+- AC-57 Given 任一寫入端點中途丟出例外；Then 事件與任務狀態都未變（沒有只寫一半）。
+
+### 7.10 完成定義
+
+P1 完成 = AC-01 至 AC-42、AC-48 至 AC-53、AC-55 至 AC-57 全數通過，並以真實專案資料試用 2 週，量測第 1.3 節的衡量值，作為 G2 校正依據。P2 另需 AC-43 至 AC-45；P3 另需 AC-46、AC-47。
+
+---
+
+## 8. 技術棧／限制
+
+### 8.1 技術棧
+
+| 層 | 選擇 | 理由 |
+| --- | --- | --- |
+| 後端語言與框架 | Python 3.12、FastAPI、Pydantic v2 | 型別驗證與 OpenAPI 文件自動產生，錯誤格式容易統一 |
+| 資料存取 | SQLAlchemy 2.x（Core 為主）、Alembic | 交易與遷移明確；SQLite 觸發器以遷移腳本管理 |
+| 資料庫 | SQLite（WAL） | 單一使用者、單檔、可備份、可隨資料匯出 |
+| 背景工作 | 行程內 worker（asyncio）＋ `jobs` 資料表 | 不引入 Redis；重啟後可由資料表恢復 |
+| 排程 | APScheduler | 每日合併確認推播、原文清除 |
+| AI 介面 | `AIClient` 抽象類別；供應商以設定檔指定 | 可替換、可在測試中以假實作取代 |
+| 前端 | React 18、TypeScript、Vite | 元件化；以同一份程式碼提供手機與網站兩種版面 |
+| 前端狀態與資料 | TanStack Query | 快取與重新載入，配合 `STALE_VERSION` 流程 |
+| 前端路由與樣式 | React Router、CSS 變數（亮暗色） | 沿用互動原型的設計語彙 |
+| 甘特圖 | 自繪 SVG | 需求簡單（基準框、延後區間、今天線），不引入大型套件 |
+| 測試 | pytest（後端）、Vitest（前端）、Playwright（端對端） | 驗收標準直接對應端對端與 API 測試 |
+
+### 8.2 架構與限制
+
+- 單機部署：一個後端行程＋靜態前端；SQLite 寫入以單一連線序列化，不支援多行程同時寫入。
+- 平台分工（沿用原型決策）：手機重在收件匣、今日、確認、完成回報；網站重在基準、甘特圖、匯入、整批順延、週報、目標管理、歷程。兩者用同一套 API。
+- 不建帳號：負責人是名字字串；「我」是固定的保留字。多人協作不在這一版。
+- 時區固定 Asia/Taipei；不處理跨時區。
+- 日期只到「日」，不含時間；工作日與假日曆不納入（延後 3 天就是日曆上 3 天）。
+- 資料量假設：單一使用者，任務 ≤ 數千筆、事件 ≤ 數萬筆。
+- AI：不得要求 AI 輸出自由文字後直接寫入資料；所有 AI 輸出皆須通過結構驗證與規則檢查。
+- 隱私：送進 AI 的內容為必要摘錄與任務清單；私人範圍不進週報；供應商資料處理條件須在上線前確認〔待決〕。
+- 安全：API 預設只綁 `127.0.0.1`；對外開放前須加 TLS 與 token 輪替。
+- 備份：每日以 SQLite backup API 複製資料庫檔，保留 14 份〔假設〕。
+- 可觀測性：記錄每次 AI 呼叫、重試與失敗（`ai_runs`）；以 `ai_feedback` 與事件推導評估指標，不另建分析資料庫。
+
+### 8.3 建議目錄結構
+
+```
+app/
+  backend/
+    app/
+      main.py
+      api/            # routers：settings, projects, tasks, events, candidates, ...
+      domain/         # 規則：due.py, marks.py, bulk.py, baseline.py, ingest_rules.py, stats.py
+      ai/             # AIClient, nodes/ai01..ai07.py, validators.py
+      db/             # models.py, migrations/（含 events 觸發器）
+      jobs/           # worker.py, scheduler.py
+    tests/            # 對應第 7 章 AC 編號
+  frontend/
+    src/
+      features/       # inbox, today, tasks, projects, gantt, history, goals, reports, settings
+      components/
+      api/            # 型別由 OpenAPI 產生
+```
+
+---
+
+## 9. 待決事項與假設
+
+### 9.1 待決（需要你裁定）
+
+| 編號 | 事項 | 我的建議 |
+| --- | --- | --- |
+| D-01 | AI-02 星數提議是否進 P1 | P1 先不上，或預設關閉；前 10 件由你自設星數，避免錨定 |
+| D-03 | 送進 AI 前是否遮蔽姓名 | 看你更重視隱私還是 AI-01 判斷負責人的準確度 |
+| D-04 | 週報是否由系統代發 | P1 不代發，只產生文字 |
+| D-05 | 完成回報儲存後是否允許修改 | 允許，以新增更正事件實作，統計取最新 |
+| D-06 | LINE 群組綁定是否放 P1（P1b） | 貼上入口為 P1 必要；LINE 視開發量決定 |
+| D-07 | 同一則訊息含延期與完成時的處理 | 完成優先，延期留待手動 |
+
+### 9.2 已裁定（本規格依此撰寫）
+
+1. 精力以事件完成回報為主；事前預設星數，完成時回報實際星數；自評精力高／中／低為必填。
+2. P1 同時含專案閉環與單點、每日兩條軌道。
+3. 會議錄音線先排除，以逐字稿入口啟動；負責人用名字，不建帳號；多人協作不在這一版。
+4. 星數量表由啟用時的 AI 訪談個人化，版本化，AI 只提議預設值。
+5. 預計完成日調整需詢問時間管理註記；專案須記錄修改歷程。
+6. 整批順延：我的任務套用統一註記，逐項不同在歷程改註記。
+7. 基準更正：**直接覆蓋原訂日，舊值只留在歷程**，不做基準版本；單人版不限制權限，僅靠兩段式確認。
+8. 延期原因與時間管理註記**一律由使用者判斷，不設 AI 節點**（原 AI-08 取消，不列入後續階段）。原因連動「建議不計入」提示再連到註記，任何 AI 預填都會間接影響對自己的評價。（原 D-02，已結案）
+
+### 9.3 本文件中的〔假設〕清單
+
+候選確認率 ≥ 70%、註記完成率 ≥ 80%、完成回報填寫率 ≥ 70%；同步與背景工作的門檻（30 行）；輪詢間隔與上限（3 秒、60 秒）；AI 逾時 20 秒；基準更正憑證 10 分鐘；少於 5 筆不下判讀；日期範圍（今天前 365 天至後 730 天）；效能目標（AC-55、AC-56）；備份保留 14 份。以上全部待 G2 以實測校正。
+
+### 9.4 可追溯對照
+
+| 本文件 | 對應 |
+| --- | --- |
+| FR-INB、FR-DUE、FR-MRK | 序列圖 3、5；AI 增強 A1 |
+| FR-BLK | 序列圖 6 |
+| FR-BAS | 序列圖 7 |
+| FR-IMP | 序列圖 2；AI 增強 A3 |
+| FR-SET、FR-RUB | 序列圖 1；AI 增強 A3 |
+| FR-FBK、FR-GOL、FR-RPT | 序列圖 4；AI 增強 A2 |
+| FR-AI、第 6.6 節 | AI 節點盤點 v0.1（AI-01 至 AI-07） |
