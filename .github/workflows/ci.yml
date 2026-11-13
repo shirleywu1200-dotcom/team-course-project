@@ -46,6 +46,10 @@ jobs:
 
   secrets:
     runs-on: ubuntu-latest
+    # PR 模式下 gitleaks-action 要讀 PR 的提交清單；只給讀取權限
+    permissions:
+      contents: read
+      pull-requests: read
     steps:
       - uses: actions/checkout@v4
         with:
