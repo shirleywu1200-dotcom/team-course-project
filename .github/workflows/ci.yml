@@ -72,3 +72,17 @@ jobs:
           if [ -n "$changed" ]; then
             echo "既有遷移檔被修改或刪除，請改用新的遷移：" && echo "$changed" && exit 1
           fi
+
+  # todo 6.2：受保護路徑只能由負責人修改（規則在 .github/path-owners.txt；docs/platform-settings.md 選項 C）
+  path-owners:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: 受保護路徑由負責人修改
+        env:
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          BASE_REF: ${{ github.base_ref }}
+        run: git diff --name-only "origin/${BASE_REF}...HEAD" | python3 scripts/check_path_owners.py "$PR_AUTHOR"

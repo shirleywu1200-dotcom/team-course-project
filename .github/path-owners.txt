@@ -1,0 +1,25 @@
+# 受保護路徑與負責人（todo 6.2；docs/platform-settings.md 選項 C）
+# 格式：<路徑前綴> <GitHub 帳號> [<帳號> …]
+# - PR 修改了某路徑，而 PR 作者不在該路徑的負責人中，CI 的 path-owners 檢查就亮紅燈。
+# - 一個檔案符合多條規則時，取最長（最具體）的前綴。
+# - 還沒收齊帳號的路徑，負責人留空，檢查會略過並提示「尚未設定」。
+
+# DDL 與遷移只有 Dev-A 能動
+backend/app/db/migrations/      n731110NK
+
+# 凍結契約（todo 5.7）
+backend/app/domain/events.py    n731110NK
+backend/app/domain/due.py       n731110NK
+backend/app/errors.py           n731110NK
+backend/app/ai/client.py
+
+# QC 的驗收測試與夾具庫（填入 QC-1、QC-2 帳號）
+backend/tests/acceptance/
+backend/tests/fixtures/
+
+# 規格與契約變更（填入產品負責人帳號）
+docs/spec.md
+docs/todo.md
+
+# 本檔本身（填入產品負責人帳號）
+.github/path-owners.txt         n731110NK
