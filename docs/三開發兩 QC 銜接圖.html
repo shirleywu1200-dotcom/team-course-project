@@ -1,0 +1,247 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>三開發兩 QC 銜接圖</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&amp;family=IBM+Plex+Mono:wght@500&amp;display=swap">
+<style>
+:root {
+  /* 版面：上方圖例，下方一張泳道圖（時間 × 工作線），再一張驗收環 */
+  --bg:#f3f5f8; --surface:#ffffff; --surface-2:#e9eef4; --fg:#16202b; --muted:#566575; --line:#cdd6e0;
+  --amber-bg:#fbebc6; --amber-line:#b9820f; --warn:#b3261e; --warn-bg:#fbe2df;
+  --l1:#2457c5; --l2:#b3541a; --l3:#0d8a68; --l4:#7a3fb5; --l5:#c22d6a; --ok-bg:#d6efe3; --ok-line:#1f8a5f;
+  --sans:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif; --mono:"IBM Plex Mono",ui-monospace,monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg:#0e141b; --surface:#16202a; --surface-2:#202c38; --fg:#e5eaf0; --muted:#9aa8b6; --line:#2d3a48;
+  --amber-bg:#3a2f12; --amber-line:#e0b043; --warn:#ff8f85; --warn-bg:#3a1f1d;
+  --l1:#7ca3f8; --l2:#f2a561; --l3:#4fcaa4; --l4:#bb94f2; --l5:#f27eab; --ok-bg:#153329; --ok-line:#4fcaa4; color-scheme:dark; } }
+:root[data-theme="dark"] {
+  --bg:#0e141b; --surface:#16202a; --surface-2:#202c38; --fg:#e5eaf0; --muted:#9aa8b6; --line:#2d3a48;
+  --amber-bg:#3a2f12; --amber-line:#e0b043; --warn:#ff8f85; --warn-bg:#3a1f1d;
+  --l1:#7ca3f8; --l2:#f2a561; --l3:#4fcaa4; --l4:#bb94f2; --l5:#f27eab; --ok-bg:#153329; --ok-line:#4fcaa4; color-scheme:dark; }
+body { background:var(--bg); color:var(--fg); font:15px/1.65 var(--sans); padding-block:28px 48px;
+  padding-left:max(16px,env(safe-area-inset-left,0px)); padding-right:max(16px,env(safe-area-inset-right,0px)); }
+main { max-width:1120px; margin:0 auto; display:flex; flex-direction:column; gap:28px; }
+h1 { font-size:26px; line-height:1.3; margin:0 0 4px; text-wrap:balance; }
+h2 { font-size:17px; margin:0 0 6px; }
+p { margin:0; max-width:68ch; }
+.sub { color:var(--muted); }
+.legend { display:flex; flex-wrap:wrap; gap:10px 22px; font-size:13px; color:var(--muted); align-items:center; }
+.legend span { display:inline-flex; gap:8px; align-items:center; }
+.sw { width:26px; height:16px; border-radius:3px; border:1px solid var(--line); background:var(--surface-2); position:relative; display:inline-block; }
+.sw::before { content:""; position:absolute; left:0; top:0; bottom:0; width:4px; background:var(--l1); border-radius:2px; }
+.sw.ac { background:var(--amber-bg); border-color:var(--amber-line); }
+.sw.lag { background:var(--warn-bg); border:1px dashed var(--warn); }
+.sw.ok { background:var(--ok-bg); border-color:var(--ok-line); }
+.sw.gt { width:0; height:18px; border:0; border-left:2px dashed var(--muted); border-radius:0; background:none; }
+.sw.gt::before { display:none; }
+figure { margin:0; }
+.scroll { overflow-x:auto; border:1px solid var(--line); border-radius:8px; background:var(--surface); padding:12px; }
+.scroll svg { display:block; min-width:960px; width:100%; height:auto; }
+.scroll.flow svg { min-width:900px; }
+figcaption { margin-top:8px; color:var(--muted); font-size:13px; max-width:78ch; }
+svg text { font-family:var(--sans); }
+.hd { fill:var(--surface-2); }
+.th { fill:var(--fg); font-size:14px; font-weight:700; }
+.lane { fill:var(--surface); stroke:var(--line); }
+.tl { fill:var(--fg); font-size:18px; font-weight:700; font-family:var(--mono); }
+.tl2 { fill:var(--fg); font-size:15px; font-weight:700; font-family:var(--mono); }
+.tn { fill:var(--muted); font-size:12px; }
+.ex { fill:var(--surface-2); stroke:var(--line); }
+.t { fill:var(--fg); font-size:12.5px; font-weight:500; }
+.tm { fill:var(--muted); font-size:11.5px; }
+.ac { fill:var(--amber-bg); stroke:var(--amber-line); }
+.lag { fill:var(--warn-bg); stroke:var(--warn); stroke-dasharray:4 3; }
+.ta { fill:var(--fg); font-size:12px; font-weight:500; }
+.tam { fill:var(--muted); font-size:11px; }
+.s1 { fill:var(--l1); } .s2 { fill:var(--l2); } .s3 { fill:var(--l3); } .s4 { fill:var(--l4); } .s5 { fill:var(--l5); }
+.ok { fill:var(--ok-bg); stroke:var(--ok-line); }
+.rc { fill:var(--muted); font-size:11px; }
+.edge2 { stroke:var(--muted); stroke-width:1.6; stroke-dasharray:5 4; }
+.gate { stroke:var(--muted); stroke-width:1.5; stroke-dasharray:6 5; }
+.tg { fill:var(--muted); font-size:11.5px; }
+.node { fill:var(--surface-2); stroke:var(--line); }
+.edge { stroke:var(--amber-line); stroke-width:2; }
+.arrowhead { fill:var(--amber-line); }
+.te { fill:var(--fg); font-size:12px; }
+.notes { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:18px; }
+.notes div { border-top:2px solid var(--line); padding-top:10px; }
+.notes b { display:block; margin-bottom:4px; }
+.notes p { font-size:14px; color:var(--muted); }
+code { font-family:var(--mono); font-size:13px; background:var(--surface-2); padding:1px 5px; border-radius:3px; }
+</style>
+<main>
+<header>
+<h1>三開發兩 QC 銜接圖</h1>
+<p class="sub">模式 A：3 位開發與 2 位 QC 在 W1 到 W5 各做什麼，QC 何時寫測試、何時驗收，以及一個 PR 從開始到合併的路徑。依據 todo.md 第 5、6 節。</p>
+</header>
+<div class="legend" aria-label="圖例">
+<span><i class="sw"></i>開發實作（色條 = 該開發）</span>
+<span><i class="sw ac"></i>QC 寫驗收測試（色條 = 被測的開發線）</span>
+<span><i class="sw ok"></i>QC 驗收／演練</span>
+<span><i class="sw lag"></i>與開發同步或落後</span>
+<span><i class="sw gt"></i>閘門</span>
+</div>
+<figure>
+<div class="scroll" tabindex="0">
+<svg viewBox="0 0 1080 588" role="img" aria-label="3 位開發與 2 位 QC 在 W1 到 W5 的執行區塊。QC 在驗收列寫測試與驗收被測開發線；Phase 5、9、10、11、12 的驗收測試與開發同步或落後。" xmlns="http://www.w3.org/2000/svg">
+<rect class="hd" x="122" y="10" width="184" height="38" rx="4"/>
+<text class="th" x="214.0" y="34" text-anchor="middle">W1</text>
+<rect class="hd" x="310" y="10" width="184" height="38" rx="4"/>
+<text class="th" x="402.0" y="34" text-anchor="middle">W2</text>
+<rect class="hd" x="498" y="10" width="184" height="38" rx="4"/>
+<text class="th" x="590.0" y="34" text-anchor="middle">W3</text>
+<rect class="hd" x="686" y="10" width="184" height="38" rx="4"/>
+<text class="th" x="778.0" y="34" text-anchor="middle">W4</text>
+<rect class="hd" x="874" y="10" width="184" height="38" rx="4"/>
+<text class="th" x="966.0" y="34" text-anchor="middle">W5 整合</text>
+<rect class="lane" x="0" y="64" width="1060" height="76" rx="6"/>
+<rect class="s1" x="0" y="64" width="5" height="76" rx="2"/>
+<text class="tl" x="16" y="94">Dev-A</text>
+<text class="tn" x="16" y="114">核心規則</text>
+<rect class="lane" x="0" y="148" width="1060" height="76" rx="6"/>
+<rect class="s2" x="0" y="148" width="5" height="76" rx="2"/>
+<text class="tl" x="16" y="178">Dev-B</text>
+<text class="tn" x="16" y="198">資料進出與 AI</text>
+<rect class="lane" x="0" y="232" width="1060" height="76" rx="6"/>
+<rect class="s3" x="0" y="232" width="5" height="76" rx="2"/>
+<text class="tl" x="16" y="262">Dev-C</text>
+<text class="tn" x="16" y="282">前端與目標週報</text>
+<rect class="lane" x="0" y="316" width="1060" height="112" rx="6"/>
+<rect class="s4" x="0" y="316" width="5" height="112" rx="2"/>
+<text class="tl" x="16" y="346">QC-1</text>
+<text class="tn" x="16" y="366">規則與歷程</text>
+<rect class="lane" x="0" y="436" width="1060" height="112" rx="6"/>
+<rect class="s5" x="0" y="436" width="5" height="112" rx="2"/>
+<text class="tl" x="16" y="466">QC-2</text>
+<text class="tn" x="16" y="486">資料進出、AI</text>
+<text class="tn" x="16" y="501">與前端</text>
+<line class="gate" x1="308" y1="54" x2="308" y2="554"/>
+<rect class="ex" x="126" y="78" width="176" height="48" rx="4"/><rect class="s1" x="126" y="78" width="4" height="48" rx="2"/>
+<text class="t" x="140" y="98">P0 → P1 第一片</text><text class="tm" x="140" y="115">（閘門）</text>
+<rect class="ex" x="314" y="78" width="176" height="48" rx="4"/><rect class="s1" x="314" y="78" width="4" height="48" rx="2"/>
+<text class="t" x="328" y="98">P2 → P3</text><text class="tm" x="328" y="115">事件、改日期、註記</text>
+<rect class="ex" x="502" y="78" width="176" height="48" rx="4"/><rect class="s1" x="502" y="78" width="4" height="48" rx="2"/>
+<text class="t" x="516" y="98">P4 批次、基準更正</text><text class="tm" x="516" y="115">12.2 · 12.4 · 12.5</text>
+<rect class="ex" x="690" y="78" width="176" height="48" rx="4"/><rect class="s1" x="690" y="78" width="4" height="48" rx="2"/>
+<text class="t" x="704" y="98">12.x 完成</text><text class="tm" x="704" y="115">支援整合</text>
+<rect class="ex" x="878" y="78" width="176" height="48" rx="4"/><rect class="s1" x="878" y="78" width="4" height="48" rx="2"/>
+<text class="t" x="892" y="98">P13 整合</text><text class="tm" x="892" y="115">13.7 部署文件</text>
+<rect class="ex" x="126" y="162" width="176" height="48" rx="4"/><rect class="s2" x="126" y="162" width="4" height="48" rx="2"/>
+<text class="t" x="140" y="182">純函式：匯入解析</text><text class="tm" x="140" y="199">R2 規則、去重雜湊</text>
+<rect class="ex" x="314" y="162" width="176" height="48" rx="4"/><rect class="s2" x="314" y="162" width="4" height="48" rx="2"/>
+<text class="t" x="328" y="182">P5 歷程、甘特</text><text class="tm" x="328" y="199">P6 匯入</text>
+<rect class="ex" x="502" y="162" width="176" height="48" rx="4"/><rect class="s2" x="502" y="162" width="4" height="48" rx="2"/>
+<text class="t" x="516" y="192">P7 收件候選</text>
+<rect class="ex" x="690" y="162" width="176" height="48" rx="4"/><rect class="s2" x="690" y="162" width="4" height="48" rx="2"/>
+<text class="t" x="704" y="182">P8 設定、量表</text><text class="tm" x="704" y="199">12.7 · 12.8 · 12.11</text>
+<rect class="ex" x="878" y="162" width="176" height="48" rx="4"/><rect class="s2" x="878" y="162" width="4" height="48" rx="2"/>
+<text class="t" x="892" y="182">P13 整合</text><text class="tm" x="892" y="199">13.4 真實 AI 接入</text>
+<rect class="ex" x="126" y="246" width="176" height="48" rx="4"/><rect class="s3" x="126" y="246" width="4" height="48" rx="2"/>
+<text class="t" x="140" y="266">P11 前端基礎</text><text class="tm" x="140" y="283">（MSW）</text>
+<rect class="ex" x="314" y="246" width="176" height="48" rx="4"/><rect class="s3" x="314" y="246" width="4" height="48" rx="2"/>
+<text class="t" x="328" y="266">P12 其餘頁面</text><text class="tm" x="328" y="283">P9 後端開工</text>
+<rect class="ex" x="502" y="246" width="176" height="48" rx="4"/><rect class="s3" x="502" y="246" width="4" height="48" rx="2"/>
+<text class="t" x="516" y="266">P9 → P10</text><text class="tm" x="516" y="283">目標、週報</text>
+<rect class="ex" x="690" y="246" width="176" height="48" rx="4"/><rect class="s3" x="690" y="246" width="4" height="48" rx="2"/>
+<text class="t" x="704" y="276">P12 完成</text>
+<rect class="ex" x="878" y="246" width="176" height="48" rx="4"/><rect class="s3" x="878" y="246" width="4" height="48" rx="2"/>
+<text class="t" x="892" y="266">P13 整合</text><text class="tm" x="892" y="283">13.1 前後端接合</text>
+<rect class="ac" x="126" y="324" width="176" height="44" rx="4"/>
+<rect class="s1" x="126" y="324.0" width="4" height="44.0"/>
+<text class="ta" x="140" y="342">P1–P3 驗收測試</text><text class="tam" x="140" y="358">＋夾具庫</text>
+<rect class="ac" x="314" y="324" width="176" height="44" rx="4"/>
+<rect class="s1" x="314" y="324.0" width="4" height="22.0"/>
+<rect class="s2" x="314" y="346.0" width="4" height="22.0"/>
+<text class="ta" x="328" y="342">P4 · P5 驗收測試</text><text class="tam" x="328" y="358">（P5 與開發同步）</text>
+<rect class="lag" x="502" y="324" width="176" height="44" rx="4"/>
+<rect class="s3" x="502" y="324.0" width="4" height="44.0"/>
+<text class="ta" x="516" y="342">P10 驗收測試</text><text class="tam" x="516" y="358">（與開發同步）</text>
+<rect class="ok" x="126" y="376" width="176" height="44" rx="4"/>
+<rect class="s1" x="126" y="376.0" width="4" height="44.0"/>
+<text class="ta" x="140" y="394">審 P0 夾具、</text><text class="tam" x="140" y="410">錯誤格式</text>
+<rect class="ok" x="314" y="376" width="176" height="44" rx="4"/>
+<rect class="s1" x="314" y="376.0" width="4" height="44.0"/>
+<text class="ta" x="328" y="403">驗收 P1–P3</text>
+<rect class="ok" x="502" y="376" width="176" height="44" rx="4"/>
+<rect class="s1" x="502" y="376.0" width="4" height="22.0"/>
+<rect class="s2" x="502" y="398.0" width="4" height="22.0"/>
+<text class="ta" x="516" y="403">驗收 P4、P5</text>
+<rect class="ok" x="690" y="376" width="176" height="44" rx="4"/>
+<rect class="s3" x="690" y="376.0" width="4" height="44.0"/>
+<text class="ta" x="704" y="394">驗收 P10</text><text class="tam" x="704" y="410">演練</text>
+<rect class="ok" x="878" y="376" width="176" height="44" rx="4"/>
+<text class="ta" x="892" y="394">13.3 · 13.5 · 13.6</text><text class="tam" x="892" y="410">演練</text>
+<rect class="ac" x="126" y="444" width="176" height="44" rx="4"/>
+<rect class="s2" x="126" y="444.0" width="4" height="44.0"/>
+<text class="ta" x="140" y="462">標註測試集</text><text class="tam" x="140" y="478">＋P6、P7 測試</text>
+<rect class="ac" x="314" y="444" width="176" height="44" rx="4"/>
+<rect class="s2" x="314" y="444.0" width="4" height="22.0"/>
+<rect class="s3" x="314" y="466.0" width="4" height="22.0"/>
+<text class="ta" x="328" y="462">P8 · P9 驗收測試</text><text class="tam" x="328" y="478">（P9 與開發同步）</text>
+<rect class="lag" x="502" y="444" width="176" height="44" rx="4"/>
+<rect class="s3" x="502" y="444.0" width="4" height="14.666666666666666"/>
+<rect class="s1" x="502" y="458.6666666666667" width="4" height="14.666666666666666"/>
+<rect class="s2" x="502" y="473.3333333333333" width="4" height="14.666666666666666"/>
+<text class="ta" x="516" y="462">前端 Playwright 流程</text><text class="tam" x="516" y="478">（P11、12 落後補測）</text>
+<rect class="ok" x="314" y="496" width="176" height="44" rx="4"/>
+<rect class="s2" x="314" y="496.0" width="4" height="44.0"/>
+<text class="ta" x="328" y="523">驗收 P6</text>
+<rect class="ok" x="502" y="496" width="176" height="44" rx="4"/>
+<rect class="s2" x="502" y="496.0" width="4" height="44.0"/>
+<text class="ta" x="516" y="523">驗收 P7</text>
+<rect class="ok" x="690" y="496" width="176" height="44" rx="4"/>
+<rect class="s2" x="690" y="496.0" width="4" height="14.666666666666666"/>
+<rect class="s3" x="690" y="510.6666666666667" width="4" height="14.666666666666666"/>
+<rect class="s1" x="690" y="525.3333333333334" width="4" height="14.666666666666666"/>
+<text class="ta" x="704" y="514">驗收 P8、P9</text><text class="tam" x="704" y="530">前端驗收</text>
+<rect class="ok" x="878" y="496" width="176" height="44" rx="4"/>
+<text class="ta" x="892" y="514">13.1 · 13.2</text><text class="tam" x="892" y="530">13.8 驗算</text>
+<text class="rc" x="114" y="350" text-anchor="end">寫測試</text>
+<text class="rc" x="114" y="402" text-anchor="end">驗收</text>
+<text class="rc" x="114" y="470" text-anchor="end">寫測試</text>
+<text class="rc" x="114" y="522" text-anchor="end">驗收</text>
+<text class="tg" x="308" y="572" text-anchor="middle">▲ Dev-A 第一片合併（W1 末）：Dev-B 開始接資料庫</text></svg>
+</div>
+<figcaption>圖 1　執行與驗收的時間銜接。W0 開工會已凍結契約。Dev-B 在閘門前只做不碰資料庫的純函式；Dev-C 的前端基礎只依賴 OpenAPI，不受閘門影響。</figcaption>
+</figure>
+<figure>
+<div class="scroll flow" tabindex="0">
+<svg viewBox="0 0 1000 250" role="img" aria-label="一個 PR 從 QC 先寫驗收測試，到開發生成與單元測試，再到 QC 驗收與另一位開發審查，最後合併。驗收失敗回開發，規格歧義回產品負責人裁定。" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="arrowhead"/></marker></defs>
+<rect class="ac" x="10" y="70" width="140" height="64" rx="5"/>
+<text class="t" x="22" y="98">QC 先寫 AC 測試</text><text class="tm" x="22" y="118">先紅，領先一個 Phase</text>
+<rect class="ex" x="178" y="70" width="140" height="64" rx="5"/>
+<text class="t" x="190" y="98">Dev 提示 AI 生成</text><text class="tm" x="190" y="118">附 spec、契約、DDL</text>
+<rect class="ex" x="346" y="70" width="140" height="64" rx="5"/>
+<text class="t" x="358" y="98">Dev 單元測試綠</text><text class="tm" x="358" y="118">不改 QC 目錄、遷移</text>
+<rect class="ok" x="514" y="70" width="140" height="64" rx="5"/>
+<text class="t" x="526" y="98">QC 驗收測試綠</text><text class="tm" x="526" y="118">轉綠才算驗收</text>
+<rect class="ex" x="682" y="70" width="140" height="64" rx="5"/>
+<text class="t" x="694" y="98">另一位開發審查</text><text class="tm" x="694" y="118">看 diff 範圍、有無繞過</text>
+<rect class="ex" x="850" y="70" width="140" height="64" rx="5"/>
+<text class="t" x="862" y="98">合併</text><text class="tm" x="862" y="118">三條件皆成立</text>
+<line class="edge" x1="150" y1="102" x2="176" y2="102" marker-end="url(#ah)"/>
+<line class="edge" x1="318" y1="102" x2="344" y2="102" marker-end="url(#ah)"/>
+<line class="edge" x1="486" y1="102" x2="512" y2="102" marker-end="url(#ah)"/>
+<line class="edge" x1="654" y1="102" x2="680" y2="102" marker-end="url(#ah)"/>
+<line class="edge" x1="822" y1="102" x2="848" y2="102" marker-end="url(#ah)"/>
+<path class="edge2" d="M584 70 V40 H248 V68" fill="none" marker-end="url(#ah)"/>
+<text class="te" x="416.0" y="32" text-anchor="middle">AC 失敗 → 回開發修正</text>
+<rect class="ex" x="366" y="186" width="268" height="44" rx="5"/>
+<text class="t" x="500.0" y="206" text-anchor="middle">你（產品負責人）</text><text class="tm" x="500.0" y="222" text-anchor="middle">裁定規格歧義，開發與 QC 都不自行決定</text>
+<path class="edge2" d="M416 134 V186" fill="none" marker-end="url(#ah)"/>
+<path class="edge2" d="M584 134 V186" fill="none" marker-end="url(#ah)"/>
+</svg>
+</div>
+<figcaption>圖 2　一個 PR 的路徑。合併條件是開發單元測試綠、QC 驗收測試綠、另一位開發審查通過。審查配對：Dev-A 審 Dev-B，Dev-B 審 Dev-C，Dev-C 審 Dev-A；涉及 <code>adjust_due</code> 的 PR，Dev-A 與 Dev-B 互審。</figcaption>
+</figure>
+<section aria-label="圖中要注意的三件事">
+<h2>圖中要注意的三件事</h2>
+<div class="notes">
+<div><b>Dev-A 是關鍵路徑</b><p>第一片只含 DDL、觸發器、<code>write_event</code>、樂觀鎖，刻意切小。Dev-B 在這之前只做純函式，不是閒置。</p></div>
+<div><b>QC 領先並非處處成立</b><p>Phase 5、9、10 的驗收測試與開發同波次，Phase 11 與 Phase 12 的前端流程測試要到 W3 才補。獨立性還在，但先紅再實作的好處打折。</p></div>
+<div><b>最重的橫向依賴</b><p>Dev-A 的 Phase 4 與 Dev-B 的 Phase 7 都呼叫 <code>adjust_due</code>。簽名在開工會凍結，Dev-B 用替身驗證呼叫參數。</p></div>
+</div>
+</section>
+</main>
+
+</body></html>
