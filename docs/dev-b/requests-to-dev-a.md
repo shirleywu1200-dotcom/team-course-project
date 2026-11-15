@@ -80,7 +80,7 @@ Dev-B 開發時發現、需要 Dev-A 處理或知道的事項，**統一記在�
   - `src/App.tsx`：`/import` 路由
 - 12.7 SDD D-3（AI-07 回饋寫入 `ai_feedback`）的契約新增已提請產品負責人裁定（#8），核可後另記 N-09。
 
-### N-10 Dev-B 20 個端點補回應模型（審查 A4）　〔已完成，需通知 Dev-C、QC-2〕
+### N-10 Dev-B 20 個端點補回應模型（審查 A4）　〔已完成，已通知 Dev-C：#11〕
 
 - rebase 到 `dev-a/phase-0-4` 後，`test_contract_guards` 要求每個 2xx 都有 schema。模型附加在 `backend/app/api/responses.py` 的「Phase 5～8，Dev-B」各節。
 - 執行期回應內容不變（加模型前後 93 筆實際回應比對，僅鍵順序不同）；OpenAPI 新增歷程、甘特、匯入、收件候選、設定、量表、清除、匯出的回應 schema。
