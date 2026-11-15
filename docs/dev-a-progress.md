@@ -43,3 +43,29 @@
 - 前端 Vitest：18 個通過。
 - ruff：無問題。
 - 前端 tsc：無錯誤。
+
+## 待辦（2026-11-15 彙整：PR #1 審查、issue、Dev-B 分支文件）
+
+來源：PR #1 Dev-C（兼產品負責人）三則審查留言（2026-11-15）、issue #2–#5、`dev-b/phase-5-8` 的 `docs/dev-b/requests-to-dev-a.md`。
+
+### 已完成，等其他人
+
+- [x] issue #2 R-01、#3 R-02、#4 R-03：已在 PR #1 處理，PR 合併時自動關閉
+- [x] issue #5：已讀並關閉
+- [ ] path-owners：等 MoraChen、Andpeterpan 在 PR #1 按 Approve 後 Re-run
+
+### PR #1 審查回饋（依建議順序）
+
+- [ ] **A4（高優先）** 各路由補 `response_model`，重新匯出 OpenAPI 後所有 2xx 都有非空 schema；選做：CI 檢查空 schema
+- [ ] **B2** 系統種子遷移（`settings` id=1、`rubrics` version=0，文字已由產品負責人確認），冪等；AC-59。同步修正 Dev-A 測試中插入 `rubrics(id=1, version=0)`、`settings(id=1)` 的種子，並通知 QC、Dev-B
+- [ ] **B5** `rubrics` 不可修改觸發器（UPDATE、DELETE、TRUNCATE），說明做法、成本與對 QC 測試清理的影響
+- [ ] **A1** 移除 `ai_runs.node_id` 的 `AI-08`（建議用新遷移，不改 0001）
+- [ ] **A2** `POST /tasks/{id}/adjust-start`（AC-62）；建立時開始日晚於期限回 422（AC-61，回答 B1）。先把 AC-59、61、62 與新端點、警告碼 `START_AFTER_DUE` 寫進 spec
+- [ ] **C** 移除 `frontend/tsconfig.tsbuildinfo` 並加入 `.gitignore`；更新 CLAUDE.md「Git 與 PR」；修 `BulkShiftPage` 偶發失敗的測試
+- [ ] **D2** 回覆 `AdjustDuePanel` 可嵌入介面提案（`taskId`、`expectedVersion`、`onDone`、`onClose`）
+- [ ] **D3** `dev-a-handoff.md` 補 Windows venv 路徑 `.venv\Scripts\python`
+- 約束 **D1**：前端 18 個測試必須保持通過；**C**：之後的 PR 回到不超過半個 Phase
+
+### 需要通知
+
+- Dev-B：Phase 8 設計（`phase-8-sdd.md` Q1、Q3）原選「程式補預設列、不加量表觸發器」，已被產品負責人 B2、B5 裁定改為系統種子遷移與觸發器
