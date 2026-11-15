@@ -252,7 +252,7 @@
 
 ### 3.15 FR-GOV 資料控制（P1）
 
-- FR-GOV-01 來源原文依保存期限自動清除（每日排程）。
+- FR-GOV-01 來源原文依保存期限自動清除（每小時排程，見 6.7）。
 - FR-GOV-02 匯出：產生包含所有表的 JSON 檔供下載。
 - FR-GOV-03 刪除所有來源原文：二次確認；刪除後任務、事件仍保留，原句顯示為已刪除。`idempotency_keys` 存的回應本文可能含原句，一併刪除（屬於暫存，不是歷程，DA-23）。
 - FR-GOV-04 LINE 群組解除綁定即停止處理該群組，不追溯刪除已確認的紀錄。
@@ -1080,8 +1080,9 @@ CREATE TABLE idempotency_keys (
 
 ### 6.7 資料保存與清除
 
-- 每日排程（預設凌晨 03:00）：將 `expires_at` 已過的 `sources.excerpt` 設為 NULL，寫 `purged_at`。`events`、`candidates` 不動。
-- 「刪除所有來源原文」清除 `sources.excerpt`，並刪除 `idempotency_keys` 全部列（回應本文可能含原句；這張表是 24 小時的重送暫存，不是歷程，DA-23）。`events`、`candidates`、`tasks` 不動，事件的原句顯示改為已刪除。
+- 清除排程（服務啟動時一次，之後每小時一次；冪等）：將 `expires_at` 已過的 `sources.excerpt` 設為 NULL，寫 `purged_at`。有原文被清除時，一併刪除 `idempotency_keys`（DA-23）。`created_at` 加保存天數已過的 `ai_runs.raw_output` 設為 NULL，不分節點（失敗的 AI-01 輸出連不回來源；AI-06、AI-07 的輸出也可能含原文；PR #20 B2）。`events`、`candidates` 不動。（2026-11-15 裁定：原為每日 03:00，本機服務該時段常未開機會漏跑，改為每小時。）
+- 修改保存期限時，尚未清除的來源一併重算 `expires_at = received_at + 新天數`（2026-11-15 裁定）。
+- 「刪除所有來源原文」清除 `sources.excerpt`，刪除 `idempotency_keys` 全部列（回應本文可能含原句；這張表是 24 小時的重送暫存，不是歷程，DA-23），並將 `ai_runs.raw_output` 全部設為 NULL（PR #20 B2）。`events`、`candidates`、`tasks` 不動，事件的原句顯示改為已刪除。
 - 匯出檔包含全部表；`sources.excerpt` 已清除者匯出為 `null`。
 
 ### 6.8 並行與一致性
@@ -1174,7 +1175,7 @@ CREATE TABLE idempotency_keys (
 
 ### 7.9 資料控制與非功能
 
-- AC-52 Given 保存期限 30 天；When 每日排程執行；Then 超過期限的 `excerpt` 為 NULL，事件與候選仍在。
+- AC-52 Given 保存期限 30 天；When 清除排程執行；Then 超過期限的 `excerpt` 為 NULL，事件與候選仍在。
 - AC-53 Given 「刪除所有來源原文」；When 未帶 `confirm=true`；Then 拒絕；帶了則所有 `excerpt` 為 NULL。
 - AC-54 Given 匯出；Then 檔案為合法 JSON，含所有表，且表的筆數與資料庫一致。
 - AC-55 Given 500 列匯入；Then preview 在 2 秒內完成（不含 AI-07）〔假設〕。

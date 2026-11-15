@@ -47,3 +47,12 @@ Dev-B 開發時發現、需要 Dev-A 處理或知道的事項，**統一記在�
 ### N-04 匯入 preview 新增手動對應　〔已完成，需通知 Dev-C、QC-2〕
 
 - Phase 6 SDD Q1：`POST /projects/import/preview` 輸入多一個選填欄位 `column_map`（`{title, owner, start, end}` 欄位索引）；帶了時回 `mapped_by="manual"`。`mapped_by` 原本只有 `rule`、`ai`、`null`，現在多一個值。
+
+### N-05 `IdempotencyMiddleware` 跳過 `/export`　〔已完成〕
+
+- Phase 8 SDD 第 6 節：匯出回應含全部原文，帶 `Idempotency-Key` 時會整份存進 `idempotency_keys`，多一份清除不到的副本。`middleware.py` 新增 `NO_CACHE_PATHS`，`/export` 不經快取；其他端點行為不變。
+
+### N-06 spec 6.7 清除排程改為每小時、改保存期限會重算期限　〔已完成，需通知 QC-2〕
+
+- Phase 8 SDD Q2、Q5（2026-11-15 產品負責人裁定）。spec FR-GOV-01、6.7、AC-52 的「每日排程」改為「清除排程」，QC 的 AC-52 測試措辭請對應。
+- `sources_repo.retention_days` 已移除，收件改從 `app/domain/settings.get_settings` 取保存期限（沒有設定列時自動補預設列）。

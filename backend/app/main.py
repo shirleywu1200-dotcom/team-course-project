@@ -5,15 +5,17 @@
 
 from fastapi import APIRouter, FastAPI
 
-from app import worker
+from app import scheduler, worker
 from app.ai.client import AIClient, FakeAIClient
 from app.api import (
     error_handlers,
     routes_events,
+    routes_governance,
     routes_history,
     routes_import,
     routes_inbox,
     routes_projects,
+    routes_settings,
     routes_tasks,
 )
 from app.api.middleware import API_PREFIX, BearerTokenMiddleware, IdempotencyMiddleware, UnhandledErrorMiddleware
@@ -45,7 +47,7 @@ def create_app(settings: Settings | None = None, db: Database | None = None,
     api = APIRouter(prefix=API_PREFIX)
     # 匯入（/projects/import/…）排在專案路由（/projects/{id}…）之前
     for r in (routes_import.router, routes_projects.router, routes_tasks.router, routes_events.router,
-              routes_history.router, routes_inbox.router):
+              routes_history.router, routes_inbox.router, routes_settings.router, routes_governance.router):
         api.include_router(r)
     app.include_router(api)
     return app
@@ -57,6 +59,7 @@ def run() -> None:
     settings = load_settings()
     app = create_app(settings)
     worker.start(app.state.db, app.state.ai)   # 收件背景工作（todo 7.5）；測試不經 run()，不會啟動
+    scheduler.start(app.state.db)              # 原文到期清除（todo 8.5）
     uvicorn.run(app, host=settings.bind_host, port=settings.port)
 
 

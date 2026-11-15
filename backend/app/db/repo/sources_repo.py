@@ -4,7 +4,6 @@ from sqlalchemy import Connection, bindparam, text
 
 COLUMNS = {"channel", "line_group_id", "speaker", "spoken_at", "excerpt", "excerpt_hash",
            "received_at", "expires_at", "purged_at"}
-DEFAULT_RETENTION_DAYS = 30
 
 
 def insert_if_new(conn: Connection, fields: dict) -> int | None:
@@ -30,7 +29,21 @@ def get_many(conn: Connection, ids: list[int]) -> list[dict]:
     return [dict(r) for r in conn.execute(sql, {"ids": ids}).mappings()]
 
 
-def retention_days(conn: Connection) -> int:
-    """設定的保存天數；尚未完成啟用（沒有 settings 列）時用預設值。"""
-    days = conn.execute(text("SELECT retention_days FROM settings WHERE id = 1")).scalar_one_or_none()
-    return days or DEFAULT_RETENTION_DAYS
+def recompute_expiry(conn: Connection, days: int) -> int:
+    """保存期限改變時，尚未清除的來源改用新天數重算期限（spec 6.7）。"""
+    return conn.execute(text(
+        "UPDATE sources SET expires_at = received_at + make_interval(days => :d) WHERE excerpt IS NOT NULL"),
+        {"d": days}).rowcount
+
+
+def purge_expired(conn: Connection, now) -> int:
+    """到期的原文設為 NULL（FR-GOV-01）。已清除的不再動。"""
+    return conn.execute(text(
+        "UPDATE sources SET excerpt = NULL, purged_at = :now WHERE expires_at <= :now AND excerpt IS NOT NULL"),
+        {"now": now}).rowcount
+
+
+def purge_all(conn: Connection, now) -> int:
+    """所有原文設為 NULL（FR-GOV-03）。"""
+    return conn.execute(text(
+        "UPDATE sources SET excerpt = NULL, purged_at = :now WHERE excerpt IS NOT NULL"), {"now": now}).rowcount

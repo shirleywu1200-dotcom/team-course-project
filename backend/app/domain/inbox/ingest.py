@@ -17,6 +17,7 @@ from app.ai.client import AIClient, AIInvalidOutput, AIUnavailable
 from app.clock import get_clock
 from app.db.database import Database
 from app.db.repo import ai_runs_repo, candidates_repo, jobs_repo, projects_repo, sources_repo
+from app.domain import settings
 from app.domain.inbox import r2
 from app.domain.inbox.parse import Message, parse_text
 from app.errors import DomainError
@@ -42,7 +43,7 @@ def _store_sources(conn: Connection, messages: list[Message]) -> tuple[list[int]
     """寫入新訊息，回傳 (新 source id, 重複數)。重複只計數，不合併（FR-INB-04）。"""
     seen = sources_repo.existing_hashes(conn, [m.hash for m in messages])
     now = get_clock().now()
-    expires = now + timedelta(days=sources_repo.retention_days(conn))
+    expires = now + timedelta(days=settings.get_settings(conn)["retention_days"])
     ids, duplicates = [], 0
     for m in messages:
         if m.hash in seen:
