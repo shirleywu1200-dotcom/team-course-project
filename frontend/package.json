@@ -7,7 +7,13 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "typecheck": "tsc -b --noEmit",
-    "test": "vitest run"
+    "test": "vitest run && npm run test:tooling",
+    "openapi:export": "node scripts/openapi.mjs export",
+    "types:generate": "node scripts/openapi.mjs generate",
+    "types:check": "node scripts/openapi.mjs check",
+    "openapi:check": "node scripts/openapi.mjs check-export",
+    "test:tooling": "node --test scripts/openapi.checks.mjs",
+    "format:check": "git diff --check -- . && git diff --cached --check -- ."
   },
   "dependencies": {
     "@tanstack/react-query": "^5.107.1",
@@ -25,6 +31,7 @@
     "@vitejs/plugin-react": "^4.7.0",
     "jsdom": "^26.1.0",
     "msw": "^2.15.0",
+    "openapi-typescript": "7.13.0",
     "typescript": "^5.9.3",
     "vite": "^6.4.6",
     "vitest": "^3.2.7"
