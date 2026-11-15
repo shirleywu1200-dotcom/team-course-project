@@ -132,6 +132,10 @@ class TaskEventOut(Out):
     event: EventOut
 
 
+class AdjustStartOut(TaskEventOut):
+    warnings: list[str] = Field(description="可含 START_AFTER_DUE（開始日晚於最新預計日）")
+
+
 class CompleteOut(TaskEventOut):
     feedback_required: bool
 

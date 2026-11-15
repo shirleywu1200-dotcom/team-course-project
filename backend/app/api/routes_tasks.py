@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, Query
 from app.api.deps import get_db
 from app.api.responses import (
     AdjustDueOut,
+    AdjustStartOut,
     BaselinePreviewOut,
     CompleteOut,
     TaskDetailOut,
@@ -19,6 +20,7 @@ from app.api.responses import (
 )
 from app.api.schemas import (
     AdjustDue,
+    AdjustStart,
     BaselineCommit,
     BaselinePreview,
     BlockChange,
@@ -74,6 +76,13 @@ def set_status(task_id: int, body: StatusChange, db: Database = Depends(get_db))
 def set_blocked(task_id: int, body: BlockChange, db: Database = Depends(get_db)):
     task, event = db.run(lambda c: tasks.set_blocked(c, task_id, body.blocked, body.expected_version))
     return {"task": task_out(task), "event": event_out(event)}
+
+
+@router.post("/{task_id}/adjust-start", response_model=AdjustStartOut)
+def adjust_start(task_id: int, body: AdjustStart, db: Database = Depends(get_db)):
+    task, event, warnings = db.run(lambda c: tasks.adjust_start(c, task_id, body.new_start, body.expected_version,
+                                                               body.note))
+    return {"task": task_out(task), "event": event_out(event), "warnings": warnings}
 
 
 @router.post("/{task_id}/complete", response_model=CompleteOut)

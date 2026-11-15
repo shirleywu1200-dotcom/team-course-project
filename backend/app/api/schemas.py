@@ -57,6 +57,11 @@ class BlockChange(Versioned):
     blocked: bool = True
 
 
+class AdjustStart(Versioned):
+    new_start: date
+    note: str | None = None
+
+
 class Complete(Versioned):
     done_date: date | None = None
 

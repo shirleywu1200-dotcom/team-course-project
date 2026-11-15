@@ -260,3 +260,75 @@ def test_ac57_api_failure_rolls_back(app, db, seed, query, monkeypatch):
         r = c.post("/api/v1/tasks/2/block", json={"expected_version": 1})
     assert r.status_code == 500
     assert query("SELECT count(*) AS n FROM events")[0]["n"] == 0
+
+
+# ---------- 開始日（FR-TSK-08、09；AC-61、62；PR #1 審查 A2） ----------
+
+def test_ac61_create_with_explicit_start(client, seed):
+    seed(BASE)
+    t = client.post("/api/v1/tasks", json={"title": "x", "due": "2026-11-20", "start": "2026-11-15"}).json()
+    assert t["start"] == "2026-11-15"
+
+
+def test_ac61_start_after_due_is_rejected_and_nothing_written(client, seed, query):
+    seed(BASE)
+    r = client.post("/api/v1/tasks", json={"title": "晚開始", "due": "2026-11-20", "start": "2026-11-21"})
+    assert r.status_code == 422
+    assert r.json()["error"]["code"] == "VALIDATION_ERROR" and r.json()["error"]["details"]["fields"] == ["start"]
+    assert query("SELECT count(*) AS n FROM tasks WHERE title = '晚開始'")[0]["n"] == 0
+    assert query("SELECT count(*) AS n FROM events")[0]["n"] == 0
+
+
+def test_ac61_start_equal_to_due_is_allowed(client, seed):
+    seed(BASE)
+    assert client.post("/api/v1/tasks", json={"title": "x", "due": "2026-11-20", "start": "2026-11-20"}
+                       ).status_code == 201
+
+
+def test_ac62_adjust_start_changes_only_start_date(client, seed, query):
+    seed(BASE)
+    r = client.post("/api/v1/tasks/4/adjust-start", json={"new_start": "2026-11-12", "expected_version": 1,
+                                                          "note": "提早開工"})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["task"]["start"] == "2026-11-12" and body["task"]["version"] == 2
+    assert (body["task"]["orig_due"], body["task"]["latest_due"]) == ("2026-11-18", "2026-11-18")
+    ev = body["event"]
+    assert (ev["kind"], ev["field"], ev["from_value"], ev["to_value"], ev["note"]) == (
+        "task", "start_date", "2026-11-14", "2026-11-12", "提早開工")
+    assert ev["delta_days"] is None and ev["mark"] is None and body["warnings"] == []
+
+
+def test_ac62_adjust_start_not_in_time_management_stats(client, seed):
+    seed(BASE)
+    client.post("/api/v1/tasks/4/adjust-start", json={"new_start": "2026-11-12", "expected_version": 1})
+    s = client.get("/api/v1/stats/time-management").json()
+    assert (s["better"]["count"], s["worse"]["count"], s["none"], s["unmarked"]) == (0, 0, 0, 0)
+
+
+def test_ac62_start_after_latest_due_warns(client, seed):
+    seed(BASE)
+    r = client.post("/api/v1/tasks/4/adjust-start", json={"new_start": "2026-11-19", "expected_version": 1})
+    assert r.status_code == 200 and r.json()["warnings"] == ["START_AFTER_DUE"]
+
+
+@pytest.mark.parametrize(("task_id", "body", "status", "code"), [
+    (1, {"new_start": "2026-11-05", "expected_version": 3}, 409, "TASK_DONE"),
+    (4, {"new_start": "2026-11-14", "expected_version": 1}, 422, "NO_CHANGE"),
+    (4, {"new_start": "2025-11-10", "expected_version": 1}, 422, "DATE_OUT_OF_RANGE"),
+    (4, {"new_start": "2028-11-11", "expected_version": 1}, 422, "DATE_OUT_OF_RANGE"),
+    (3, {"new_start": "2026-11-10", "expected_version": 1}, 409, "STALE_VERSION"),
+    (4, {"new_start": "not-a-date", "expected_version": 1}, 422, "VALIDATION_ERROR"),
+])
+def test_ac62_adjust_start_rejections(client, seed, query, task_id, body, status, code):
+    seed(BASE)
+    r = client.post(f"/api/v1/tasks/{task_id}/adjust-start", json=body)
+    assert r.status_code == status and r.json()["error"]["code"] == code
+    assert query("SELECT count(*) AS n FROM events")[0]["n"] == 0
+
+
+def test_bulk_shift_does_not_move_start_date(client, seed, query):
+    seed(BASE)
+    client.post("/api/v1/projects/1/bulk-shift/commit", json={
+        "items": [{"task_id": 4, "expected_version": 1}], "days": 3, "mark": "none"})
+    assert query("SELECT start_date FROM tasks WHERE id = 4")[0]["start_date"] == date(2026, 11, 14)

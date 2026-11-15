@@ -10,6 +10,7 @@ from sqlalchemy import Connection
 from app.clock import get_clock
 from app.db.repo import events_repo, misc_repo, projects_repo
 from app.db.repo.tasks_repo import TaskRepo
+from app.domain.due import check_date_range  # 開始日與預計完成日共用同一個允許範圍
 from app.domain.events import OWNER_ME, write_event
 from app.errors import DomainError
 
@@ -40,6 +41,8 @@ def create_task(conn: Connection, *, title: str, due: date, owner: str = OWNER_M
     owner = (owner or "").strip() or OWNER_ME
     if not title:
         raise DomainError("VALIDATION_ERROR", details={"fields": ["title"]})
+    if start is not None and start > due:
+        raise DomainError("VALIDATION_ERROR", "開始日不可晚於期限", {"fields": ["start"]})   # FR-TSK-08、AC-61
     if project_id is not None:
         project = projects_repo.get(conn, project_id)
         scope = scope or project["scope"]
@@ -105,6 +108,22 @@ def set_blocked(conn: Connection, task_id: int, blocked: bool, expected_version:
                         from_value=str(task["blocked"]).lower(), to_value=str(blocked).lower(),
                         origin=origin, origin_ref=origin_ref, source_id=source_id)
     return repo.update(task_id, {"blocked": blocked}), event
+
+
+def adjust_start(conn: Connection, task_id: int, new_start: date, expected_version: int,
+                 note: str | None = None) -> tuple[dict, dict, list[str]]:
+    """調整開始日（FR-TSK-09、AC-62）：只改 start_date，不問原因與註記，不進時間管理統計。"""
+    repo = TaskRepo(conn)
+    task = repo.get_for_update(task_id, expected_version)
+    _ensure_not_done(task)
+    if new_start == task["start_date"]:
+        raise DomainError("NO_CHANGE", details={"task_id": task_id})
+    check_date_range(new_start, get_clock().today())
+    warnings = ["START_AFTER_DUE"] if new_start > task["latest_due"] else []
+    event = write_event(conn, task_id=task_id, kind="task", field="start_date",
+                        from_value=task["start_date"].isoformat(), to_value=new_start.isoformat(),
+                        note=note, origin="manual")
+    return repo.update(task_id, {"start_date": new_start}), event, warnings
 
 
 def complete_task(conn: Connection, task_id: int, expected_version: int, done_date: date | None = None, *,

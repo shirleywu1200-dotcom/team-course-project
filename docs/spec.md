@@ -144,6 +144,8 @@
 - FR-TSK-05 任務詳情顯示：負責人、原訂（固定）、最新預計、與原訂差距、預設星數與來源、完成回報、此任務的歷程。
 - FR-TSK-06 更改負責人（名字）寫一筆 `task` 事件。更改後，**過去事件的「是否為我的任務」判斷不變**。
 - FR-TSK-07 已完成任務：不可調整預計完成日、不可更正基準、不可再標卡住。
+- FR-TSK-08 建立任務可指定開始日（選填）；明確填入晚於期限的開始日時拒絕（`VALIDATION_ERROR`，`details.fields` 含 `start`）。未填時沿用 DA-07：今天，期限早於今天時用期限當天。（2026-11-15 產品負責人裁定，PR #1 審查 A2、B1）
+- FR-TSK-09 調整開始日：只改 `start_date`，不問原因與註記；寫一筆 `task` 事件（`field='start_date'`，`delta_days`、`mark` 為 NULL，不進時間管理統計），`version` 加 1。已完成回 `TASK_DONE`；等於目前值回 `NO_CHANGE`；超出「今天前 365 天到後 730 天」回 `DATE_OUT_OF_RANGE`；晚於最新預計日仍成功，回警告 `START_AFTER_DUE`。不新增錯誤碼；整批順延仍不動開始日。（同上）
 
 ### 3.6 FR-DUE 預計完成日調整（P1）
 
@@ -711,6 +713,7 @@ CREATE TABLE idempotency_keys (
 | GET | `/tasks/{id}` | 詳情，含最近歷程 |
 | PATCH | `/tasks/{id}/owner` | 改負責人 |
 | POST | `/tasks/{id}/adjust-due` | 調整最新預計日 |
+| POST | `/tasks/{id}/adjust-start` | 調整開始日（FR-TSK-09） |
 | POST | `/tasks/{id}/block` | 標為卡住／取消 |
 | POST | `/tasks/{id}/complete` | 標為完成並回傳是否需要完成回報 |
 | POST | `/tasks/suggest-stars` | AI-02 提議預設星數 |
@@ -755,6 +758,8 @@ CREATE TABLE idempotency_keys (
 ```
 
 錯誤：`TASK_DONE`、`NO_CHANGE`、`DATE_OUT_OF_RANGE`、`MARK_REQUIRED`、`STALE_VERSION`、`VALIDATION_ERROR`（原因不在該方向的選項內，例如提前時選了延後原因）。`warnings` 可含 `BEFORE_START`。`needs_mark` 為 `true` 表示我的任務且選了稍後註記，註記留空。
+
+`POST /tasks/{id}/adjust-start` 輸入：`{ "new_start": "2026-11-14", "expected_version": 4, "note": "…" }`（`note` 選填）。輸出：`{ "task", "event", "warnings": [] }`，`warnings` 可含 `START_AFTER_DUE`。錯誤：`TASK_DONE`、`NO_CHANGE`、`DATE_OUT_OF_RANGE`、`STALE_VERSION`、`VALIDATION_ERROR`。
 
 `POST /tasks/{id}/complete` 輸入：`{ "expected_version": 4, "done_date": "2026-11-12" }`（`done_date` 預設為今天，不可晚於今天）。輸出：`{ "task", "event", "feedback_required": true }`。
 
@@ -1171,6 +1176,8 @@ P1 完成 = AC-01 至 AC-42、AC-48 至 AC-53、AC-55 至 AC-57 全數通過，�
 編號由產品負責人指定。
 
 - AC-59 Given 全新資料庫；When 跑完遷移；Then `settings` 恰 1 列、`rubrics` 恰 1 列（version=0、`levels` 剛好 5 句）；When 遷移降級再升級，或重跑種子；Then 兩表仍各 1 列。
+- AC-61 Given 建立任務時指定開始日；Then 任務的 `start_date` 為該日；Given 指定的開始日晚於期限；Then 422 `VALIDATION_ERROR`，`details.fields` 含 `start`，不建立任務也不寫事件。
+- AC-62 Given 未完成任務；When `POST /tasks/{id}/adjust-start` 帶新開始日；Then 只有 `start_date` 改變（`orig_due`、`latest_due` 不變）、`version` 加 1，並新增一筆 `task` 事件（`field='start_date'`，前值、後值，`delta_days` 與 `mark` 為 NULL），該事件不進時間管理統計；Given 新開始日晚於最新預計日；Then 200 且 `warnings` 含 `START_AFTER_DUE`；Given 已完成任務、等於目前值、或超出日期範圍；Then 分別回 `TASK_DONE`、`NO_CHANGE`、`DATE_OUT_OF_RANGE`。
 
 ## 8. 技術棧／限制
 
