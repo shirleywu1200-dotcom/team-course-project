@@ -1,0 +1,38 @@
+import { http, HttpResponse } from "msw";
+import { getErrorFixture, type ErrorFixtureCode } from "./errorFixtures";
+import { adjustStartFixtures, dueFixtures, makeSerializedTask, statusFixtures } from "./fixtures";
+import { reasons } from "./reasons";
+
+export const API = "http://localhost:3000/api/v1";
+
+// 固定 fixture，不驗證請求、不持久化狀態；需要另一情境時以 server.use 覆寫。
+export function statusHandler(status: keyof typeof statusFixtures = "doing") {
+  const fixture = statusFixtures[status];
+  return http.post(`${API}/tasks/${fixture.response.task.id}/status`, () => HttpResponse.json(fixture.response));
+}
+
+export function markIgnoredHandler() {
+  const fixture = dueFixtures.markIgnored;
+  return http.post(`${API}/tasks/${fixture.response.task.id}/adjust-due`, () => HttpResponse.json(fixture.response));
+}
+
+// 只測錯誤格式，不代表此端點在產品中會回全部錯誤碼（例如 AI_UNAVAILABLE）。
+export function errorHandler(code: ErrorFixtureCode) {
+  const fixture = getErrorFixture(code);
+  return http.get(`${API}/tasks/4`, () => HttpResponse.json(fixture.body, { status: fixture.status }));
+}
+
+// 待 Dev-A 實作（todo 2.11）。僅測試用，不會向真正後端補送請求。
+export function adjustStartHandler(scenario: keyof typeof adjustStartFixtures = "success") {
+  const fixture = adjustStartFixtures[scenario];
+  return http.post(`${API}/tasks/3/adjust-start`, () => HttpResponse.json(fixture.response, { status: fixture.status }));
+}
+
+export const handlers = [
+  http.get(`${API}/meta/reasons`, () => HttpResponse.json(reasons)),
+  http.get(`${API}/tasks`, () => HttpResponse.json({ items: [makeSerializedTask()], total: 1 })),
+  http.get(`${API}/tasks/4`, () => HttpResponse.json({ task: makeSerializedTask(), events: [] })),
+  http.post(`${API}/tasks/4/adjust-due`, () => HttpResponse.json(dueFixtures.success.response)),
+  statusHandler(),
+  adjustStartHandler(),
+];

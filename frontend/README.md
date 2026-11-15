@@ -93,3 +93,47 @@ code／message 必須是非空字串，details 必須是非陣列物件。
 
 `client.test.tsx` 對 spec 5.2 的 17 個錯誤碼逐一檢查錯誤解析、顯示與不自動重送。
 其中 `INTERNAL_ERROR`（DA-19）**待產品負責人複核**；這些測試不代表已取得正式核可。
+
+## MSW 共用資料集（11.7）
+
+測試仍從 `src/test/server.tsx` 匯入 `API`、`server`、`reasons`、`makeTask`、`apiError`、
+`renderWithClient`；既有名稱、原因選項順序、makeTask 的 13 欄與覆寫方式均保留。
+資料單一來源分工：`reasons.ts` 放選項、`fixtures.ts` 放任務與情境快照、
+`errorFixtures.ts` 放 spec 5.2 全部 17 個錯誤碼／HTTP 狀態、`handlers.ts` 放 MSW handlers。
+Dev-A 測試原有的局部 handler 覆寫保留，沒有刪除或放寬測試。
+
+| 情境 | 依據 | 對應行為測試 |
+| --- | --- | --- |
+| 全部 17 種錯誤回應 | spec 5.1、5.2 | `spec 5.2 的全部 17 個錯誤碼與狀態集中在單一資料集`；`MSW 錯誤情境 <code> 回傳統一格式`，每碼一項 |
+| `INTERNAL_ERROR` 待複核 | DA-19 | 資料集完整性測試另檢查複核標記 |
+| todo／doing 狀態切換 | FR-TSK-04、DA-08 | `DA-08 狀態 <status> 使用生成請求型別與完整序列化回應` |
+| status 回應欄位全集 | `serialize.py`、`routes_tasks.py` | `status 的 task／event 欄位全集對照後端 serialize.py，不依殘缺產品型別猜欄位` |
+| `MARK_IGNORED` 是成功警告 | FR-MRK-02、DA-11 | `DA-11 MARK_IGNORED 仍為 200 警告，不寫入我的註記` |
+| 調整開始日成功快照 | FR-TSK-08、AC-62 | `AC-62 adjust-start 成功快照只改開始日與版本，標示待 Dev-A 實作` |
+| 開始日晚於預計日仍成功 | AC-62 | `AC-62 START_AFTER_DUE 是 200 警告，不阻擋開始日調整` |
+| 開始日調整的 5 種錯誤 | 已核准的 adjust-start 契約 | `adjust-start 錯誤情境 <scenario> 沿用既有錯誤碼` |
+| 選項、舊 factory 與隔離 | FR-DUE-05、FR-MRK-03、既有介面相容要求 | `makeTask 與原因選項相容，測試資料可獨立修改而不污染後續情境` |
+| 測試手寫形狀不得流入產品 | 本次核准的測試型別邊界 | `產品程式不得引用 src/test 的手寫形狀或 fixture` |
+
+預設 handlers 提供原因選項、任務列表、任務 4 詳情、日期調整、任務 4 狀態切換、
+任務 3 開始日調整。使用 `server.use(statusHandler("todo"))`、
+`server.use(markIgnoredHandler())`、`server.use(adjustStartHandler("afterDue"))` 切換情境。
+全部為固定範例快照，不驗證請求、不持久化狀態、不模擬交易，也不代算伺服器欄位。
+錯誤 handler 只驗證統一錯誤格式，不代表測試端點在產品中會回全部錯誤碼；
+例如 spec 5.2 的 503 `AI_UNAVAILABLE` 仍僅限量表訪談。
+
+手寫形狀僅在 `src/test/fixtureTypes.ts`，不從 `src/api/` 匯出、不供產品程式引用：
+
+| 手寫形狀 | 來源與邊界 |
+| --- | --- |
+| `SerializedTaskFixture` | `task_out` 的 19 欄；只在測試擴充原有 Task，不改產品型別 |
+| `SerializedEventFixture` | `event_out` 的 21 欄；時間戳使用固定 `+08:00` 字串 |
+| `StatusFixtureResponse` | 狀態路由的 `{task,event}`；請求引用生成的 `StatusChange` |
+| `AdjustStartFixtureRequest` | 已核准的 `new_start`、`expected_version`、選填 `note` |
+| `AdjustStartFixtureResponse` | 已核准成功輸出與 AC-62 的空 mark／delta_days；不補猜測欄位 |
+
+status 形狀標記「形狀取自後端現況，待 Dev-A 補 response_model 後改由生成型別取代」。
+adjust-start 的形狀、資料與 handler 均標記「待 Dev-A 實作（todo 2.11）」。
+它依已核准的規劃契約使用 `start_date`；現行 task_out 的 `start` 保持原樣，兩者不自行統一。
+未擴充其他 12 個空 schema 端點，也未新增 AC-61 的建立任務端點 fixture。
+測試型別的補充與固定情境組織方式屬本次授權內的測試實作選擇，不代表產品契約已補齊。
