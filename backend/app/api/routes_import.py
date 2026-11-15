@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends
 
 from app.ai.client import AIClient
 from app.api.deps import get_ai, get_db
+from app.api.responses import ImportCommitOut, ImportPreviewOut
 from app.api.schemas import Strict
 from app.db.database import Database
 from app.domain.imports import service
@@ -44,13 +45,13 @@ class CommitIn(Strict):
     rows: list[CommitRow]
 
 
-@router.post("/preview")
+@router.post("/preview", response_model=ImportPreviewOut)
 def preview(body: PreviewIn, db: Database = Depends(get_db), ai: AIClient = Depends(get_ai)):
     cmap = body.column_map.model_dump() if body.column_map else None
     return service.preview(db, ai, body.text, body.target, cmap)
 
 
-@router.post("/commit", status_code=201)
+@router.post("/commit", status_code=201, response_model=ImportCommitOut)
 def commit(body: CommitIn, db: Database = Depends(get_db)):
     rows = [r.model_dump() for r in body.rows]
     return db.run(lambda c: service.commit(c, body.target, body.new_name, rows))

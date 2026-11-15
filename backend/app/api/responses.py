@@ -220,3 +220,237 @@ class ReasonsOut(Out):
 class HealthOut(Out):
     db: Literal["ok", "error"]
     ai: Literal["ok", "unavailable"]
+
+
+# ---------- 歷程與甘特（Phase 5，Dev-B） ----------
+
+class SourceRefOut(Out):
+    label: str
+    quote: str | None = Field(description="原文已清除或沒有來源時為 null")
+    purged: bool
+
+
+class HistoryItemOut(EventOut):
+    project_name: str | None
+    effective_mark: Mark | None
+    source: SourceRefOut
+
+
+class HistoryListOut(Out):
+    items: list[HistoryItemOut]
+    total: int
+
+
+class GanttSummary(Out):
+    done: int
+    total: int
+    delayed: int
+    open_candidates: int
+
+
+class GanttRowOut(Out):
+    task_id: int
+    title: str
+    owner: str
+    status: Literal["todo", "doing", "done"]
+    start: date
+    orig_due: date
+    latest_due: date
+    delta_days: int
+    done_date: date | None
+    blocked: bool
+    version: int
+
+
+class GanttOut(Out):
+    range: FromToDate | None = Field(description="沒有任務時為 null")
+    today: date
+    summary: GanttSummary
+    rows: list[GanttRowOut]
+
+
+# ---------- 匯入（Phase 6，Dev-B） ----------
+
+AiStatus = Literal["ok", "unavailable", "invalid_output"]
+
+
+class ImportIssueOut(Out):
+    level: Literal["error", "warn"]
+    code: str
+    message: str
+
+
+class ImportRowOut(Out):
+    index: int
+    title: str
+    owner: str
+    start: date | None
+    end: date | None
+    blocking: bool
+    issues: list[ImportIssueOut]
+
+
+class ColumnMapOut(Out):
+    title: int | None
+    owner: int | None
+    start: int | None
+    end: int | None
+    mapped_by: Literal["rule", "ai", "manual"] | None = Field(description="必填欄位對應不到時為 null，rows 為空")
+
+
+class ImportSummary(Out):
+    importable: int
+    blocking: int
+
+
+class ImportPreviewOut(Out):
+    ai_status: AiStatus
+    header: list[str]
+    column_map: ColumnMapOut
+    rows: list[ImportRowOut]
+    summary: ImportSummary
+
+
+class ImportCommitOut(Out):
+    project_id: int
+    created: int
+    skipped: int
+    event_id: int
+
+
+# ---------- 收件與候選（Phase 7，Dev-B） ----------
+# 選填欄位（沒有就不出現）的端點以 response_model_exclude_unset=True 註冊，維持原本的回應形狀。
+
+class CandidateTaskOut(Out):
+    id: int
+    title: str
+    latest_due: date
+    orig_due: date
+    version: int
+
+
+class ProposedOut(Out):
+    new_due: date | None = None
+
+
+class SuggestOut(Out):
+    kind: Literal["delay", "done", "stuck"]
+    new_due: date | None = None
+
+
+class CandidateOut(Out):
+    id: int
+    kind: Literal["delay", "done", "stuck", "unclear", "unmatched"]
+    certainty: Literal["sure", "to_clarify", "to_match"]
+    state: Literal["open", "confirmed", "ignored"]
+    task: CandidateTaskOut | None
+    proposed: ProposedOut | None
+    quote: str | None = Field(description="原文已清除時為 null")
+    speaker: str
+    spoken_at: str | None
+    note: str | None
+    suggest: SuggestOut | None
+
+
+class CandidateListOut(Out):
+    items: list[CandidateOut]
+    total: int
+
+
+class IngestSummary(Out):
+    created: int
+    skipped: int
+    duplicates: int
+    unparsed_lines: list[int]
+
+
+class IngestSyncOut(Out):
+    mode: Literal["sync"]
+    ai_status: AiStatus
+    result: IngestSummary
+    candidates: list[CandidateOut]
+
+
+class IngestAsyncOut(Out):
+    mode: Literal["async"]
+    job_id: int
+    status: Literal["queued"]
+
+
+class IngestJobResult(IngestSummary):
+    ai_status: AiStatus
+    candidate_ids: list[int]
+
+
+class IngestJobOut(Out):
+    id: int
+    status: Literal["queued", "running", "succeeded", "failed"]
+    attempts: int
+    result: IngestJobResult | None
+    error: str | None
+
+
+class DecideOut(Out):
+    candidate: CandidateOut
+    task: TaskOut | None = Field(None, description="忽略時不出現")
+    event: EventOut | None = Field(None, description="忽略、建任務時不出現")
+    needs_mark: bool | None = Field(None, description="確認延期時才出現")
+    feedback_required: bool | None = Field(None, description="確認完成時才出現")
+
+
+# ---------- 設定、量表、資料控制（Phase 8，Dev-B） ----------
+
+class SettingsOut(Out):
+    default_scope: Literal["work", "private"]
+    role: Literal["project_owner", "wbs_owner", "both"]
+    report_audience: Literal["manager", "client", "none"]
+    confirm_time: str
+    confirm_cap_min: int
+    remind_default: Literal["morning", "eve_before", "none"]
+    retention_days: int
+    energy_def_high: str
+    energy_def_mid: str
+    energy_def_low: str
+    goal_types_enabled: list[Literal["growth", "time", "expectation"]]
+    onboarded_at: datetime | None
+
+
+class InterviewAnswers(Out):
+    q1: str
+    q2: str
+    q3: str
+
+
+class RubricOut(Out):
+    id: int
+    version: int
+    levels: list[str]
+    source: Literal["default", "interview"]
+    interview: InterviewAnswers | None
+    created_at: datetime
+
+
+class RubricListOut(Out):
+    items: list[RubricOut]
+    total: int
+
+
+class RubricCreatedOut(Out):
+    id: int
+    version: int
+
+
+class RubricDraftOut(Out):
+    ai_status: Literal["ok"]
+    draft: list[str]
+
+
+class PurgeOut(Out):
+    purged: int
+
+
+class ExportOut(Out):
+    exported_at: datetime
+    schema_version: str | None
+    counts: dict[str, int]
+    tables: dict[str, list[dict]]

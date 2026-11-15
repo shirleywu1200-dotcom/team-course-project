@@ -1,12 +1,14 @@
 """收件與候選端點（spec 5.11；todo Phase 7，Dev-B）。`/webhooks/line`（7.12）本版不做。"""
 
 from datetime import date
-from typing import Literal
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends
+from pydantic import Field
 
 from app.ai.client import AIClient
 from app.api.deps import get_ai, get_db
+from app.api.responses import CandidateListOut, DecideOut, IngestAsyncOut, IngestJobOut, IngestSyncOut
 from app.api.schemas import Strict, Versioned
 from app.api.serialize import event_out, task_out
 from app.db.database import Database
@@ -15,6 +17,8 @@ from app.domain.inbox import confirm as cand
 from app.domain.inbox.ingest import ingest as run_ingest
 
 router = APIRouter(tags=["inbox"])
+
+IngestOut = Annotated[IngestSyncOut | IngestAsyncOut, Field(discriminator="mode")]
 
 
 class IngestIn(Strict):
@@ -57,7 +61,7 @@ def _decided(db: Database, out: dict) -> dict:
     return body
 
 
-@router.post("/ingest")
+@router.post("/ingest", response_model=IngestOut)
 def ingest(body: IngestIn, db: Database = Depends(get_db), ai: AIClient = Depends(get_ai)):
     out = run_ingest(db, ai, body.text, body.project_id)
     if out["mode"] == "sync":
@@ -65,34 +69,35 @@ def ingest(body: IngestIn, db: Database = Depends(get_db), ai: AIClient = Depend
     return out
 
 
-@router.get("/ingest/jobs/{job_id}")
+@router.get("/ingest/jobs/{job_id}", response_model=IngestJobOut)
 def get_job(job_id: int, db: Database = Depends(get_db)):
     job = db.run(lambda c: jobs_repo.get(c, job_id))
     return {"id": job["id"], "status": job["status"], "attempts": job["attempts"], "result": job["result"],
             "error": job["error"]}
 
 
-@router.get("/candidates")
+@router.get("/candidates", response_model=CandidateListOut, response_model_exclude_unset=True)
 def list_candidates(state: Literal["open", "confirmed", "ignored"] = "open", db: Database = Depends(get_db)):
     items = [candidate_out(c) for c in db.run(lambda c: candidates_repo.list_detail(c, state))]
     return {"items": items, "total": len(items)}
 
 
-@router.post("/candidates/{candidate_id}/confirm")
+@router.post("/candidates/{candidate_id}/confirm", response_model=DecideOut, response_model_exclude_unset=True)
 def confirm(candidate_id: int, body: ConfirmIn, db: Database = Depends(get_db)):
     return _decided(db, db.run(lambda c: cand.confirm(c, candidate_id, body.new_due, body.expected_version)))
 
 
-@router.post("/candidates/{candidate_id}/clarify")
+@router.post("/candidates/{candidate_id}/clarify", response_model=DecideOut, response_model_exclude_unset=True)
 def clarify(candidate_id: int, body: ConfirmIn, db: Database = Depends(get_db)):
     return _decided(db, db.run(lambda c: cand.clarify(c, candidate_id, body.new_due, body.expected_version)))
 
 
-@router.post("/candidates/{candidate_id}/create-task", status_code=201)
+@router.post("/candidates/{candidate_id}/create-task", status_code=201, response_model=DecideOut,
+             response_model_exclude_unset=True)
 def create_task(candidate_id: int, body: CreateTaskIn, db: Database = Depends(get_db)):
     return _decided(db, db.run(lambda c: cand.create_task_from(c, candidate_id, **body.model_dump())))
 
 
-@router.post("/candidates/{candidate_id}/ignore")
+@router.post("/candidates/{candidate_id}/ignore", response_model=DecideOut, response_model_exclude_unset=True)
 def ignore(candidate_id: int, db: Database = Depends(get_db)):
     return _decided(db, db.run(lambda c: cand.ignore(c, candidate_id)))

@@ -6,6 +6,7 @@ from typing import Literal
 from fastapi import APIRouter, Depends, Query
 
 from app.api.deps import get_db
+from app.api.responses import GanttOut, HistoryListOut
 from app.api.serialize import event_out
 from app.db.database import Database
 from app.domain import history
@@ -25,7 +26,7 @@ def _list(db: Database, filters: dict, limit: int, offset: int) -> dict:
     return {"items": [_history_item(r) for r in rows], "total": total}
 
 
-@router.get("/events")
+@router.get("/events", response_model=HistoryListOut)
 def list_events(project_id: str | None = Query(None, pattern=r"^(none|\d+)$"), kind: EventKind | None = None,
                 task_id: int | None = None, batch_id: int | None = None,
                 from_: date | None = Query(None, alias="from"), to: date | None = None,
@@ -37,7 +38,7 @@ def list_events(project_id: str | None = Query(None, pattern=r"^(none|\d+)$"), k
     return _list(db, filters, limit, offset)
 
 
-@router.get("/projects/{project_id}/history")
+@router.get("/projects/{project_id}/history", response_model=HistoryListOut)
 def project_history(project_id: int, kind: EventKind | None = None, task_id: int | None = None,
                     batch_id: int | None = None, from_: date | None = Query(None, alias="from"),
                     to: date | None = None, limit: int = Query(100, ge=1, le=500), offset: int = Query(0, ge=0),
@@ -47,6 +48,6 @@ def project_history(project_id: int, kind: EventKind | None = None, task_id: int
     return _list(db, filters, limit, offset)
 
 
-@router.get("/projects/{project_id}/gantt")
+@router.get("/projects/{project_id}/gantt", response_model=GanttOut)
 def project_gantt(project_id: int, db: Database = Depends(get_db)):
     return db.run(lambda c: history.project_gantt(c, project_id))

@@ -7,6 +7,7 @@ from pydantic import ConfigDict, Field, StringConstraints, field_validator
 
 from app.ai.client import AIClient
 from app.api.deps import get_ai, get_db
+from app.api.responses import RubricCreatedOut, RubricDraftOut, RubricListOut, SettingsOut
 from app.api.schemas import Scope, Strict
 from app.db.database import Database
 from app.domain import rubrics, settings
@@ -63,34 +64,34 @@ def settings_out(row: dict) -> dict:
     return {k: v for k, v in row.items() if k != "id"}
 
 
-@router.get("/settings")
+@router.get("/settings", response_model=SettingsOut)
 def get_settings(db: Database = Depends(get_db)):
     return settings_out(db.run(settings.get_settings))
 
 
-@router.put("/settings")
+@router.put("/settings", response_model=SettingsOut)
 def put_settings(body: SettingsPatch, db: Database = Depends(get_db)):
     fields = body.model_dump(exclude_none=True)
     return settings_out(db.run(lambda c: settings.update_settings(c, fields)))
 
 
-@router.post("/settings/onboarding/complete")
+@router.post("/settings/onboarding/complete", response_model=SettingsOut)
 def complete_onboarding(body: OnboardingIn, db: Database = Depends(get_db)):
     return settings_out(db.run(lambda c: settings.complete_onboarding(c)))
 
 
-@router.get("/rubrics")
+@router.get("/rubrics", response_model=RubricListOut)
 def list_rubrics(active: bool = False, db: Database = Depends(get_db)):
     items = db.run(lambda c: rubrics.list_rubrics(c, active))
     return {"items": items, "total": len(items)}
 
 
-@router.post("/rubrics/interview")
+@router.post("/rubrics/interview", response_model=RubricDraftOut)
 def interview(body: InterviewIn, db: Database = Depends(get_db), ai: AIClient = Depends(get_ai)):
     return {"ai_status": "ok", "draft": rubrics.interview(db, ai, body.model_dump())}
 
 
-@router.post("/rubrics", status_code=201)
+@router.post("/rubrics", status_code=201, response_model=RubricCreatedOut)
 def confirm_rubric(body: RubricIn, db: Database = Depends(get_db)):
     answers = body.interview.model_dump(exclude={"draft"})
     row = db.run(lambda c: rubrics.confirm(c, body.levels, answers, body.interview.draft))
