@@ -18,13 +18,13 @@ try {
         throw new Error("OpenAPI 快照已過期，請執行 npm run openapi:export，再執行 npm run types:generate。");
       }
     }
-    checkPendingResponses(schema, await readFile(pending, "utf8"));
+    const pendingCount = checkPendingResponses(schema, await readFile(pending, "utf8"));
     if (command === "generate") {
       await generateTypes(schema, generated);
       console.log("型別已產生至 src/api/types.generated.ts。");
     } else {
       await checkGenerated(schema, generated);
-      console.log("產生型別與暫存回應清單檢查通過。" + (command === "check-export" ? " OpenAPI 快照與後端相符。" : ""));
+      console.log(`產生型別與暫存回應清單檢查通過。pending 端點：${pendingCount}。` + (command === "check-export" ? " OpenAPI 快照與後端相符。" : ""));
     }
   } else {
     throw new Error("用法：node scripts/openapi.mjs export|generate|check|check-export");

@@ -29,7 +29,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectListOut"
+                }
               }
             }
           },
@@ -66,7 +68,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectOut"
+                }
               }
             }
           },
@@ -106,7 +110,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectDetailOut"
+                }
               }
             }
           },
@@ -154,7 +160,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectPatchOut"
+                }
               }
             }
           },
@@ -194,7 +202,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectOut"
+                }
               }
             }
           },
@@ -244,7 +254,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/BulkPreviewOut"
+                }
               }
             }
           },
@@ -294,7 +306,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/BulkCommitOut"
+                }
               }
             }
           },
@@ -407,7 +421,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/TaskListOut"
+                }
               }
             }
           },
@@ -444,7 +460,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/TaskOut"
+                }
               }
             }
           },
@@ -484,7 +502,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/TaskDetailOut"
+                }
               }
             }
           },
@@ -534,7 +554,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/TaskEventOut"
+                }
               }
             }
           },
@@ -584,7 +606,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/TaskEventOut"
+                }
               }
             }
           },
@@ -634,7 +658,61 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/TaskEventOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tasks/{task_id}/adjust-start": {
+      "post": {
+        "tags": [
+          "tasks"
+        ],
+        "summary": "Adjust Start",
+        "operationId": "adjust_start_api_v1_tasks__task_id__adjust_start_post",
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Task Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdjustStart"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdjustStartOut"
+                }
               }
             }
           },
@@ -684,7 +762,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/CompleteOut"
+                }
               }
             }
           },
@@ -734,7 +814,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/AdjustDueOut"
+                }
               }
             }
           },
@@ -784,7 +866,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/BaselinePreviewOut"
+                }
               }
             }
           },
@@ -834,7 +918,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/TaskEventOut"
+                }
               }
             }
           },
@@ -884,7 +970,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/AnnotationOut"
+                }
               }
             }
           },
@@ -949,7 +1037,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/TimeMgmtStatsOut"
+                }
               }
             }
           },
@@ -978,7 +1068,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ReasonsOut"
+                }
               }
             }
           }
@@ -997,7 +1089,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/HealthOut"
+                }
               }
             }
           }
@@ -1069,6 +1163,90 @@
         ],
         "title": "AdjustDue"
       },
+      "AdjustDueOut": {
+        "properties": {
+          "task": {
+            "$ref": "#/components/schemas/TaskOut"
+          },
+          "event": {
+            "$ref": "#/components/schemas/EventOut"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings"
+          },
+          "needs_mark": {
+            "type": "boolean",
+            "title": "Needs Mark"
+          }
+        },
+        "type": "object",
+        "required": [
+          "task",
+          "event",
+          "warnings",
+          "needs_mark"
+        ],
+        "title": "AdjustDueOut"
+      },
+      "AdjustStart": {
+        "properties": {
+          "expected_version": {
+            "type": "integer",
+            "title": "Expected Version"
+          },
+          "new_start": {
+            "type": "string",
+            "format": "date",
+            "title": "New Start"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "type": "object",
+        "required": [
+          "expected_version",
+          "new_start"
+        ],
+        "title": "AdjustStart"
+      },
+      "AdjustStartOut": {
+        "properties": {
+          "task": {
+            "$ref": "#/components/schemas/TaskOut"
+          },
+          "event": {
+            "$ref": "#/components/schemas/EventOut"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings",
+            "description": "可含 START_AFTER_DUE（開始日晚於最新預計日）"
+          }
+        },
+        "type": "object",
+        "required": [
+          "task",
+          "event",
+          "warnings"
+        ],
+        "title": "AdjustStartOut"
+      },
       "Annotation": {
         "properties": {
           "mark": {
@@ -1109,6 +1287,28 @@
         ],
         "title": "Annotation"
       },
+      "AnnotationOut": {
+        "properties": {
+          "event": {
+            "$ref": "#/components/schemas/EventOut"
+          },
+          "effective_mark": {
+            "type": "string",
+            "enum": [
+              "better",
+              "worse",
+              "none"
+            ],
+            "title": "Effective Mark"
+          }
+        },
+        "type": "object",
+        "required": [
+          "event",
+          "effective_mark"
+        ],
+        "title": "AnnotationOut"
+      },
       "BaselineCommit": {
         "properties": {
           "confirmation_token": {
@@ -1126,6 +1326,36 @@
           "confirmation_token"
         ],
         "title": "BaselineCommit"
+      },
+      "BaselineImpactOut": {
+        "properties": {
+          "orig_due": {
+            "$ref": "#/components/schemas/FromToDate"
+          },
+          "gap_days": {
+            "$ref": "#/components/schemas/FromToInt"
+          },
+          "project_delayed_count": {
+            "$ref": "#/components/schemas/FromToInt"
+          },
+          "past_due_events_kept": {
+            "type": "integer",
+            "title": "Past Due Events Kept"
+          },
+          "old_value_kept_in_history": {
+            "type": "boolean",
+            "title": "Old Value Kept In History"
+          }
+        },
+        "type": "object",
+        "required": [
+          "orig_due",
+          "gap_days",
+          "project_delayed_count",
+          "past_due_events_kept",
+          "old_value_kept_in_history"
+        ],
+        "title": "BaselineImpactOut"
       },
       "BaselinePreview": {
         "properties": {
@@ -1166,6 +1396,29 @@
         ],
         "title": "BaselinePreview"
       },
+      "BaselinePreviewOut": {
+        "properties": {
+          "confirmation_token": {
+            "type": "string",
+            "title": "Confirmation Token"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At"
+          },
+          "impact": {
+            "$ref": "#/components/schemas/BaselineImpactOut"
+          }
+        },
+        "type": "object",
+        "required": [
+          "confirmation_token",
+          "expires_at",
+          "impact"
+        ],
+        "title": "BaselinePreviewOut"
+      },
       "BlockChange": {
         "properties": {
           "expected_version": {
@@ -1184,6 +1437,37 @@
         ],
         "title": "BlockChange"
       },
+      "BulkCommitOut": {
+        "properties": {
+          "batch_id": {
+            "type": "integer",
+            "title": "Batch Id"
+          },
+          "updated": {
+            "type": "integer",
+            "title": "Updated"
+          },
+          "mine_marked": {
+            "type": "integer",
+            "title": "Mine Marked"
+          },
+          "events": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Events"
+          }
+        },
+        "type": "object",
+        "required": [
+          "batch_id",
+          "updated",
+          "mine_marked",
+          "events"
+        ],
+        "title": "BulkCommitOut"
+      },
       "BulkItem": {
         "properties": {
           "task_id": {
@@ -1201,6 +1485,80 @@
           "expected_version"
         ],
         "title": "BulkItem"
+      },
+      "BulkPreviewItemOut": {
+        "properties": {
+          "task_id": {
+            "type": "integer",
+            "title": "Task Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "owner": {
+            "type": "string",
+            "title": "Owner"
+          },
+          "from": {
+            "type": "string",
+            "format": "date",
+            "title": "From"
+          },
+          "to": {
+            "type": "string",
+            "format": "date",
+            "title": "To"
+          },
+          "mine": {
+            "type": "boolean",
+            "title": "Mine"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings"
+          }
+        },
+        "type": "object",
+        "required": [
+          "task_id",
+          "title",
+          "owner",
+          "from",
+          "to",
+          "mine",
+          "warnings"
+        ],
+        "title": "BulkPreviewItemOut"
+      },
+      "BulkPreviewOut": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/BulkPreviewItemOut"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "mine_count": {
+            "type": "integer",
+            "title": "Mine Count"
+          },
+          "mark_required": {
+            "type": "boolean",
+            "title": "Mark Required"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "mine_count",
+          "mark_required"
+        ],
+        "title": "BulkPreviewOut"
       },
       "BulkShift": {
         "properties": {
@@ -1266,6 +1624,24 @@
         ],
         "title": "BulkShift"
       },
+      "CodeLabelOut": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "label"
+        ],
+        "title": "CodeLabelOut"
+      },
       "Complete": {
         "properties": {
           "expected_version": {
@@ -1291,6 +1667,372 @@
         ],
         "title": "Complete"
       },
+      "CompleteOut": {
+        "properties": {
+          "task": {
+            "$ref": "#/components/schemas/TaskOut"
+          },
+          "event": {
+            "$ref": "#/components/schemas/EventOut"
+          },
+          "feedback_required": {
+            "type": "boolean",
+            "title": "Feedback Required"
+          }
+        },
+        "type": "object",
+        "required": [
+          "task",
+          "event",
+          "feedback_required"
+        ],
+        "title": "CompleteOut"
+      },
+      "CountDays": {
+        "properties": {
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          },
+          "days": {
+            "type": "integer",
+            "title": "Days"
+          }
+        },
+        "type": "object",
+        "required": [
+          "count",
+          "days"
+        ],
+        "title": "CountDays"
+      },
+      "DueReasonOut": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "direction": {
+            "type": "string",
+            "enum": [
+              "earlier",
+              "later"
+            ],
+            "title": "Direction"
+          },
+          "external": {
+            "type": "boolean",
+            "title": "External"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "label",
+          "direction",
+          "external"
+        ],
+        "title": "DueReasonOut"
+      },
+      "EnergyDistribution": {
+        "properties": {
+          "high": {
+            "type": "integer",
+            "title": "High"
+          },
+          "mid": {
+            "type": "integer",
+            "title": "Mid"
+          },
+          "low": {
+            "type": "integer",
+            "title": "Low"
+          },
+          "not_done": {
+            "type": "integer",
+            "title": "Not Done"
+          }
+        },
+        "type": "object",
+        "required": [
+          "high",
+          "mid",
+          "low",
+          "not_done"
+        ],
+        "title": "EnergyDistribution"
+      },
+      "EventOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "ts": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Ts"
+          },
+          "project_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project Id"
+          },
+          "task_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Task Id"
+          },
+          "task_title": {
+            "type": "string",
+            "title": "Task Title"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "due",
+              "annotation",
+              "status",
+              "task",
+              "feedback",
+              "goal",
+              "baseline",
+              "project"
+            ],
+            "title": "Kind"
+          },
+          "field": {
+            "type": "string",
+            "title": "Field"
+          },
+          "from_value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "From Value"
+          },
+          "to_value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "To Value"
+          },
+          "origin": {
+            "type": "string",
+            "enum": [
+              "candidate",
+              "manual",
+              "bulk",
+              "import",
+              "baseline_correction",
+              "system"
+            ],
+            "title": "Origin"
+          },
+          "origin_ref": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Origin Ref"
+          },
+          "source_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Id"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "delta_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delta Days"
+          },
+          "mark": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "better",
+                  "worse",
+                  "none"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mark"
+          },
+          "mine": {
+            "type": "boolean",
+            "title": "Mine"
+          },
+          "ref_event_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ref Event Id"
+          },
+          "batch_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Batch Id"
+          },
+          "actor": {
+            "type": "string",
+            "title": "Actor"
+          },
+          "extra": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Extra"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "ts",
+          "project_id",
+          "task_id",
+          "task_title",
+          "kind",
+          "field",
+          "from_value",
+          "to_value",
+          "origin",
+          "origin_ref",
+          "source_id",
+          "reason",
+          "note",
+          "delta_days",
+          "mark",
+          "mine",
+          "ref_event_id",
+          "batch_id",
+          "actor",
+          "extra"
+        ],
+        "title": "EventOut"
+      },
+      "FromToDate": {
+        "properties": {
+          "from": {
+            "type": "string",
+            "format": "date",
+            "title": "From"
+          },
+          "to": {
+            "type": "string",
+            "format": "date",
+            "title": "To"
+          }
+        },
+        "type": "object",
+        "required": [
+          "from",
+          "to"
+        ],
+        "title": "FromToDate"
+      },
+      "FromToInt": {
+        "properties": {
+          "from": {
+            "type": "integer",
+            "title": "From"
+          },
+          "to": {
+            "type": "integer",
+            "title": "To"
+          }
+        },
+        "type": "object",
+        "required": [
+          "from",
+          "to"
+        ],
+        "title": "FromToInt"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -1303,6 +2045,32 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "HealthOut": {
+        "properties": {
+          "db": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "error"
+            ],
+            "title": "Db"
+          },
+          "ai": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "unavailable"
+            ],
+            "title": "Ai"
+          }
+        },
+        "type": "object",
+        "required": [
+          "db",
+          "ai"
+        ],
+        "title": "HealthOut"
       },
       "OwnerChange": {
         "properties": {
@@ -1365,6 +2133,193 @@
         ],
         "title": "ProjectCreate"
       },
+      "ProjectDetailOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "work",
+              "private"
+            ],
+            "title": "Scope"
+          },
+          "audience": {
+            "type": "string",
+            "enum": [
+              "manager",
+              "client",
+              "none"
+            ],
+            "title": "Audience"
+          },
+          "line_group_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Line Group Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          },
+          "archived_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Archived At"
+          },
+          "task_count": {
+            "type": "integer",
+            "title": "Task Count"
+          },
+          "baseline_saved_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baseline Saved At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "scope",
+          "audience",
+          "line_group_id",
+          "created_at",
+          "updated_at",
+          "archived_at",
+          "task_count",
+          "baseline_saved_at"
+        ],
+        "title": "ProjectDetailOut"
+      },
+      "ProjectListOut": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ProjectOut"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "ProjectListOut"
+      },
+      "ProjectOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "work",
+              "private"
+            ],
+            "title": "Scope"
+          },
+          "audience": {
+            "type": "string",
+            "enum": [
+              "manager",
+              "client",
+              "none"
+            ],
+            "title": "Audience"
+          },
+          "line_group_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Line Group Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          },
+          "archived_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Archived At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "scope",
+          "audience",
+          "line_group_id",
+          "created_at",
+          "updated_at",
+          "archived_at"
+        ],
+        "title": "ProjectOut"
+      },
       "ProjectPatch": {
         "properties": {
           "name": {
@@ -1412,6 +2367,58 @@
         },
         "type": "object",
         "title": "ProjectPatch"
+      },
+      "ProjectPatchOut": {
+        "properties": {
+          "project": {
+            "$ref": "#/components/schemas/ProjectOut"
+          },
+          "changes": {
+            "items": {
+              "$ref": "#/components/schemas/EventOut"
+            },
+            "type": "array",
+            "title": "Changes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "project",
+          "changes"
+        ],
+        "title": "ProjectPatchOut"
+      },
+      "ReasonsOut": {
+        "properties": {
+          "due": {
+            "items": {
+              "$ref": "#/components/schemas/DueReasonOut"
+            },
+            "type": "array",
+            "title": "Due"
+          },
+          "baseline_types": {
+            "items": {
+              "$ref": "#/components/schemas/CodeLabelOut"
+            },
+            "type": "array",
+            "title": "Baseline Types"
+          },
+          "baseline_reasons": {
+            "items": {
+              "$ref": "#/components/schemas/CodeLabelOut"
+            },
+            "type": "array",
+            "title": "Baseline Reasons"
+          }
+        },
+        "type": "object",
+        "required": [
+          "due",
+          "baseline_types",
+          "baseline_reasons"
+        ],
+        "title": "ReasonsOut"
       },
       "StatusChange": {
         "properties": {
@@ -1542,6 +2549,266 @@
           "due"
         ],
         "title": "TaskCreate"
+      },
+      "TaskDetailOut": {
+        "properties": {
+          "task": {
+            "$ref": "#/components/schemas/TaskOut"
+          },
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/EventOut"
+            },
+            "type": "array",
+            "title": "Events"
+          }
+        },
+        "type": "object",
+        "required": [
+          "task",
+          "events"
+        ],
+        "title": "TaskDetailOut"
+      },
+      "TaskEventOut": {
+        "properties": {
+          "task": {
+            "$ref": "#/components/schemas/TaskOut"
+          },
+          "event": {
+            "$ref": "#/components/schemas/EventOut"
+          }
+        },
+        "type": "object",
+        "required": [
+          "task",
+          "event"
+        ],
+        "title": "TaskEventOut"
+      },
+      "TaskListOut": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/TaskOut"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "TaskListOut"
+      },
+      "TaskOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "project_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "owner": {
+            "type": "string",
+            "title": "Owner"
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "work",
+              "private"
+            ],
+            "title": "Scope"
+          },
+          "start": {
+            "type": "string",
+            "format": "date",
+            "title": "Start"
+          },
+          "orig_due": {
+            "type": "string",
+            "format": "date",
+            "title": "Orig Due"
+          },
+          "latest_due": {
+            "type": "string",
+            "format": "date",
+            "title": "Latest Due"
+          },
+          "delta_days": {
+            "type": "integer",
+            "title": "Delta Days",
+            "description": "latest_due − orig_due（天）"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "todo",
+              "doing",
+              "done"
+            ],
+            "title": "Status"
+          },
+          "blocked": {
+            "type": "boolean",
+            "title": "Blocked"
+          },
+          "done_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Done Date"
+          },
+          "done_when": {
+            "type": "string",
+            "title": "Done When"
+          },
+          "remind": {
+            "type": "string",
+            "enum": [
+              "morning",
+              "eve_before",
+              "none"
+            ],
+            "title": "Remind"
+          },
+          "expected_stars": {
+            "type": "integer",
+            "title": "Expected Stars"
+          },
+          "star_source": {
+            "type": "string",
+            "enum": [
+              "self",
+              "ai_accepted",
+              "ai_edited",
+              "import_default"
+            ],
+            "title": "Star Source"
+          },
+          "rubric_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rubric Id"
+          },
+          "goal_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Goal Id"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "project_id",
+          "title",
+          "owner",
+          "scope",
+          "start",
+          "orig_due",
+          "latest_due",
+          "delta_days",
+          "status",
+          "blocked",
+          "done_date",
+          "done_when",
+          "remind",
+          "expected_stars",
+          "star_source",
+          "rubric_id",
+          "goal_id",
+          "version"
+        ],
+        "title": "TaskOut"
+      },
+      "TimeMgmtStatsOut": {
+        "properties": {
+          "better": {
+            "$ref": "#/components/schemas/CountDays"
+          },
+          "worse": {
+            "$ref": "#/components/schemas/CountDays"
+          },
+          "none": {
+            "type": "integer",
+            "title": "None"
+          },
+          "unmarked": {
+            "type": "integer",
+            "title": "Unmarked"
+          },
+          "worse_by_energy": {
+            "$ref": "#/components/schemas/EnergyDistribution"
+          },
+          "min_sample": {
+            "type": "integer",
+            "title": "Min Sample"
+          },
+          "judgement": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Judgement"
+          }
+        },
+        "type": "object",
+        "required": [
+          "better",
+          "worse",
+          "none",
+          "unmarked",
+          "worse_by_energy",
+          "min_sample",
+          "judgement"
+        ],
+        "title": "TimeMgmtStatsOut"
       },
       "ValidationError": {
         "properties": {

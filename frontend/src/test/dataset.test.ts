@@ -78,16 +78,17 @@ test("DA-11 MARK_IGNORED 仍為 200 警告，不寫入我的註記", async () =>
   expect(data.error).toBeUndefined();
 });
 
-test("AC-62 adjust-start 成功快照只改開始日與版本，標示待 Dev-A 實作", async () => {
+test("AC-62 adjust-start 成功快照引用正式 AdjustStartOut 的 start 欄位", async () => {
   const fixture = adjustStartFixtures.success;
   const response = await fetch(`${API}/tasks/3/adjust-start`, {
     method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(fixture.request),
   });
   expect(response.status).toBe(200);
   expect(await response.json()).toEqual(fixture.response);
-  expect(fixture.response.task).toEqual({ id: 3, start_date: "2026-11-17", orig_due: "2026-11-20", latest_due: "2026-11-20", version: 5 });
+  expect(fixture.response.task).toMatchObject({ id: 3, start: "2026-11-17", orig_due: "2026-11-20", latest_due: "2026-11-20", version: 5 });
+  expect(fixture.response.task).not.toHaveProperty("start_date");
   expect(fixture.response.event).toMatchObject({ kind: "task", field: "start_date", mark: null, delta_days: null });
-  expect(fixture.implementation).toBe("待 Dev-A 實作（todo 2.11）");
+  expect(fixture).not.toHaveProperty("implementation");
 });
 
 test("AC-62 START_AFTER_DUE 是 200 警告，不阻擋開始日調整", async () => {
@@ -97,7 +98,7 @@ test("AC-62 START_AFTER_DUE 是 200 警告，不阻擋開始日調整", async ()
   expect(response.status).toBe(200);
   const data = await response.json();
   expect(data.warnings).toEqual(["START_AFTER_DUE"]);
-  expect(data.task.start_date).toBe("2026-11-21");
+  expect(data.task.start).toBe("2026-11-21");
   expect(data.task.latest_due).toBe("2026-11-20");
   expect(data.error).toBeUndefined();
 });
@@ -109,7 +110,7 @@ test.each(["taskDone", "noChange", "outOfRange", "staleVersion", "validationErro
     const response = await fetch(`${API}/tasks/3/adjust-start`, { method: "POST", body: JSON.stringify(fixture.request) });
     expect(response.status).toBe(fixture.status);
     expect(await response.json()).toEqual(fixture.response);
-    expect(fixture.implementation).toBe("待 Dev-A 實作（todo 2.11）");
+    expect(fixture).not.toHaveProperty("implementation");
   },
 );
 
@@ -117,12 +118,38 @@ test("makeTask 與原因選項相容，測試資料可獨立修改而不污染�
   const changed = makeSerializedTask();
   changed.title = "範例修改";
   expect(makeSerializedTask().title).toBe(makeTask().title);
-  expect(Object.keys(makeTask())).toHaveLength(13);
+  expect(Object.keys(makeTask())).toHaveLength(19);
   const response = await fetch(`${API}/meta/reasons`);
   expect(await response.json()).toEqual(reasons);
   expect(reasons.due.filter((reason) => reason.external).map((reason) => reason.code)).toEqual([
     "wait_external", "scope_change_external", "resource_external",
   ]);
+});
+
+test("A4 的全部 22 個成功操作都有 schema，pending 清單為零", () => {
+  const schema = JSON.parse(readFileSync(resolve("openapi.json"), "utf8"));
+  const operations = Object.values(schema.paths).flatMap((item) => Object.entries(item as Record<string, unknown>)
+    .filter(([method]) => ["get", "post", "patch", "put", "delete"].includes(method)).map(([, operation]) => operation)) as { responses: Record<string, { content?: Record<string, { schema?: object }> }> }[];
+  expect(operations).toHaveLength(22);
+  for (const operation of operations) {
+    for (const [status, response] of Object.entries(operation.responses)) {
+      if (!status.startsWith("2")) continue;
+      expect(response.content).toBeDefined();
+      for (const media of Object.values(response.content ?? {})) expect(Object.keys(media.schema ?? {}).length).toBeGreaterThan(0);
+    }
+  }
+  const pending = readFileSync(resolve("src/api/types.pending.ts"), "utf8");
+  expect(pending).toContain("pending-response-count: 0");
+  expect(pending.match(/^\/\/ pending-response: /gm) ?? []).toHaveLength(0);
+});
+
+test("fixture 型別全部引用生成模型，不再宣告手寫介面或待實作標記", () => {
+  const source = readFileSync(resolve("src/test/fixtureTypes.ts"), "utf8");
+  expect(source).toContain("types.generated");
+  expect(source).not.toMatch(/export interface /);
+  for (const file of ["fixtureTypes.ts", "fixtures.ts", "handlers.ts"]) {
+    expect(readFileSync(resolve("src/test", file), "utf8")).not.toContain("待 Dev-A 實作");
+  }
 });
 
 test("產品程式不得引用 src/test 的手寫形狀或 fixture", () => {

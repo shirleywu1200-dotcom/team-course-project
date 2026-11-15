@@ -22,7 +22,7 @@ export function errorHandler(code: ErrorFixtureCode) {
   return http.get(`${API}/tasks/4`, () => HttpResponse.json(fixture.body, { status: fixture.status }));
 }
 
-// 待 Dev-A 實作（todo 2.11）。僅測試用，不會向真正後端補送請求。
+// 正式 adjust-start 的測試情境，不會向真正後端補送請求。
 export function adjustStartHandler(scenario: keyof typeof adjustStartFixtures = "success") {
   const fixture = adjustStartFixtures[scenario];
   return http.post(`${API}/tasks/3/adjust-start`, () => HttpResponse.json(fixture.response, { status: fixture.status }));

@@ -34,11 +34,10 @@ npm run typecheck
 請求型別從 `src/api/types.ts` 匯出，內容引用生成型別。
 原本沒有獨立命名的功能頁請求物件保留原樣；本次不改 Dev-A 功能程式。
 
-回應模型尚未齊全，既有手寫定義原樣集中至 `src/api/types.pending.ts`。
-該檔的 `pending-response` 註解逐一列出使用這些型別的端點，也是檢查程式讀取的清單。
-若清單內任一端點的任一 2xx 回應 schema 不再是空物件，檢查會失敗：
-待 Dev-A 補齊契約後，應在後續作業移除對應暫存型別與清單項目，改用生成型別。
-請勿自行補齊、擴充或推測回應欄位。
+A4 已補齊全部成功回應模型。`src/api/types.ts` 的既有名稱改為生成型別別名；
+`types.pending.ts` 只保留 `pending-response-count: 0`，沒有手寫回應型別。
+零清單檢查會掃描全部成功回應；若出現空 schema，不能宣告零 pending。
+`FromTo<T>`、`Paged<T>` 僅保留由生成模型欄位推導的相容泛型，不另定義資源欄位。
 
 ## 路由與共用版面（11.1）
 
@@ -97,7 +96,7 @@ code／message 必須是非空字串，details 必須是非陣列物件。
 ## MSW 共用資料集（11.7）
 
 測試仍從 `src/test/server.tsx` 匯入 `API`、`server`、`reasons`、`makeTask`、`apiError`、
-`renderWithClient`；既有名稱、原因選項順序、makeTask 的 13 欄與覆寫方式均保留。
+`renderWithClient`；既有名稱、原因選項順序與 makeTask 覆寫方式保留；A4 後補齊 TaskOut 的 19 欄。
 資料單一來源分工：`reasons.ts` 放選項、`fixtures.ts` 放任務與情境快照、
 `errorFixtures.ts` 放 spec 5.2 全部 17 個錯誤碼／HTTP 狀態、`handlers.ts` 放 MSW handlers。
 Dev-A 測試原有的局部 handler 覆寫保留，沒有刪除或放寬測試。
@@ -109,7 +108,7 @@ Dev-A 測試原有的局部 handler 覆寫保留，沒有刪除或放寬測試�
 | todo／doing 狀態切換 | FR-TSK-04、DA-08 | `DA-08 狀態 <status> 使用生成請求型別與完整序列化回應` |
 | status 回應欄位全集 | `serialize.py`、`routes_tasks.py` | `status 的 task／event 欄位全集對照後端 serialize.py，不依殘缺產品型別猜欄位` |
 | `MARK_IGNORED` 是成功警告 | FR-MRK-02、DA-11 | `DA-11 MARK_IGNORED 仍為 200 警告，不寫入我的註記` |
-| 調整開始日成功快照 | FR-TSK-08、AC-62 | `AC-62 adjust-start 成功快照只改開始日與版本，標示待 Dev-A 實作` |
+| 調整開始日成功快照 | FR-TSK-09、AC-62 | `AC-62 adjust-start 成功快照引用正式 AdjustStartOut 的 start 欄位` |
 | 開始日晚於預計日仍成功 | AC-62 | `AC-62 START_AFTER_DUE 是 200 警告，不阻擋開始日調整` |
 | 開始日調整的 5 種錯誤 | 已核准的 adjust-start 契約 | `adjust-start 錯誤情境 <scenario> 沿用既有錯誤碼` |
 | 選項、舊 factory 與隔離 | FR-DUE-05、FR-MRK-03、既有介面相容要求 | `makeTask 與原因選項相容，測試資料可獨立修改而不污染後續情境` |
@@ -122,19 +121,18 @@ Dev-A 測試原有的局部 handler 覆寫保留，沒有刪除或放寬測試�
 錯誤 handler 只驗證統一錯誤格式，不代表測試端點在產品中會回全部錯誤碼；
 例如 spec 5.2 的 503 `AI_UNAVAILABLE` 仍僅限量表訪談。
 
-手寫形狀僅在 `src/test/fixtureTypes.ts`，不從 `src/api/` 匯出、不供產品程式引用：
+`src/test/fixtureTypes.ts` 全部引用 `types.generated.ts`，只保留測試相容別名，不再手寫形狀：
 
-| 手寫形狀 | 來源與邊界 |
+| 測試別名 | 生成模型／來源 |
 | --- | --- |
-| `SerializedTaskFixture` | `task_out` 的 19 欄；只在測試擴充原有 Task，不改產品型別 |
-| `SerializedEventFixture` | `event_out` 的 21 欄；時間戳使用固定 `+08:00` 字串 |
-| `StatusFixtureResponse` | 狀態路由的 `{task,event}`；請求引用生成的 `StatusChange` |
-| `TaskDetailFixtureResponse` | `routes_tasks.py` 的 `get_task`：`{task: task_out(...), events: event_out(...)[]}`；`events: []` 表示範例任務沒有近期歷程 |
-| `AdjustStartFixtureRequest` | 已核准的 `new_start`、`expected_version`、選填 `note` |
-| `AdjustStartFixtureResponse` | 已核准成功輸出與 AC-62 的空 mark／delta_days；不補猜測欄位 |
+| `SerializedTaskFixture` | `components.schemas.TaskOut`（19 欄） |
+| `SerializedEventFixture` | `components.schemas.EventOut`（21 欄） |
+| `StatusFixtureResponse` | `components.schemas.TaskEventOut`；請求使用 `StatusChange` |
+| `TaskDetailFixtureResponse` | `components.schemas.TaskDetailOut`，包含 `task`、`events`；空陣列表示範例沒有近期歷程 |
+| `AdjustStartFixtureRequest` | `components.schemas.AdjustStart` |
+| `AdjustStartFixtureResponse` | `components.schemas.AdjustStartOut`；使用正式的 `task.start` |
 
-status 形狀標記「形狀取自後端現況，待 Dev-A 補 response_model 後改由生成型別取代」。
-adjust-start 的形狀、資料與 handler 均標記「待 Dev-A 實作（todo 2.11）」。
-它依已核准的規劃契約使用 `start_date`；現行 task_out 的 `start` 保持原樣，兩者不自行統一。
-未擴充其他 12 個空 schema 端點，也未新增 AC-61 的建立任務端點 fixture。
-測試型別的補充與固定情境組織方式屬本次授權內的測試實作選擇，不代表產品契約已補齊。
+0-8b 已移除所有手寫回應介面與舊的待實作標記。
+正式 adjust-start 依 `responses.py` 使用 `TaskOut.start`；事件欄位仍為 `field="start_date"`。
+既有 API、server、原因選項與 helper 匯出保留，Dev-A 功能／測試不需改動。
+本資料集沒有新增建立任務端點 fixture，也不代替後端 AC-61／62 的交易與資料庫驗收。

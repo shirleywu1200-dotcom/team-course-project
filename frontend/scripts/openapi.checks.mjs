@@ -40,6 +40,12 @@ test("unknown and missing pending entries fail instead of silently passing", () 
   assert.throws(() => checkPendingResponses(document({}), ""), /pending-response/);
 });
 
+test("an explicit zero-pending marker requires every success schema to be modeled", () => {
+  const none = "// pending-response-count: 0\n";
+  assert.equal(checkPendingResponses(document({ type: "object" }), none), 0);
+  assert.throws(() => checkPendingResponses(document({}), none), /GET \/tasks/);
+});
+
 test("generation is repeatable and detects a stale generated file", async () => {
   const dir = await mkdtemp(join(tmpdir(), "dev-c-openapi-"));
   try {

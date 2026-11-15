@@ -2,20 +2,18 @@ import type { AdjustDue, AdjustDueResult, StatusChange, Task } from "../api/type
 import type { AdjustStartFixtureRequest, AdjustStartFixtureResponse, SerializedEventFixture, SerializedTaskFixture, StatusFixtureResponse, TaskDetailFixtureResponse } from "./fixtureTypes";
 import { getErrorFixture, type ErrorFixtureCode } from "./errorFixtures";
 
-// 原 makeTask 的值、欄位與覆寫方式原樣保留，只有一份基底資料。
+// A4 TaskOut 的完整 19 欄；既有值保留，補上原 SerializedTaskFixture 的六個欄位。
 export function makeTask(over: Partial<Task> = {}): Task {
   return {
     id: 4, project_id: 1, title: "確認驗收條件", owner: "我", scope: "work", start: "2026-11-14",
     orig_due: "2026-11-18", latest_due: "2026-11-18", delta_days: 0, status: "todo", blocked: false,
-    done_date: null, version: 1, ...over,
+    done_date: null, done_when: "", remind: "morning", expected_stars: 3,
+    star_source: "self", rubric_id: 1, goal_id: null, version: 1, ...over,
   };
 }
 
 export function makeSerializedTask(over: Partial<SerializedTaskFixture> = {}): SerializedTaskFixture {
-  return {
-    ...makeTask(), done_when: "", remind: "morning", expected_stars: 3,
-    star_source: "self", rubric_id: 1, goal_id: null, ...over,
-  };
+  return makeTask(over);
 }
 
 export function makeTaskDetailFixture(): TaskDetailFixtureResponse {
@@ -60,30 +58,29 @@ function dueFixture(mine: boolean) {
 
 export const dueFixtures = { success: dueFixture(true), markIgnored: dueFixture(false) };
 
-// 待 Dev-A 實作（todo 2.11）：這些是已指定契約的固定快照，不模擬後端狀態機。
-const implementation = "待 Dev-A 實作（todo 2.11）" as const;
+// 正式 AdjustStartOut 的固定快照，不模擬後端狀態機。
 const startRequest: AdjustStartFixtureRequest = { new_start: "2026-11-17", expected_version: 4, note: "範例開始日調整" };
 const startResponse: AdjustStartFixtureResponse = {
-  task: { id: 3, start_date: "2026-11-17", orig_due: "2026-11-20", latest_due: "2026-11-20", version: 5 },
-  event: { id: 91, kind: "task", field: "start_date", from_value: "2026-11-15", to_value: "2026-11-17", mine: true, mark: null, delta_days: null },
+  task: makeTask({ id: 3, start: "2026-11-17", orig_due: "2026-11-20", latest_due: "2026-11-20", version: 5 }),
+  event: makeSerializedEvent({ id: 91, task_id: 3, kind: "task", field: "start_date", from_value: "2026-11-15", to_value: "2026-11-17", mine: true, mark: null, delta_days: null }),
   warnings: [],
 };
 
 function startError(code: ErrorFixtureCode, request: AdjustStartFixtureRequest) {
   const fixture = getErrorFixture(code);
-  return { request, response: fixture.body, status: fixture.status, implementation };
+  return { request, response: fixture.body, status: fixture.status };
 }
 
 export const adjustStartFixtures = {
-  success: { request: startRequest, response: startResponse, status: 200, implementation },
+  success: { request: startRequest, response: startResponse, status: 200 },
   afterDue: {
     request: { ...startRequest, new_start: "2026-11-21" },
     response: {
-      task: { ...startResponse.task, start_date: "2026-11-21" },
+      task: { ...startResponse.task, start: "2026-11-21" },
       event: { ...startResponse.event, to_value: "2026-11-21" },
       warnings: ["START_AFTER_DUE"],
     } satisfies AdjustStartFixtureResponse,
-    status: 200, implementation,
+    status: 200,
   },
   taskDone: startError("TASK_DONE", { ...startRequest }),
   noChange: startError("NO_CHANGE", { ...startRequest, new_start: "2026-11-15" }),

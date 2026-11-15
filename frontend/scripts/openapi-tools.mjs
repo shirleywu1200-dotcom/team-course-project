@@ -44,7 +44,22 @@ export async function checkGenerated(schema, target) {
 
 export function checkPendingResponses(schema, pendingText) {
   const entries = [...pendingText.matchAll(/^\/\/ pending-response: (GET|POST|PUT|PATCH|DELETE) (\S+)$/gm)];
-  if (!entries.length) throw new Error("types.pending.ts 缺少 pending-response 清單。");
+  if (!entries.length) {
+    if (!/^\/\/ pending-response-count: 0$/m.test(pendingText)) throw new Error("types.pending.ts 缺少 pending-response 清單。");
+    for (const [path, item] of Object.entries(schema.paths)) {
+      for (const [method, operation] of Object.entries(item)) {
+        if (!["get", "post", "put", "patch", "delete", "head", "options", "trace"].includes(method)) continue;
+        for (const [status, response] of Object.entries(operation.responses ?? {})) {
+          if (!/^2(?:\d\d|XX)$/i.test(status)) continue;
+          const media = Object.values(response.content ?? {});
+          if (!response.$ref && (!media.length || media.some(({ schema: body }) => !body || (typeof body === "object" && !Object.keys(body).length)))) {
+            throw new Error(`${method.toUpperCase()} ${path} 的 ${status} 回應尚無模型，不能宣告 pending-response-count: 0。`);
+          }
+        }
+      }
+    }
+    return 0;
+  }
   for (const [, method, path] of entries) {
     const operation = schema.paths[path]?.[method.toLowerCase()];
     if (!operation) throw new Error(`pending-response 端點不存在：${method} ${path}`);
@@ -58,4 +73,5 @@ export function checkPendingResponses(schema, pendingText) {
       }
     }
   }
+  return entries.length;
 }

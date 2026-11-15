@@ -173,6 +173,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/tasks/{task_id}/adjust-start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Adjust Start */
+        post: operations["adjust_start_api_v1_tasks__task_id__adjust_start_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/tasks/{task_id}/complete": {
         parameters: {
             query?: never;
@@ -334,6 +351,37 @@ export interface components {
              */
             defer_mark?: boolean;
         };
+        /** AdjustDueOut */
+        AdjustDueOut: {
+            task: components["schemas"]["TaskOut"];
+            event: components["schemas"]["EventOut"];
+            /** Warnings */
+            warnings: string[];
+            /** Needs Mark */
+            needs_mark: boolean;
+        };
+        /** AdjustStart */
+        AdjustStart: {
+            /** Expected Version */
+            expected_version: number;
+            /**
+             * New Start
+             * Format: date
+             */
+            new_start: string;
+            /** Note */
+            note?: string | null;
+        };
+        /** AdjustStartOut */
+        AdjustStartOut: {
+            task: components["schemas"]["TaskOut"];
+            event: components["schemas"]["EventOut"];
+            /**
+             * Warnings
+             * @description 可含 START_AFTER_DUE（開始日晚於最新預計日）
+             */
+            warnings: string[];
+        };
         /** Annotation */
         Annotation: {
             /**
@@ -346,6 +394,15 @@ export interface components {
             /** Note */
             note?: string | null;
         };
+        /** AnnotationOut */
+        AnnotationOut: {
+            event: components["schemas"]["EventOut"];
+            /**
+             * Effective Mark
+             * @enum {string}
+             */
+            effective_mark: "better" | "worse" | "none";
+        };
         /** BaselineCommit */
         BaselineCommit: {
             /** Confirmation Token */
@@ -355,6 +412,16 @@ export interface components {
              * @default false
              */
             ack?: boolean;
+        };
+        /** BaselineImpactOut */
+        BaselineImpactOut: {
+            orig_due: components["schemas"]["FromToDate"];
+            gap_days: components["schemas"]["FromToInt"];
+            project_delayed_count: components["schemas"]["FromToInt"];
+            /** Past Due Events Kept */
+            past_due_events_kept: number;
+            /** Old Value Kept In History */
+            old_value_kept_in_history: boolean;
         };
         /** BaselinePreview */
         BaselinePreview: {
@@ -373,6 +440,17 @@ export interface components {
             /** Reason */
             reason?: string | null;
         };
+        /** BaselinePreviewOut */
+        BaselinePreviewOut: {
+            /** Confirmation Token */
+            confirmation_token: string;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            impact: components["schemas"]["BaselineImpactOut"];
+        };
         /** BlockChange */
         BlockChange: {
             /** Expected Version */
@@ -383,12 +461,55 @@ export interface components {
              */
             blocked?: boolean;
         };
+        /** BulkCommitOut */
+        BulkCommitOut: {
+            /** Batch Id */
+            batch_id: number;
+            /** Updated */
+            updated: number;
+            /** Mine Marked */
+            mine_marked: number;
+            /** Events */
+            events: number[];
+        };
         /** BulkItem */
         BulkItem: {
             /** Task Id */
             task_id: number;
             /** Expected Version */
             expected_version: number;
+        };
+        /** BulkPreviewItemOut */
+        BulkPreviewItemOut: {
+            /** Task Id */
+            task_id: number;
+            /** Title */
+            title: string;
+            /** Owner */
+            owner: string;
+            /**
+             * From
+             * Format: date
+             */
+            from: string;
+            /**
+             * To
+             * Format: date
+             */
+            to: string;
+            /** Mine */
+            mine: boolean;
+            /** Warnings */
+            warnings: string[];
+        };
+        /** BulkPreviewOut */
+        BulkPreviewOut: {
+            /** Items */
+            items: components["schemas"]["BulkPreviewItemOut"][];
+            /** Mine Count */
+            mine_count: number;
+            /** Mark Required */
+            mark_required: boolean;
         };
         /** BulkShift */
         BulkShift: {
@@ -408,6 +529,13 @@ export interface components {
              */
             defer_mark?: boolean;
         };
+        /** CodeLabelOut */
+        CodeLabelOut: {
+            /** Code */
+            code: string;
+            /** Label */
+            label: string;
+        };
         /** Complete */
         Complete: {
             /** Expected Version */
@@ -415,10 +543,138 @@ export interface components {
             /** Done Date */
             done_date?: string | null;
         };
+        /** CompleteOut */
+        CompleteOut: {
+            task: components["schemas"]["TaskOut"];
+            event: components["schemas"]["EventOut"];
+            /** Feedback Required */
+            feedback_required: boolean;
+        };
+        /** CountDays */
+        CountDays: {
+            /** Count */
+            count: number;
+            /** Days */
+            days: number;
+        };
+        /** DueReasonOut */
+        DueReasonOut: {
+            /** Code */
+            code: string;
+            /** Label */
+            label: string;
+            /**
+             * Direction
+             * @enum {string}
+             */
+            direction: "earlier" | "later";
+            /** External */
+            external: boolean;
+        };
+        /** EnergyDistribution */
+        EnergyDistribution: {
+            /** High */
+            high: number;
+            /** Mid */
+            mid: number;
+            /** Low */
+            low: number;
+            /** Not Done */
+            not_done: number;
+        };
+        /** EventOut */
+        EventOut: {
+            /** Id */
+            id: number;
+            /**
+             * Ts
+             * Format: date-time
+             */
+            ts: string;
+            /** Project Id */
+            project_id: number | null;
+            /** Task Id */
+            task_id: number | null;
+            /** Task Title */
+            task_title: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "due" | "annotation" | "status" | "task" | "feedback" | "goal" | "baseline" | "project";
+            /** Field */
+            field: string;
+            /** From Value */
+            from_value: string | null;
+            /** To Value */
+            to_value: string | null;
+            /**
+             * Origin
+             * @enum {string}
+             */
+            origin: "candidate" | "manual" | "bulk" | "import" | "baseline_correction" | "system";
+            /** Origin Ref */
+            origin_ref: number | null;
+            /** Source Id */
+            source_id: number | null;
+            /** Reason */
+            reason: string | null;
+            /** Note */
+            note: string | null;
+            /** Delta Days */
+            delta_days: number | null;
+            /** Mark */
+            mark: ("better" | "worse" | "none") | null;
+            /** Mine */
+            mine: boolean;
+            /** Ref Event Id */
+            ref_event_id: number | null;
+            /** Batch Id */
+            batch_id: number | null;
+            /** Actor */
+            actor: string;
+            /** Extra */
+            extra: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /** FromToDate */
+        FromToDate: {
+            /**
+             * From
+             * Format: date
+             */
+            from: string;
+            /**
+             * To
+             * Format: date
+             */
+            to: string;
+        };
+        /** FromToInt */
+        FromToInt: {
+            /** From */
+            from: number;
+            /** To */
+            to: number;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /** HealthOut */
+        HealthOut: {
+            /**
+             * Db
+             * @enum {string}
+             */
+            db: "ok" | "error";
+            /**
+             * Ai
+             * @enum {string}
+             */
+            ai: "ok" | "unavailable";
         };
         /** OwnerChange */
         OwnerChange: {
@@ -446,6 +702,79 @@ export interface components {
             /** Line Group Id */
             line_group_id?: number | null;
         };
+        /** ProjectDetailOut */
+        ProjectDetailOut: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /**
+             * Scope
+             * @enum {string}
+             */
+            scope: "work" | "private";
+            /**
+             * Audience
+             * @enum {string}
+             */
+            audience: "manager" | "client" | "none";
+            /** Line Group Id */
+            line_group_id: number | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Archived At */
+            archived_at: string | null;
+            /** Task Count */
+            task_count: number;
+            /** Baseline Saved At */
+            baseline_saved_at: string | null;
+        };
+        /** ProjectListOut */
+        ProjectListOut: {
+            /** Items */
+            items: components["schemas"]["ProjectOut"][];
+            /** Total */
+            total: number;
+        };
+        /** ProjectOut */
+        ProjectOut: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /**
+             * Scope
+             * @enum {string}
+             */
+            scope: "work" | "private";
+            /**
+             * Audience
+             * @enum {string}
+             */
+            audience: "manager" | "client" | "none";
+            /** Line Group Id */
+            line_group_id: number | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Archived At */
+            archived_at: string | null;
+        };
         /** ProjectPatch */
         ProjectPatch: {
             /** Name */
@@ -454,6 +783,21 @@ export interface components {
             scope?: ("work" | "private") | null;
             /** Audience */
             audience?: ("manager" | "client" | "none") | null;
+        };
+        /** ProjectPatchOut */
+        ProjectPatchOut: {
+            project: components["schemas"]["ProjectOut"];
+            /** Changes */
+            changes: components["schemas"]["EventOut"][];
+        };
+        /** ReasonsOut */
+        ReasonsOut: {
+            /** Due */
+            due: components["schemas"]["DueReasonOut"][];
+            /** Baseline Types */
+            baseline_types: components["schemas"]["CodeLabelOut"][];
+            /** Baseline Reasons */
+            baseline_reasons: components["schemas"]["CodeLabelOut"][];
         };
         /** StatusChange */
         StatusChange: {
@@ -506,6 +850,103 @@ export interface components {
             /** Suggested Stars */
             suggested_stars?: number | null;
         };
+        /** TaskDetailOut */
+        TaskDetailOut: {
+            task: components["schemas"]["TaskOut"];
+            /** Events */
+            events: components["schemas"]["EventOut"][];
+        };
+        /** TaskEventOut */
+        TaskEventOut: {
+            task: components["schemas"]["TaskOut"];
+            event: components["schemas"]["EventOut"];
+        };
+        /** TaskListOut */
+        TaskListOut: {
+            /** Items */
+            items: components["schemas"]["TaskOut"][];
+            /** Total */
+            total: number;
+        };
+        /** TaskOut */
+        TaskOut: {
+            /** Id */
+            id: number;
+            /** Project Id */
+            project_id: number | null;
+            /** Title */
+            title: string;
+            /** Owner */
+            owner: string;
+            /**
+             * Scope
+             * @enum {string}
+             */
+            scope: "work" | "private";
+            /**
+             * Start
+             * Format: date
+             */
+            start: string;
+            /**
+             * Orig Due
+             * Format: date
+             */
+            orig_due: string;
+            /**
+             * Latest Due
+             * Format: date
+             */
+            latest_due: string;
+            /**
+             * Delta Days
+             * @description latest_due − orig_due（天）
+             */
+            delta_days: number;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "todo" | "doing" | "done";
+            /** Blocked */
+            blocked: boolean;
+            /** Done Date */
+            done_date: string | null;
+            /** Done When */
+            done_when: string;
+            /**
+             * Remind
+             * @enum {string}
+             */
+            remind: "morning" | "eve_before" | "none";
+            /** Expected Stars */
+            expected_stars: number;
+            /**
+             * Star Source
+             * @enum {string}
+             */
+            star_source: "self" | "ai_accepted" | "ai_edited" | "import_default";
+            /** Rubric Id */
+            rubric_id: number | null;
+            /** Goal Id */
+            goal_id: number | null;
+            /** Version */
+            version: number;
+        };
+        /** TimeMgmtStatsOut */
+        TimeMgmtStatsOut: {
+            better: components["schemas"]["CountDays"];
+            worse: components["schemas"]["CountDays"];
+            /** None */
+            none: number;
+            /** Unmarked */
+            unmarked: number;
+            worse_by_energy: components["schemas"]["EnergyDistribution"];
+            /** Min Sample */
+            min_sample: number;
+            /** Judgement */
+            judgement: string | null;
+        };
         /** ValidationError */
         ValidationError: {
             /** Location */
@@ -545,7 +986,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ProjectListOut"];
                 };
             };
             /** @description Validation Error */
@@ -578,7 +1019,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ProjectOut"];
                 };
             };
             /** @description Validation Error */
@@ -609,7 +1050,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ProjectDetailOut"];
                 };
             };
             /** @description Validation Error */
@@ -644,7 +1085,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ProjectPatchOut"];
                 };
             };
             /** @description Validation Error */
@@ -675,7 +1116,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ProjectOut"];
                 };
             };
             /** @description Validation Error */
@@ -710,7 +1151,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["BulkPreviewOut"];
                 };
             };
             /** @description Validation Error */
@@ -745,7 +1186,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["BulkCommitOut"];
                 };
             };
             /** @description Validation Error */
@@ -780,7 +1221,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["TaskListOut"];
                 };
             };
             /** @description Validation Error */
@@ -813,7 +1254,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["TaskOut"];
                 };
             };
             /** @description Validation Error */
@@ -844,7 +1285,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["TaskDetailOut"];
                 };
             };
             /** @description Validation Error */
@@ -879,7 +1320,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["TaskEventOut"];
                 };
             };
             /** @description Validation Error */
@@ -914,7 +1355,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["TaskEventOut"];
                 };
             };
             /** @description Validation Error */
@@ -949,7 +1390,42 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["TaskEventOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    adjust_start_api_v1_tasks__task_id__adjust_start_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                task_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdjustStart"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdjustStartOut"];
                 };
             };
             /** @description Validation Error */
@@ -984,7 +1460,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["CompleteOut"];
                 };
             };
             /** @description Validation Error */
@@ -1019,7 +1495,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["AdjustDueOut"];
                 };
             };
             /** @description Validation Error */
@@ -1054,7 +1530,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["BaselinePreviewOut"];
                 };
             };
             /** @description Validation Error */
@@ -1089,7 +1565,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["TaskEventOut"];
                 };
             };
             /** @description Validation Error */
@@ -1124,7 +1600,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["AnnotationOut"];
                 };
             };
             /** @description Validation Error */
@@ -1156,7 +1632,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["TimeMgmtStatsOut"];
                 };
             };
             /** @description Validation Error */
@@ -1185,7 +1661,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ReasonsOut"];
                 };
             };
         };
@@ -1205,7 +1681,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["HealthOut"];
                 };
             };
         };
