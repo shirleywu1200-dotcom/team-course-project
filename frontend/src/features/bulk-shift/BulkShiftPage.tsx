@@ -3,7 +3,7 @@
 // 預設全選未完成任務；不自動推論相依。原因與註記預設不選（FR-AI-06）。
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 
 import { api, ApiError, newIdempotencyKey } from "../../api/client";
@@ -28,22 +28,21 @@ export function BulkShift({ projectId }: { projectId: number }) {
   const openTasks = useMemo(() => (tasks.data ?? []).filter((t) => t.status !== "done"), [tasks.data]);
   const doneCount = (tasks.data?.length ?? 0) - openTasks.length;
 
-  const [selected, setSelected] = useState<Set<number> | null>(null);
+  // null 表示「預設全選未完成任務」（FR-BLK-03）。直接推導，不用 useEffect 補設，避免資料到達後才勾選的時序落差。
+  const [picked, setSelected] = useState<Set<number> | null>(null);
   const [days, setDays] = useState("");
   const [reason, setReason] = useState("");
   const [note, setNote] = useState("");
   const [mark, setMark] = useState<MarkValue>(null);
   const [preview, setPreview] = useState<{ data: BulkPreview; key: string } | null>(null);
 
-  useEffect(() => {
-    if (selected === null && tasks.data) setSelected(new Set(openTasks.map((t) => t.id)));
-  }, [selected, tasks.data, openTasks]);
 
   const dayNum = Number(days);
   const validDays = days !== "" && Number.isInteger(dayNum) && dayNum !== 0 && Math.abs(dayNum) <= 365;
   const direction = validDays ? directionOf(dayNum) : null;
   const dueReasons = reasons.data?.due ?? [];
-  const chosen: Task[] = openTasks.filter((t) => selected?.has(t.id));
+  const selected = useMemo(() => picked ?? new Set(openTasks.map((t) => t.id)), [picked, openTasks]);
+  const chosen: Task[] = openTasks.filter((t) => selected.has(t.id));
   const items = chosen.map((t) => ({ task_id: t.id, expected_version: t.version }));
 
   function invalidate() {
@@ -84,7 +83,7 @@ export function BulkShift({ projectId }: { projectId: number }) {
   });
 
   function toggle(id: number) {
-    const next = new Set(selected ?? []);
+    const next = new Set(selected);
     if (next.has(id)) next.delete(id);
     else next.add(id);
     setSelected(next);
@@ -116,7 +115,7 @@ export function BulkShift({ projectId }: { projectId: number }) {
                   <input
                     type="checkbox"
                     aria-label={`選擇 ${t.title}`}
-                    checked={selected?.has(t.id) ?? false}
+                    checked={selected.has(t.id)}
                     onChange={() => toggle(t.id)}
                   />
                 </td>
