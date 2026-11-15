@@ -71,3 +71,25 @@ npm run typecheck
 
 預留頁面只顯示「此功能尚未開放」，不讀寫 API，也不代表該 todo 已實作。
 TokenGate 與 token 儲存、傳送邏輯沿用原有程式。
+
+## API client（11.2）
+
+`src/api/client.ts` 提供通用 `api<T>`，成功時原樣回傳 JSON；HTTP 200、201 都是成功。
+`MARK_IGNORED` 保留在成功回應的 warnings，屬警告，不拋錯。
+沒有新增端點專用函式或手寫回應型別，也不驗證或推測業務回應欄位。
+
+失敗時解析 `{error:{code,message,details}}` 並拋出既有 `ApiError`。
+格式不符時沿用前端既有 `HTTP_ERROR` 備援，不新增伺服器錯誤碼；
+code／message 必須是非空字串，details 必須是非陣列物件。
+缺少有效訊息時使用 HTTP 狀態文字，再以 `HTTP <狀態碼>` 備援，不把 HTML 原文當作訊息。
+
+`STALE_VERSION` 不自動重送。沿用既有功能頁的 onError 流程使相關查詢失效並重新讀取，
+使用者確認最新資料後才能自行再次提交。整合測試驗證 GET 確實重新執行，
+第二次 POST 必須由使用者操作觸發，且帶重新讀取的 expected_version。
+本次未修改 QueryClient 設定、既有功能頁或其測試。
+
+認證維持原樣：token 存在 `localStorage` 的 `g4.token`，以 `VITE_API_TOKEN` 作備援，
+每次請求透過既有 `Authorization: Bearer …` header 傳送；沒有新增儲存或傳送管道。
+
+`client.test.tsx` 對 spec 5.2 的 17 個錯誤碼逐一檢查錯誤解析、顯示與不自動重送。
+其中 `INTERNAL_ERROR`（DA-19）**待產品負責人複核**；這些測試不代表已取得正式核可。
