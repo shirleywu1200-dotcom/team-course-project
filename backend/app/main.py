@@ -6,7 +6,7 @@
 from fastapi import APIRouter, FastAPI
 
 from app.ai.client import AIClient, FakeAIClient
-from app.api import error_handlers, routes_events, routes_projects, routes_tasks
+from app.api import error_handlers, routes_events, routes_history, routes_projects, routes_tasks
 from app.api.middleware import API_PREFIX, BearerTokenMiddleware, IdempotencyMiddleware, UnhandledErrorMiddleware
 from app.config import Settings, load_settings
 from app.db.database import Database
@@ -34,7 +34,7 @@ def create_app(settings: Settings | None = None, db: Database | None = None,
     app.add_middleware(UnhandledErrorMiddleware)   # 後加的在外層、先執行，所以它在最外層
 
     api = APIRouter(prefix=API_PREFIX)
-    for r in (routes_projects.router, routes_tasks.router, routes_events.router):
+    for r in (routes_projects.router, routes_tasks.router, routes_events.router, routes_history.router):
         api.include_router(r)
     app.include_router(api)
     return app

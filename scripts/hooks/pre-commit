@@ -11,5 +11,7 @@ fi
 gitleaks git --pre-commit --staged --redact --no-banner "$ROOT"
 
 if git diff --cached --name-only --diff-filter=ACM | grep -q '^backend/.*\.py$'; then
-  "$ROOT/backend/.venv/bin/ruff" check "$ROOT/backend"
+  RUFF="$ROOT/backend/.venv/bin/ruff"
+  [ -x "$RUFF" ] || RUFF="$ROOT/backend/.venv/Scripts/ruff.exe"   # Windows venv
+  "$RUFF" check "$ROOT/backend"
 fi
