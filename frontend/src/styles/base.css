@@ -91,3 +91,25 @@ tr.row-error td { background: var(--color-error-bg); }
   .import-left { position: static; }
   .map-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+/* Dev-B 12.11 啟用精靈與設定（D-5：精靈頂部步驟條；設定頁左側分類導覽，≤ 760px 改橫向捲動列） */
+.small { font-size: 12px; }
+.steps { display: flex; gap: var(--space-1); margin: var(--space-2) 0; padding: 0; list-style: none; }
+.steps li { flex: 1; padding: 6px 2px; text-align: center; border-bottom: 3px solid var(--color-border); color: var(--color-muted); font-size: 12px; }
+.steps li.on { border-color: var(--color-accent); color: var(--color-text); font-weight: 600; }
+.steps li.done { border-color: var(--color-ok-text); }
+ol.levels { margin: var(--space-1) 0; padding: 0; list-style: none; }
+ol.levels li { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 6px; padding: 3px 0; }
+ol.levels b { color: var(--color-muted); font-weight: 600; }
+.settings-split { display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: var(--space-4); align-items: start; }
+.settings-nav { position: sticky; top: var(--space-4); display: flex; flex-direction: column; gap: 2px; }
+.settings-nav button { text-align: left; border: 0; border-left: 3px solid var(--color-border); border-radius: 0; background: none; padding: 6px 10px; }
+.settings-nav button[aria-current="page"] { border-left-color: var(--color-accent); font-weight: 600; }
+@media (max-width: 760px) {
+  .steps .steps-name { display: none; }
+  .steps li.on .steps-name { display: inline; }
+  .settings-split { grid-template-columns: minmax(0, 1fr); }
+  .settings-nav { position: static; flex-direction: row; overflow-x: auto; }
+  .settings-nav button { border-left: 0; border-bottom: 3px solid var(--color-border); white-space: nowrap; }
+  .settings-nav button[aria-current="page"] { border-bottom-color: var(--color-accent); }
+}

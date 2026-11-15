@@ -85,3 +85,13 @@ Dev-B 開發時發現、需要 Dev-A 處理或知道的事項，**統一記在�
 - rebase 到 `dev-a/phase-0-4` 後，`test_contract_guards` 要求每個 2xx 都有 schema。模型附加在 `backend/app/api/responses.py` 的「Phase 5～8，Dev-B」各節。
 - 執行期回應內容不變（加模型前後 93 筆實際回應比對，僅鍵順序不同）；OpenAPI 新增歷程、甘特、匯入、收件候選、設定、量表、清除、匯出的回應 schema。
 - Dev-C 可用生成型別取代 `types.ts` 中 Dev-B 手寫的收件匣與匯入型別；QC-2 可依 OpenAPI 寫驗收。
+
+### N-11 啟用精靈與設定頁（12.11）加進前端暫代檔　〔已完成，需通知 Dev-C〕
+
+- 12.11 SDD D-1(b)：全站守門 `OnboardingGate` 包在暫代 `App.tsx` 的 `<Routes>` 外層；`onboarded_at` 為空時，除 `/onboarding` 外都導向精靈。Dev-C 做 Phase 11 正式路由時要把守門搬過去，否則新使用者不會看到精靈。
+- Dev-C 做 0.8、Phase 11 時，下列 Dev-B 新增的部分要一併吸收：
+  - `src/api/types.ts`：`AppSettings` 改為完整欄位（原本只有 `confirm_cap_min`）；新增 `GoalType`、`SettingsKey`、`InterviewAnswers`、`Rubric`
+  - `src/api/queries.ts`：`keys.activeRubric` 與 `fetchActiveRubric`
+  - `src/test/server.tsx`：`makeSettings`、`RUBRIC_V0`；`GET /settings` 預設改回已啟用的完整設定（D-1(c)，既有頁面測試不會被導走），新增 `GET /rubrics` 預設 handler
+  - `src/styles/base.css`：`.small`、`.steps`、`ol.levels`、`.settings-split`、`.settings-nav`，以及 ≤ 760px 的斷點
+  - `src/App.tsx`：`/onboarding`、`/settings` 路由，首頁加「設定」連結
