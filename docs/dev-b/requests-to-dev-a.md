@@ -70,7 +70,7 @@ Dev-B 開發時發現、需要 Dev-A 處理或知道的事項，**統一記在�
   - `src/App.tsx`：`/inbox` 路由
 - 12.9 完成後，收件匣確認「完成」可改成直接開完成回報表單（目前只提示到今日頁補填，D-2）。
 
-### N-08 匯入精靈（12.7）加進前端暫代檔　〔已完成，需通知 Dev-C〕
+### N-08 匯入精靈（12.7）加進前端暫代檔　〔已完成，已通知 Dev-C：#7〕
 
 - 12.7 SDD 沿用 12.8 的暫代骨架。Dev-C 做 0.8、Phase 11 時，下列 Dev-B 新增的部分要一併吸收：
   - `src/api/types.ts`：`Project`、`ImportIssue`、`ImportRow`、`ColumnIndexes`、`ImportPreview`、`ImportCommitResult`
@@ -78,4 +78,4 @@ Dev-B 開發時發現、需要 Dev-A 處理或知道的事項，**統一記在�
   - `src/components/standin/ErrorBanner.tsx`：`PAYLOAD_TOO_LARGE` 訊息改為收件匣與匯入共用
   - `src/styles/base.css`：`main.wide`、`.sr-only`、`.import-split`、`.map-grid`、`.table-wrap`、`.nowrap`、`.tag-ok`／`.tag-error`／`.tag-warn`、`tr.row-error`；匯入頁 ≤ 760px 的斷點
   - `src/App.tsx`：`/import` 路由
-- 12.7 SDD D-3（AI-07 回饋寫入 `ai_feedback`）的契約新增待產品負責人核可，核可後另記 N-09。
+- 12.7 SDD D-3（AI-07 回饋寫入 `ai_feedback`）的契約新增已提請產品負責人裁定（#8），核可後另記 N-09。
