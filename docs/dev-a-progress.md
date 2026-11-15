@@ -6,7 +6,7 @@
 
 ## 環境與指令
 
-- **PostgreSQL**：Docker 容器 `g4-pg`（`postgres:17`），只綁 `127.0.0.1:54329`，帳號 `g4`。
+- **PostgreSQL**：Docker 容器 `g4-pg`（`postgres:17`），帳號 `g4`。團隊範例的本機連接埠是 `5433`（`env/example.env`、`docs/deploy.md`，Issue #4）；Dev-A 本機的容器沿用 `127.0.0.1:54329`，以自己的 `env/local.env` 為準。
   - 啟動 `docker start g4-pg`；停止 `docker stop g4-pg`；移除 `docker rm -f g4-pg`。
 - **後端**：在 `backend/` 下執行。
   - 安裝 `uv sync`

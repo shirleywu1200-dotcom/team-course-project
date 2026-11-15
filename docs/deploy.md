@@ -31,11 +31,18 @@
 
 ```bash
 # 資料庫（以 Docker 為例；只綁本機）
-docker run -d --name g4-pg -p 127.0.0.1:54329:5432 \
+docker run -d --name g4-pg -p 127.0.0.1:5433:5432 \
   -e POSTGRES_USER=g4 -e POSTGRES_PASSWORD=<密碼> -e POSTGRES_DB=g4 -e TZ=Asia/Taipei postgres:17
 
-cp env/example.env env/local.env      # 填入實際值
+cp env/example.env env/local.env      # 填入實際值；連接埠要與上面 -p 的本機埠一致
+```
 
+範例的本機連接埠是 `5433`。綁不上時（例如被其他 PostgreSQL 或系統保留範圍占用），換一個沒被占用的值，並同步改 `env/local.env` 裡兩個連線字串的連接埠。
+
+- Windows 會保留一段動態連接埠範圍，各台電腦不同。查詢保留範圍：`netsh interface ipv4 show excludedportrange protocol=tcp`
+- Mac／Linux 查詢是否被占用：`lsof -iTCP:5433 -sTCP:LISTEN`
+
+```bash
 cd backend
 uv sync
 uv run alembic upgrade head        # 建立資料表與 events 只增觸發器
