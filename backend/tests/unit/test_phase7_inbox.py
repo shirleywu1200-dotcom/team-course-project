@@ -281,6 +281,10 @@ def test_create_task_from_unmatched_defaults_owner_to_speaker(client, seed, quer
     assert body["candidate"]["state"] == "confirmed"
     [fb] = query("SELECT outcome, detail FROM ai_feedback")
     assert fb == {"outcome": "changed", "detail": {"task_id": body["task"]["id"]}}
+    [ev] = query("SELECT origin, origin_ref, source_id FROM events WHERE task_id = :t AND field = 'created'",
+                 t=body["task"]["id"])
+    src = query("SELECT source_id FROM candidates WHERE id = 26")[0]["source_id"]
+    assert ev == {"origin": "candidate", "origin_ref": 26, "source_id": src}   # FR-INB-14、FR-HIS-04（R-01）
 
 
 def test_unknown_candidate_is_404(client, seed):

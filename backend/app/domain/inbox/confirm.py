@@ -77,10 +77,11 @@ def clarify(conn: Connection, candidate_id: int, new_due: date | None, expected_
 
 def create_task_from(conn: Connection, candidate_id: int, *, title: str, owner: str | None, due: date,
                      project_id: int | None) -> dict:
-    """unmatched 候選：建立新任務，負責人預設為發言者（FR-INB-14）。建立事件的依據待 Dev-A R-01，暫記 manual。"""
+    """unmatched 候選：建立新任務，負責人預設為發言者（FR-INB-14）。建立事件記錄候選依據（R-01）。"""
     cand = _load_open(conn, candidate_id, {"unmatched"})
     owner = owner or sources_repo.get_many(conn, [cand["source_id"]])[0]["speaker"]
-    task = tasks.create_task(conn, title=title, owner=owner, due=due, project_id=project_id)
+    task = tasks.create_task(conn, title=title, owner=owner, due=due, project_id=project_id, origin="candidate",
+                             origin_ref=cand["id"], source_id=cand["source_id"])
     return {"candidate": _close(conn, cand, "confirmed", "create_task", "changed", {"task_id": task["id"]}),
             "task": task}
 
