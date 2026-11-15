@@ -10,10 +10,10 @@
   - 啟動 `docker start g4-pg`；停止 `docker stop g4-pg`；移除 `docker rm -f g4-pg`。
 - **後端**：在 `backend/` 下執行。
   - 安裝 `uv sync`
-  - 遷移 `.venv/bin/alembic upgrade head`
-  - 測試 `.venv/bin/pytest`
-  - 檢查 `.venv/bin/ruff check .`
-  - 啟動 `.venv/bin/python -m app.main`
+  - 遷移 `uv run alembic upgrade head`
+  - 測試 `uv run pytest`
+  - 檢查 `uv run ruff check .`
+  - 啟動 `uv run python -m app.main`
 - **前端**：在 `frontend/` 下執行。
   - 安裝 `npm ci`
   - 測試 `npm test`

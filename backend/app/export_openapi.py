@@ -1,6 +1,6 @@
 """把 OpenAPI 文件輸出到標準輸出，不需要啟動伺服器或連線資料庫。
 
-用法（在 backend/ 下）：.venv/bin/python -m app.export_openapi > ../frontend/openapi.json
+用法（在 backend/ 下）：uv run python -m app.export_openapi > ../frontend/openapi.json
 給前端由 OpenAPI 產生型別使用（todo 0.8）。
 """
 

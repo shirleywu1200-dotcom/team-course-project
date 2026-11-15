@@ -38,8 +38,8 @@ cp env/example.env env/local.env      # 填入實際值
 
 cd backend
 uv sync
-.venv/bin/alembic upgrade head        # 建立資料表與 events 只增觸發器
-.venv/bin/pytest                      # 確認環境正常
+uv run alembic upgrade head        # 建立資料表與 events 只增觸發器
+uv run pytest                      # 確認環境正常
 
 cd ../frontend
 npm ci
@@ -49,7 +49,7 @@ npm run build                         # 產出 frontend/dist
 ## 4. 啟動
 
 ```bash
-cd backend && .venv/bin/python -m app.main      # 只綁 G4_BIND_HOST:G4_PORT
+cd backend && uv run python -m app.main      # 只綁 G4_BIND_HOST:G4_PORT
 ```
 
 前端靜態檔 `frontend/dist` 交給本機的靜態伺服器（或反向代理），並把 `/api` 轉給後端。開發時用 `npm run dev`，Vite 會自動代理 `/api`。
@@ -58,7 +58,7 @@ cd backend && .venv/bin/python -m app.main      # 只綁 G4_BIND_HOST:G4_PORT
 
 - 每日備份（spec 8.2：保留 14 份）：
   ```bash
-  cd backend && .venv/bin/python -m app.db.backup /path/to/backups
+  cd backend && uv run python -m app.db.backup /path/to/backups
   ```
   可用 cron 或 launchd 每天執行一次。Docker 環境可設 `G4_PG_DUMP_CMD="docker exec g4-pg pg_dump -U g4 --format=custom g4"`。
 - 還原（會覆蓋目標資料庫，先確認目標）：

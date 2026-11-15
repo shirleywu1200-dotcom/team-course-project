@@ -124,7 +124,7 @@ AC-20 寫「資料庫未變」。決定：解讀為 `tasks` 與 `events` 不變�
 
 - `openapi.json` 改放在 `/api/v1/openapi.json`，與其他 API 一樣需要 Bearer token。
 - `/docs`、`/redoc` 關閉：瀏覽器開這兩頁時帶不了 token，放在受保護路徑下也無法使用。
-- 不啟動伺服器也能匯出：在 `backend/` 下執行 `.venv/bin/python -m app.export_openapi > ../frontend/openapi.json`，供 todo 0.8 產生前端型別。
+- 不啟動伺服器也能匯出：在 `backend/` 下執行 `uv run python -m app.export_openapi > ../frontend/openapi.json`，供 todo 0.8 產生前端型別。
 
 ## DA-25 未預期例外不寫入錯誤訊息與 traceback 【待複核：規格歧義】
 

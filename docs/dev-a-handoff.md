@@ -35,7 +35,7 @@
   | `src/styles/tokens.css`、`base.css`（亮暗兩套 CSS 變數） | 11.4 |
   | `src/components/standin/`（註記面板、原因下拉、錯誤橫幅） | 11.5 |
   | `src/test/server.tsx`（MSW） | 11.7 |
-- **OpenAPI 與型別產生（0.8）**：OpenAPI 在 `/api/v1/openapi.json`，需要 token；`/docs`、`/redoc` 已關閉（DA-24）。產生型別時不必啟動伺服器，在 `backend/` 下執行 `.venv/bin/python -m app.export_openapi > ../frontend/openapi.json` 即可。
+- **OpenAPI 與型別產生（0.8）**：OpenAPI 在 `/api/v1/openapi.json`，需要 token；`/docs`、`/redoc` 已關閉（DA-24）。產生型別時不必啟動伺服器，在 `backend/` 下執行 `uv run python -m app.export_openapi > ../frontend/openapi.json` 即可。
 - **12.3 任務詳情頁**：請把 `AdjustDuePanel`（12.2）與 `BaselineCorrectionLink`（12.5）放進去；之後 `src/features/due-adjust/TaskDuePage.tsx` 就可以刪掉。
 - **Phase 10 週報**：`docs/metrics.md` 缺口 1 建議 `reports` 加 `validated` 與 `items`，需要新遷移（DDL 擁有者 Dev-A 審）。
 
