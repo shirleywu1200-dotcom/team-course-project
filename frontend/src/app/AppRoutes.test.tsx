@@ -108,15 +108,38 @@ test("既有整批順延路由仍載入 Dev-A 頁面", async () => {
   expect(await screen.findByLabelText("選擇 確認驗收條件")).toBeInTheDocument();
 });
 
-test("手機初始版面也能從主要導覽到達全部共用入口", () => {
+test("手機底部導覽只顯示指定五個入口與順序", () => {
   viewport(true);
   open("/inbox");
   const nav = screen.getByRole("navigation", { name: "主要導覽" });
   expect(screen.getByTestId("app-shell")).toHaveAttribute("data-layout", "compact");
-  expect(within(nav).getAllByRole("link").slice(0, 3).map((link) => link.textContent)).toEqual(["收件匣", "今日", "任務"]);
-  for (const label of ["收件匣", "今日", "任務", "專案現況", "歷程", "週報", "設定"]) {
-    expect(within(nav).getByRole("link", { name: label })).toBeInTheDocument();
+  expect(within(nav).getAllByRole("link").map((link) => link.textContent)).toEqual(["收件匣", "今日", "任務", "目標", "設定"]);
+  expect(within(nav).getByRole("link", { name: "目標" })).toHaveAttribute("href", "/goals");
+});
+
+test("手機首頁保留其餘入口，仍可開啟未列於底部導覽的頁面", async () => {
+  viewport(true);
+  const user = userEvent.setup();
+  open("/");
+  const home = screen.getByRole("main");
+  for (const label of ["專案現況", "歷程", "匯入專案", "時間管理統計", "週報", "資料控制"]) {
+    expect(within(home).getByRole("link", { name: label })).toBeInTheDocument();
+    expect(within(screen.getByRole("navigation", { name: "主要導覽" })).queryByRole("link", { name: label })).not.toBeInTheDocument();
   }
+  await user.click(within(home).getByRole("link", { name: "週報" }));
+  expect(screen.getByRole("heading", { name: "週報" })).toBeInTheDocument();
+});
+
+test("網站導覽維持完整，切換手機後再切回仍恢復全部入口", () => {
+  const resize = viewport(false);
+  open("/today");
+  const labels = () => within(screen.getByRole("navigation", { name: "主要導覽" })).getAllByRole("link").map((link) => link.textContent);
+  const desktop = ["專案現況", "任務", "歷程", "匯入專案", "收件匣", "今日", "時間管理統計", "設定", "目標與精力", "週報", "資料控制"];
+  expect(labels()).toEqual(desktop);
+  resize(true);
+  expect(labels()).toEqual(["收件匣", "今日", "任務", "目標", "設定"]);
+  resize(false);
+  expect(labels()).toEqual(desktop);
 });
 
 test("未知路由顯示找不到頁面並可返回首頁", async () => {

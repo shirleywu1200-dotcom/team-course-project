@@ -19,7 +19,8 @@ function getCompactSnapshot() {
 export function AppLayout() {
   const compact = useSyncExternalStore(subscribe, getCompactSnapshot, () => false);
   const links = compact
-    ? [...navigationRoutes].sort((a, b) => (a.compactOrder ?? 100) - (b.compactOrder ?? 100))
+    ? navigationRoutes.filter((route) => route.compactOrder !== undefined)
+      .sort((a, b) => a.compactOrder! - b.compactOrder!)
     : navigationRoutes;
   // 僅改導覽與排版，不依載具切換 Outlet，保留頁面元件與未送出的輸入。
   return (
@@ -30,8 +31,8 @@ export function AppLayout() {
         <span className="muted">AI 只提議，你決定</span>
       </header>
       <nav className="app-navigation" aria-label="主要導覽">
-        {links.map(({ path, title }) => (
-          <NavLink key={path} to={path} className="app-nav-link">{title}</NavLink>
+        {links.map(({ path, title, compactTitle }) => (
+          <NavLink key={path} to={path} className="app-nav-link">{compact ? compactTitle ?? title : title}</NavLink>
         ))}
       </nav>
       <section id="page-content" className="app-content" aria-label="頁面內容" tabIndex={-1}>

@@ -13,8 +13,8 @@ export const pageRoutes = [
   { path: "/tasks/:taskId/feedback", title: "完成回報", todo: "12.9" },
   { path: "/time-management", title: "時間管理統計", todo: "12.10", nav: true },
   { path: "/setup", title: "啟用設定", todo: "12.11" },
-  { path: "/settings", title: "設定", todo: "12.11", nav: true },
-  { path: "/goals", title: "目標與精力", todo: "12.12", nav: true },
+  { path: "/settings", title: "設定", todo: "12.11", nav: true, compactOrder: 5 },
+  { path: "/goals", title: "目標與精力", todo: "12.12", nav: true, compactOrder: 4, compactTitle: "目標" },
   { path: "/reports", title: "週報", todo: "12.13", nav: true },
   { path: "/data-control", title: "資料控制", todo: "12.14", nav: true },
 ];

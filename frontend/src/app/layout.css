@@ -36,6 +36,10 @@
 .app-shell :focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
 .app-shell[data-layout="compact"] { padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px)); }
 .app-shell[data-layout="compact"] .app-navigation {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0;
+  padding-inline: var(--space-2);
   position: fixed;
   bottom: 0;
   left: 0;
@@ -45,5 +49,6 @@
   border-bottom: 0;
   padding-bottom: calc(var(--space-2) + env(safe-area-inset-bottom, 0px));
 }
+.app-shell[data-layout="compact"] .app-nav-link { text-align: center; padding-inline: var(--space-1); }
 .app-shell[data-layout="compact"] .actions { flex-wrap: wrap; }
 .app-shell[data-layout="compact"] .app-content { overflow-x: auto; }
