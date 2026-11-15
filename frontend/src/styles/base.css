@@ -71,3 +71,23 @@ dl.summary dd { margin: 0; }
 .quote small { display: block; color: var(--color-muted); }
 .done-item { font-size: 13px; }
 textarea { width: 100%; }
+
+/* Dev-B 12.7 匯入（D-5：左右分欄，≤ 760px 上下堆疊；只有此頁加寬） */
+main.wide { max-width: 1280px; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.import-split { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); gap: var(--space-3); align-items: start; }
+.import-left { position: sticky; top: var(--space-4); }
+.map-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-2); }
+.map-grid select { width: 100%; }
+.table-wrap { overflow-x: auto; }
+.table-wrap table { min-width: 640px; }
+.table-wrap th, .nowrap { white-space: nowrap; }
+.tag-ok { background: var(--color-ok-bg); color: var(--color-ok-text); border-color: transparent; }
+.tag-error { background: var(--color-error-bg); color: var(--color-error-text); border-color: transparent; }
+.tag-warn { background: var(--color-warn-bg); color: var(--color-warn-text); border-color: transparent; }
+tr.row-error td { background: var(--color-error-bg); }
+@media (max-width: 760px) {
+  .import-split { grid-template-columns: minmax(0, 1fr); }
+  .import-left { position: static; }
+  .map-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

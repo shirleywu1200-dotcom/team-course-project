@@ -6,31 +6,33 @@ Dev-B 開發時發現、需要 Dev-A 處理或知道的事項，**統一記在�
 | 狀態 | 意義 |
 | --- | --- |
 | 待處理 | 已記錄，尚未交給 Dev-A |
-| 已提出 | 已告知 Dev-A，等回覆 |
+| 已提出 | 已開 GitHub issue 指派給對方，issue 關閉即完成 |
 | 已完成 | Dev-A 已處理，或確認不需處理 |
 
 ## 請求
 
-### R-01 `create_task` 加 `origin`、`origin_ref`、`source_id` 選填參數　〔待處理〕
+### R-01 `create_task` 加 `origin`、`origin_ref`、`source_id` 選填參數　〔已提出：#2〕
 
 - **來源**：Phase 7 SDD Q5；FR-INB-14、FR-HIS-04。
 - **內容**：比照 `set_blocked`、`complete_task`，在 `app/domain/tasks.py` 的 `create_task` 加三個選填關鍵字參數，預設 `origin="manual"`，並傳給 `write_event`。舊呼叫不受影響。
 - **原因**：從 `unmatched` 候選建立任務時，建立事件要記「依據候選 #id 與原句」；現在只能記成 `manual`，歷程看不出任務是從哪則訊息來的。
 - **Dev-B 暫行做法**：先以 `origin="manual"` 呼叫；Dev-A 加上參數後，Dev-B 改一行即可。
 
-### R-02 部署文件改成跨平台指令　〔待處理〕
+### R-02 部署文件改成跨平台指令　〔已提出：#3〕
 
 - **來源**：2026-11-15 Windows 環境建置。
 - **內容**：`docs/deploy.md`、`docs/dev-a-progress.md`、`docs/decisions.md`、`app/export_openapi.py` 裡的 `.venv/bin/<指令>` 改成 `uv run <指令>`（例如 `uv run alembic upgrade head`、`uv run pytest`）。
 - **原因**：`.venv/bin/` 只有 Mac／Linux 有，Windows 是 `.venv\Scripts\`。`uv` 本來就在技術棧裡，`uv run` 兩種系統都能用，不必分兩套說明。
 
-### R-03 範例 port `54329` 換一個值　〔待處理〕
+### R-03 範例 port `54329` 換一個值　〔已提出：#4〕
 
 - **來源**：2026-11-15 Windows 環境建置。
 - **內容**：`env/example.env`、`docs/deploy.md` 的 `54329`。
 - **原因**：Windows 會保留一段動態 port 範圍，各台電腦不同；本機保留了 54315–54414，`54329` 綁不上，Docker 直接啟動失敗。建議改用 `5433` 這類常見又不太會撞到保留範圍的值，或在文件中註明「綁不上就換」。
 
 ## 通知（Dev-B 已在 `dev-b/phase-5-8` 處理）
+
+2026-11-15 已發 issue：Dev-A 的部分（N-01、N-02、N-05、N-06）為 #5；Dev-C、QC-2 的部分（N-03、N-04、N-06、N-07）為 #6。
 
 ### N-01 `backend/alembic.ini` 註解改為純 ASCII　〔已完成〕
 
@@ -67,3 +69,13 @@ Dev-B 開發時發現、需要 Dev-A 處理或知道的事項，**統一記在�
   - `src/styles/base.css`：`.head`、`.tag`、`.quote`、`.done-item`
   - `src/App.tsx`：`/inbox` 路由
 - 12.9 完成後，收件匣確認「完成」可改成直接開完成回報表單（目前只提示到今日頁補填，D-2）。
+
+### N-08 匯入精靈（12.7）加進前端暫代檔　〔已完成，需通知 Dev-C〕
+
+- 12.7 SDD 沿用 12.8 的暫代骨架。Dev-C 做 0.8、Phase 11 時，下列 Dev-B 新增的部分要一併吸收：
+  - `src/api/types.ts`：`Project`、`ImportIssue`、`ImportRow`、`ColumnIndexes`、`ImportPreview`、`ImportCommitResult`
+  - `src/api/queries.ts`：`keys.projects` 與 `fetchProjects`
+  - `src/components/standin/ErrorBanner.tsx`：`PAYLOAD_TOO_LARGE` 訊息改為收件匣與匯入共用
+  - `src/styles/base.css`：`main.wide`、`.sr-only`、`.import-split`、`.map-grid`、`.table-wrap`、`.nowrap`、`.tag-ok`／`.tag-error`／`.tag-warn`、`tr.row-error`；匯入頁 ≤ 760px 的斷點
+  - `src/App.tsx`：`/import` 路由
+- 12.7 SDD D-3（AI-07 回饋寫入 `ai_feedback`）的契約新增待產品負責人核可，核可後另記 N-09。
