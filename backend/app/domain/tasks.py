@@ -29,7 +29,13 @@ def _ensure_not_done(task: dict) -> None:
 def create_task(conn: Connection, *, title: str, due: date, owner: str = OWNER_ME, scope: str | None = None,
                 project_id: int | None = None, start: date | None = None, done_when: str = "",
                 remind: str = "morning", goal_id: int | None = None, expected_stars: int = 3,
-                suggested_stars: int | None = None) -> dict:
+                suggested_stars: int | None = None, origin: str = "manual", origin_ref: int | None = None,
+                source_id: int | None = None) -> dict:
+    """建立任務並寫 created 事件。
+
+    origin、origin_ref、source_id 記錄建立依據（FR-HIS-04）；例如收件匣從待配對候選建立任務時，
+    帶 origin="candidate"、origin_ref=候選 id、source_id=原句來源（Issue #2、FR-INB-14）。
+    """
     title = (title or "").strip()
     owner = (owner or "").strip() or OWNER_ME
     if not title:
@@ -47,7 +53,8 @@ def create_task(conn: Connection, *, title: str, due: date, owner: str = OWNER_M
         "star_source": star_source_for(expected_stars, suggested_stars),
         "rubric_id": misc_repo.active_rubric_id(conn),
     })
-    write_event(conn, task_id=task["id"], kind="task", field="created", to_value=title, origin="manual")
+    write_event(conn, task_id=task["id"], kind="task", field="created", to_value=title, origin=origin,
+                origin_ref=origin_ref, source_id=source_id)
     return task
 
 

@@ -14,7 +14,7 @@
 - **`adjust_due` 的簽名**多了 `origin_ref=None, source_id=None`（DA-03）。確認延期候選時請用：
   `adjust_due(conn, task_id, new_due, expected_version, None, None, None, True, origin="candidate", origin_ref=<候選 id>, source_id=<來源 id>)`
   - 原因與註記一律傳 `None`（FR-DUE-05a），`defer_mark=True`。回傳的 `needs_mark` 就是 spec 5.11 的 `needs_mark`（DA-04）。
-- **確認完成與卡住候選**：`app/domain/tasks.py` 的 `complete_task`、`set_blocked` 都接受 `origin`、`origin_ref`、`source_id`。
+- **確認完成與卡住候選、從待配對候選建立任務**：`app/domain/tasks.py` 的 `complete_task`、`set_blocked`、`create_task` 都接受 `origin`、`origin_ref`、`source_id`（`create_task` 為 Issue #2 新增，預設 `origin="manual"`）。
 - **`AIClient`／`FakeAIClient`** 的骨架在 `app/ai/client.py`，契約擁有者是你，介面請你確認後凍結。
 - **交易**：路由用 `db.run(lambda conn: ...)`，一個業務操作一個交易，例外即整筆回滾；死結與序列化失敗自動重試 3 次。
 - **事件**：一律經 `app/domain/events.py` 的 `write_event`，不直接 INSERT `events`。

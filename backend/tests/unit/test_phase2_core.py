@@ -107,6 +107,28 @@ def test_ac05_create_single_task(client, seed, query):
     assert len(ev) == 1 and ev[0]["kind"] == "task" and ev[0]["project_id"] is None
 
 
+def test_create_task_records_origin_from_candidate(db, seed, query):
+    """Issue #2（R-01）：從待配對候選建立任務時，created 事件記下依據的候選與原句來源。"""
+    seed(BASE + """
+    INSERT INTO sources (id, channel, speaker, excerpt_hash, received_at, expires_at)
+      VALUES (5, 'paste', '阿德', 'h5', now(), now());
+    INSERT INTO candidates (id, source_id, kind, certainty, created_at)
+      VALUES (12, 5, 'unmatched', 'to_match', now());
+    """)
+    t = db.run(lambda c: tasks_domain.create_task(c, title="報表處理", due=date(2026, 12, 20), owner="阿德",
+                                                  project_id=1, origin="candidate", origin_ref=12, source_id=5))
+    ev = query("SELECT origin, origin_ref, source_id, mine FROM events WHERE task_id = :t AND field = 'created'",
+               t=t["id"])
+    assert ev == [{"origin": "candidate", "origin_ref": 12, "source_id": 5, "mine": False}]
+
+
+def test_create_task_defaults_to_manual_origin(db, seed, query):
+    seed(BASE)
+    t = db.run(lambda c: tasks_domain.create_task(c, title="x", due=date(2026, 11, 20)))
+    assert query("SELECT origin, origin_ref, source_id FROM events WHERE task_id = :t", t=t["id"]) == [
+        {"origin": "manual", "origin_ref": None, "source_id": None}]
+
+
 def test_create_task_in_project_inherits_scope_and_active_rubric(client, seed):
     seed(BASE + RUBRIC + "UPDATE projects SET scope = 'private' WHERE id = 2;")
     t = client.post("/api/v1/tasks", json={"title": "x", "due": "2026-11-20", "project_id": 2}).json()
