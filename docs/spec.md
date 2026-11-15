@@ -541,6 +541,21 @@ CREATE TABLE idempotency_keys (
 );
 ```
 
+### 4.2.1 後續遷移
+
+0001 之後的變更一律新增遷移，不改 0001（todo 5.7）。內容以 `backend/app/db/migrations/versions/` 下的檔案為準。
+
+| 遷移 | 內容 | 依據 |
+| --- | --- | --- |
+| 0002 結構變更 | `ai_runs.node_id` 的 CHECK 移除 `AI-08`（AI-08 已取消）；`rubrics` 加不可修改觸發器，UPDATE、DELETE、TRUNCATE 皆擋，INSERT 不受影響。`settings` 不加，啟用精靈需要 UPDATE | PR #1 審查 A1、B5（2026-11-15 產品負責人裁定）；FR-RUB-01 |
+| 0003 系統種子 | 寫入 `settings`（id=1，三句精力定義，其餘欄位用 DDL 預設值）與 `rubrics`（version=0、`source='default'`、五句量表），冪等（`ON CONFLICT DO NOTHING`）；降級不刪除種子 | PR #1 審查 B2（種子文字經產品負責人確認，修改文字屬規格變更）；AC-59 |
+
+系統種子相關規則（2026-11-15 產品負責人裁定）：
+
+- 「目前量表」為 `version` 最大者；建立任務與匯入時，`tasks.rubric_id` 填入目前量表 id。
+- `settings.onboarded_at` 為 NULL 表示尚未啟用；完成或略過啟用精靈都寫入時間；略過時沿用種子值；精靈修改精力定義是 UPDATE 那一列，不新增。
+- 測試範本資料庫等於遷移結果（含種子）。測試種子不得再插入 `settings(id=1)` 或 `rubrics(version=0)`；要測多版本量表用 `version >= 1`，且 id 不得指定為 1。
+
 ### 4.3 列舉值
 
 | 列舉 | 值 |
@@ -1149,6 +1164,13 @@ CREATE TABLE idempotency_keys (
 P1 完成 = AC-01 至 AC-42、AC-48 至 AC-53、AC-55 至 AC-57 全數通過，並以真實專案資料試用 2 週，量測第 1.3 節的衡量值，作為 G2 校正依據。P2 另需 AC-43 至 AC-45；P3 另需 AC-46、AC-47。
 
 ---
+
+
+### 7.11 追加驗收標準（2026-11-15）
+
+編號由產品負責人指定。
+
+- AC-59 Given 全新資料庫；When 跑完遷移；Then `settings` 恰 1 列、`rubrics` 恰 1 列（version=0、`levels` 剛好 5 句）；When 遷移降級再升級，或重跑種子；Then 兩表仍各 1 列。
 
 ## 8. 技術棧／限制
 

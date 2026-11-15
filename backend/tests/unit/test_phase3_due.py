@@ -249,8 +249,6 @@ def test_ac13_stats_counts_each_effective_mark(client, seed):
 
 def test_stats_use_effective_mark_and_energy(client, seed):
     seed(BASE + """
-    INSERT INTO rubrics (id, version, levels, source, created_at)
-      VALUES (1, 0, '["1","2","3","4","5"]', 'default', now());
     INSERT INTO tasks (id, project_id, title, owner_name, scope, start_date, orig_due, latest_due, status,
                        done_date, created_at, updated_at) VALUES
       (21, 1, 'e', '我', 'work', '2026-11-01', '2026-11-20', '2026-11-20', 'todo', NULL, now(), now());

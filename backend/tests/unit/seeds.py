@@ -27,7 +27,11 @@ INSERT INTO tasks (id, project_id, title, owner_name, scope, start_date, orig_du
       '2026-11-01T09:00+08:00', '2026-11-01T09:00+08:00');
 """
 
+# 系統種子遷移（0003）已寫入 settings(id=1) 與量表 v0（id=1）；測試種子不再插這兩列。
+# 需要第二個量表版本時用 version >= 1，且不指定 id 1（2026-11-15 產品負責人裁定）。
+SEEDED_RUBRIC_ID = 1
+
 RUBRIC = """
 INSERT INTO rubrics (id, version, levels, source, created_at) VALUES
-  (1, 0, '["未達成","部分達成","符合預設","優於預設","遠超預設"]', 'default', '2026-11-01T09:00+08:00');
+  (2, 1, '["未達成","部分達成","符合預設","優於預設","遠超預設"]', 'interview', '2026-11-01T09:00+08:00');
 """

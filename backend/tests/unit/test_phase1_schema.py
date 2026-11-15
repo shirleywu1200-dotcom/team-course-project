@@ -79,6 +79,7 @@ CHECKS = [
     ("jobs", {"status": "'failed'"}, {"status": "'x'"}),
     ("jobs", {"kind": "'ingest'"}, {"kind": "'x'"}),
     ("ai_runs", {"node_id": "'AI-07'"}, {"node_id": "'AI-99'"}),
+    ("ai_runs", {"node_id": "'AI-01'"}, {"node_id": "'AI-08'"}),   # 0002：AI-08 已取消
     ("ai_runs", {"status": "'timeout'"}, {"status": "'x'"}),
     ("candidates", {"kind": "'unmatched'"}, {"kind": "'x'"}),
     ("candidates", {"certainty": "'to_match'"}, {"certainty": "'x'"}),
@@ -110,6 +111,8 @@ def _exec(db, sql: str):
                          ids=[f"{t}-{'-'.join(b)}" for t, _, b in CHECKS])
 def test_check_constraint_accepts_valid_and_rejects_invalid(db, seed, table, ok, bad):
     seed(PARENTS)
+    if table == "settings":
+        _exec(db, "DELETE FROM settings")   # 系統種子已有 id=1 那一列；settings 允許刪除，量表不允許
     with pytest.raises(IntegrityError):
         _exec(db, _insert_sql(table, bad))
     _exec(db, _insert_sql(table, ok))
@@ -161,10 +164,11 @@ def test_migration_round_trip():
             tables = c.execute(text("SELECT count(*) FROM information_schema.tables "
                                     "WHERE table_schema = 'public' AND table_name <> 'alembic_version'")
                                ).scalar_one()
-            triggers = c.execute(text("SELECT count(*) FROM pg_trigger WHERE tgrelid = 'events'::regclass "
-                                      "AND NOT tgisinternal")).scalar_one()
+            triggers = {t: c.execute(text(f"SELECT count(*) FROM pg_trigger WHERE tgrelid = '{t}'::regclass "
+                                          "AND NOT tgisinternal")).scalar_one() for t in ("events", "rubrics")}
+            seeds = c.execute(text("SELECT (SELECT count(*) FROM settings), (SELECT count(*) FROM rubrics)")).one()
         eng.dispose()
-        assert (tables, triggers) == (17, 3)
+        assert (tables, triggers, tuple(seeds)) == (17, {"events": 3, "rubrics": 3}, (1, 1))
     finally:
         drop_db(name)
 
@@ -188,3 +192,54 @@ def test_backup_with_real_pg_dump(tmp_path, template_db):
     cmd = ["docker", "exec", "g4-pg", "pg_dump", "-U", "g4", "--format=custom", template_db]
     path: Path = backup_mod.backup(tmp_path, dump=lambda p: backup_mod.run_dump(p, cmd))
     assert path.read_bytes()[:5] == b"PGDMP"
+
+
+# ---------- 0002、0003（PR #1 審查 A1、B2、B5） ----------
+
+def test_ac59_seed_rows_exist_after_migrations(query):
+    assert query("SELECT id, onboarded_at FROM settings") == [{"id": 1, "onboarded_at": None}]
+    rubrics = query("SELECT id, version, source, jsonb_array_length(levels) AS n, levels->>0 AS first FROM rubrics")
+    assert rubrics == [{"id": 1, "version": 0, "source": "default", "n": 5,
+                        "first": "未達成：完成條件大部分沒有達到，需要重做或補做。"}]
+
+
+def test_ac59_seed_is_idempotent_across_downgrade_and_rerun():
+    name = f"g4_test_seed_{uuid.uuid4().hex[:8]}"
+    url = create_empty_db(name)
+    cfg = alembic_config(url)
+    try:
+        command.upgrade(cfg, "head")
+        for target in ("0002", "0001"):
+            command.downgrade(cfg, target)
+            command.upgrade(cfg, "head")
+        from sqlalchemy import create_engine
+        eng = create_engine(url)
+        seed_sql = (Path(__file__).resolve().parents[2] / "app/db/migrations/versions/0003_seed.sql").read_text(
+            encoding="utf-8")
+        with eng.begin() as c:
+            c.connection.driver_connection.cursor().execute(seed_sql)   # 直接重跑種子
+        with eng.connect() as c:
+            counts = c.execute(text("SELECT (SELECT count(*) FROM settings), (SELECT count(*) FROM rubrics)")).one()
+        eng.dispose()
+        assert tuple(counts) == (1, 1)
+    finally:
+        drop_db(name)
+
+
+@pytest.mark.parametrize("stmt", [
+    "UPDATE rubrics SET source = 'interview' WHERE version = 0",
+    "DELETE FROM rubrics WHERE version = 0",
+    "TRUNCATE rubrics CASCADE",
+])
+def test_rubrics_are_immutable(db, query, stmt):
+    with pytest.raises(DBAPIError, match="rubrics are immutable"):
+        _exec(db, stmt)
+    assert query("SELECT count(*) AS n FROM rubrics")[0]["n"] == 1
+
+
+def test_rubrics_insert_new_version_allowed_and_settings_still_updatable(db, query):
+    _exec(db, "INSERT INTO rubrics (version, levels, source, created_at) "
+              "VALUES (1, '[\"a\",\"b\",\"c\",\"d\",\"e\"]', 'interview', now())")
+    _exec(db, "UPDATE settings SET energy_def_low = '改過' WHERE id = 1")
+    assert query("SELECT max(version) AS v FROM rubrics")[0]["v"] == 1
+    assert query("SELECT energy_def_low FROM settings")[0]["energy_def_low"] == "改過"

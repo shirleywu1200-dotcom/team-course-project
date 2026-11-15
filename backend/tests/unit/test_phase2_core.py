@@ -103,6 +103,7 @@ def test_ac05_create_single_task(client, seed, query):
                                            "done_when": "客戶回覆確認"}).json()
     assert t["project_id"] is None and t["orig_due"] == t["latest_due"] == "2026-11-18"
     assert t["owner"] == "我" and t["star_source"] == "self" and t["start"] == "2026-11-11"
+    assert t["rubric_id"] == 1   # 只有系統種子的量表 v0 時，填入它
     ev = query("SELECT * FROM events WHERE task_id = :t", t=t["id"])
     assert len(ev) == 1 and ev[0]["kind"] == "task" and ev[0]["project_id"] is None
 
@@ -132,7 +133,7 @@ def test_create_task_defaults_to_manual_origin(db, seed, query):
 def test_create_task_in_project_inherits_scope_and_active_rubric(client, seed):
     seed(BASE + RUBRIC + "UPDATE projects SET scope = 'private' WHERE id = 2;")
     t = client.post("/api/v1/tasks", json={"title": "x", "due": "2026-11-20", "project_id": 2}).json()
-    assert t["scope"] == "private" and t["rubric_id"] == 1
+    assert t["scope"] == "private" and t["rubric_id"] == 2   # 目前量表 = version 最大者（RUBRIC 為 v1，id 2）
 
 
 def test_create_task_unknown_project(client, seed):
