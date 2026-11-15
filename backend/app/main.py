@@ -5,8 +5,9 @@
 
 from fastapi import APIRouter, FastAPI
 
+from app import worker
 from app.ai.client import AIClient, FakeAIClient
-from app.api import error_handlers, routes_events, routes_history, routes_projects, routes_tasks
+from app.api import error_handlers, routes_events, routes_history, routes_inbox, routes_projects, routes_tasks
 from app.api.middleware import API_PREFIX, BearerTokenMiddleware, IdempotencyMiddleware, UnhandledErrorMiddleware
 from app.config import Settings, load_settings
 from app.db.database import Database
@@ -34,7 +35,8 @@ def create_app(settings: Settings | None = None, db: Database | None = None,
     app.add_middleware(UnhandledErrorMiddleware)   # 後加的在外層、先執行，所以它在最外層
 
     api = APIRouter(prefix=API_PREFIX)
-    for r in (routes_projects.router, routes_tasks.router, routes_events.router, routes_history.router):
+    for r in (routes_projects.router, routes_tasks.router, routes_events.router, routes_history.router,
+              routes_inbox.router):
         api.include_router(r)
     app.include_router(api)
     return app
@@ -44,7 +46,9 @@ def run() -> None:
     import uvicorn
 
     settings = load_settings()
-    uvicorn.run(create_app(settings), host=settings.bind_host, port=settings.port)
+    app = create_app(settings)
+    worker.start(app.state.db, app.state.ai)   # 收件背景工作（todo 7.5）；測試不經 run()，不會啟動
+    uvicorn.run(app, host=settings.bind_host, port=settings.port)
 
 
 if __name__ == "__main__":

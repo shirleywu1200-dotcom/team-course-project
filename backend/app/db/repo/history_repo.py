@@ -38,10 +38,11 @@ def search_events(conn: Connection, filters: dict, limit: int, offset: int) -> t
     total = conn.execute(text("SELECT count(*) FROM events e" + cond), params).scalar_one()  # noqa: S608 固定字串
     sql = f"""
         SELECT e.*, p.name AS project_name, {_EFFECTIVE_MARK} AS effective_mark,
-               s.excerpt AS source_excerpt, s.purged_at AS source_purged_at
+               s.excerpt AS source_excerpt, s.purged_at AS source_purged_at, cand.kind AS candidate_kind
           FROM events e
           LEFT JOIN projects p ON p.id = e.project_id
           LEFT JOIN sources s ON s.id = e.source_id
+          LEFT JOIN candidates cand ON e.origin = 'candidate' AND cand.id = e.origin_ref
           {cond}
          ORDER BY e.ts DESC, e.id DESC
          LIMIT :limit OFFSET :offset

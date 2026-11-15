@@ -15,9 +15,11 @@ _ORIGIN_LABELS = {
 }
 
 
-def source_label(origin: str, origin_ref: int | None, batch_id: int | None) -> str:
+def source_label(origin: str, origin_ref: int | None, batch_id: int | None,
+                 candidate_kind: str | None = None) -> str:
     if origin == "candidate":
-        return f"候選 #{origin_ref}"
+        # 待釐清候選經使用者確認（FR-INB-13；Phase 7 SDD Q8：由候選種類推導，不另存）
+        return f"候選 #{origin_ref}" + ("（待釐清，你確認）" if candidate_kind == "unclear" else "")
     if origin == "bulk":
         return f"整批順延 #{batch_id if batch_id is not None else origin_ref}"
     return _ORIGIN_LABELS[origin]
@@ -26,7 +28,7 @@ def source_label(origin: str, origin_ref: int | None, batch_id: int | None) -> s
 def _source(row: dict) -> dict:
     purged = row["source_purged_at"] is not None
     quote = None if (row["source_id"] is None or purged) else row["source_excerpt"]
-    return {"label": source_label(row["origin"], row["origin_ref"], row["batch_id"]),
+    return {"label": source_label(row["origin"], row["origin_ref"], row["batch_id"], row["candidate_kind"]),
             "quote": quote, "purged": purged}
 
 
