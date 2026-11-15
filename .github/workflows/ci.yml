@@ -74,15 +74,26 @@ jobs:
           fi
 
   # todo 6.2：受保護路徑只能由負責人修改（規則在 .github/path-owners.txt；docs/platform-settings.md 選項 C）
+  # 負責人在 PR 按「Approve」後，對這個工作按 Re-run 即會讀到最新的核可狀態。
   path-owners:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: 受保護路徑由負責人修改
+      - name: 受保護路徑由負責人修改或核可
         env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
           BASE_REF: ${{ github.base_ref }}
-        run: git diff --name-only "origin/${BASE_REF}...HEAD" | python3 scripts/check_path_owners.py "$PR_AUTHOR"
+        run: |
+          # 每位審查者只看最後一次審查狀態，取目前為 APPROVED 的帳號
+          approved=$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/reviews" --paginate \
+            --jq '[.[] | select(.state != "COMMENTED")] | group_by(.user.login) | map(last) | map(select(.state == "APPROVED") | .user.login) | join(",")')
+          echo "目前已核可：${approved:-（無）}"
+          git diff --name-only "origin/${BASE_REF}...HEAD" | python3 scripts/check_path_owners.py "$PR_AUTHOR" --approved-by "$approved"

@@ -21,7 +21,8 @@
 **決定（2026-11-13）：團隊選 C。** 因此：
 
 - 第 2 節（分支保護）與第 3 節（CODEOWNERS）目前不適用；改由 `.github/path-owners.txt` 加上 CI 的 `path-owners` 檢查代替。日後若改選 A 或 B，再回到第 2、3 節。
-- 收齊帳號名稱後，由 Dev-A 填入 `.github/path-owners.txt`；還沒填的路徑，檢查會略過並提示「尚未設定」。
+- 2026-11-15 已依 README 的角色對照填入帳號；QC-1 帳號待補（夾具庫目前沒有負責人，檢查會略過並提示「尚未設定」）。
+- `docs/spec.md`、`docs/todo.md` 不設負責人：開發依產品負責人裁定改 spec 是正常流程，改由 PR 範本的「契約」勾選與產品負責人審查把關。
 - 平台不會阻止合併，所以第 4 節的團隊約定是必要條件：**CI 任何一項紅燈都不合併**。
 
 ## 2. 選 A 或 B 時：`main` 分支保護設定
@@ -72,7 +73,7 @@ Settings → Branches → Add branch protection rule，Branch name pattern 填 `
 - [ ] **Dependabot alerts**：Settings → Code security 開啟。官方方案頁將 Dependabot alerts 列在 Free 方案內。
 - [ ] **團隊約定（選 C 時特別重要）**：CI 任何一項紅燈不合併；合併前要有一位審查者在 PR 留下核可；QC 目錄與遷移檔只由負責人修改。
 
-選 C 的 CI 檢查已實作：`path-owners` 工作依 `.github/path-owners.txt` 檢查，PR 若修改受保護路徑而作者不在負責人名單中，就亮紅燈（`scripts/check_path_owners.py`）。平台不會阻止合併，但違規會在 PR 上很明顯。
+選 C 的 CI 檢查已實作：`path-owners` 工作依 `.github/path-owners.txt` 檢查，PR 若修改受保護路徑，而作者不是負責人、負責人也還沒在 PR 上核可（Approve），就亮紅燈（`scripts/check_path_owners.py`）。規則與 CODEOWNERS 相同；負責人核可後，到 PR 的 Checks 對 `path-owners` 按 Re-run 即轉綠。平台不會阻止合併，但違規會在 PR 上很明顯。
 
 ## 5. 需要收集的資訊
 

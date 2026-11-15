@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """檢查 PR 作者是否為所修改受保護路徑的負責人（todo 6.2；選項 C 的自動防線）。
 
-用法：check_path_owners.py <PR 作者帳號> < 變更檔案清單（每行一個路徑）
-規則檔：.github/path-owners.txt。違規時以非 0 結束並列出檔案；未設定負責人的路徑只提示。
+用法：check_path_owners.py <PR 作者帳號> [--approved-by 帳號1,帳號2] < 變更檔案清單（每行一個路徑）
+規則檔：.github/path-owners.txt。
+- PR 作者是該路徑負責人，或該路徑任一負責人已在 PR 上核可（--approved-by），即通過；與 CODEOWNERS 的規則相同。
+- 違規時以非 0 結束並列出檔案；未設定負責人的路徑只提示。
 """
 
 import sys
@@ -27,7 +29,9 @@ def owners_for(path: str, rules: list[tuple[str, set[str]]]) -> tuple[str, set[s
     return max(matches, key=lambda m: len(m[0])) if matches else None
 
 
-def check(author: str, paths: list[str], rules: list[tuple[str, set[str]]]) -> tuple[list[str], list[str]]:
+def check(author: str, paths: list[str], rules: list[tuple[str, set[str]]],
+          approved_by: set[str] | None = None) -> tuple[list[str], list[str]]:
+    approved = {a.lower() for a in (approved_by or set())}
     violations, unset = [], []
     for path in paths:
         rule = owners_for(path, rules)
@@ -36,22 +40,26 @@ def check(author: str, paths: list[str], rules: list[tuple[str, set[str]]]) -> t
         prefix, owners = rule
         if not owners:
             unset.append(f"{path}（{prefix} 尚未設定負責人）")
-        elif author.lower() not in owners:
+        elif author.lower() not in owners and not owners & approved:
             violations.append(f"{path}（負責人：{', '.join(sorted(owners))}）")
     return violations, unset
 
 
 def main() -> int:
-    author = sys.argv[1]
+    args = sys.argv[1:]
+    author = args[0]
+    approved: set[str] = set()
+    if "--approved-by" in args:
+        approved = {a for a in args[args.index("--approved-by") + 1].split(",") if a}
     paths = [p.strip() for p in sys.stdin if p.strip()]
-    violations, unset = check(author, paths, load_rules(RULES_FILE.read_text(encoding="utf-8")))
+    violations, unset = check(author, paths, load_rules(RULES_FILE.read_text(encoding="utf-8")), approved)
     for u in unset:
         print(f"提示：{u}")
     if violations:
         print(f"PR 作者 {author} 修改了不屬於自己負責的受保護路徑：")
         for v in violations:
             print(f"  - {v}")
-        print("請改由負責人修改，或先取得負責人同意並由負責人提交。")
+        print("請該路徑的負責人在 PR 上按「Approve」，再對 path-owners 檢查按 Re-run；或改由負責人修改。")
         return 1
     print("path-owners 檢查通過")
     return 0

@@ -1,4 +1,6 @@
 # 受保護路徑與負責人（todo 6.2；docs/platform-settings.md 選項 C）
+# 帳號依 README.md 的角色對照（2026-11-15）：Dev-A n731110NK、Dev-B MoraChen、
+# Dev-C 與產品負責人 shirleywu1200-dotcom、QC-2 Andpeterpan、QC-1 待補
 # 格式：<路徑前綴> <GitHub 帳號> [<帳號> …]
 # - PR 修改了某路徑，而 PR 作者不在該路徑的負責人中，CI 的 path-owners 檢查就亮紅燈。
 # - 一個檔案符合多條規則時，取最長（最具體）的前綴。
@@ -11,15 +13,14 @@ backend/app/db/migrations/      n731110NK
 backend/app/domain/events.py    n731110NK
 backend/app/domain/due.py       n731110NK
 backend/app/errors.py           n731110NK
-backend/app/ai/client.py
+backend/app/ai/client.py        MoraChen
 
-# QC 的驗收測試與夾具庫（填入 QC-1、QC-2 帳號）
-backend/tests/acceptance/
+# QC 的驗收測試與夾具庫（QC-1 帳號待補，補上後加在後面）
+backend/tests/acceptance/       Andpeterpan
 backend/tests/fixtures/
 
-# 規格與契約變更（填入產品負責人帳號）
-docs/spec.md
-docs/todo.md
+# 規格與待辦：開發依產品負責人裁定改 spec 是正常流程（todo 0.1 第 6 點），不以作者擋；
+# 改由 PR 範本的「契約」勾選與產品負責人審查把關，所以不設負責人。
 
 # 本檔本身（填入產品負責人帳號）
-.github/path-owners.txt         n731110NK
+.github/path-owners.txt         n731110NK shirleywu1200-dotcom
