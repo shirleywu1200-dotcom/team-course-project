@@ -81,7 +81,8 @@
 
 ## Git 與 PR
 
-- 目前只在本機，尚未建立 git repo；何時 `git init` 與上傳 GitHub 由使用者指示。
+- 遠端 repo：`shirleywu1200-dotcom/team-course-project`（私人）。角色與 GitHub 帳號對照見 `README.md`；開 PR 時照 `.github/pull_request_template.md` 填寫。
+- 平台不強制分支保護（`docs/platform-settings.md` 選項 C）：CI 任何一項紅燈都不合併；受保護路徑由 `.github/path-owners.txt` 與 CI 的 `path-owners` 檢查把關。
 - 一個 PR 對應 todo 的一組任務（不超過半個 Phase），標題寫任務與 AC 編號，例如 `[2.1–2.2] write_event 與樂觀鎖（AC-57）`。
 - 合併條件與審查配對見 todo 5.8。
 

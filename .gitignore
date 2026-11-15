@@ -34,3 +34,6 @@ test-results/
 *.dump
 backups/
 .scratch/
+
+# TypeScript 增量建置快取
+*.tsbuildinfo
