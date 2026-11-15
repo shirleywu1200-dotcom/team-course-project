@@ -39,7 +39,7 @@
 
 ## 測試數字
 
-- 後端 pytest：202 個通過（約 17 秒），含 todo 6.2 的契約保護測試（`test_contract_guards.py`）與 log 不含使用者內容的測試。
+- 後端 pytest：225 個通過（約 21 秒），含契約保護測試（簽名、錯誤碼、OpenAPI 2xx schema 非空）、log 不含使用者內容、AC-59、AC-61、AC-62。
 - 前端 Vitest：18 個通過。
 - ruff：無問題。
 - 前端 tsc：無錯誤。
@@ -56,14 +56,14 @@
 
 ### PR #1 審查回饋（依建議順序）
 
-- [ ] **A4（高優先）** 各路由補 `response_model`，重新匯出 OpenAPI 後所有 2xx 都有非空 schema；選做：CI 檢查空 schema
-- [ ] **B2** 系統種子遷移（`settings` id=1、`rubrics` version=0，文字已由產品負責人確認），冪等；AC-59。同步修正 Dev-A 測試中插入 `rubrics(id=1, version=0)`、`settings(id=1)` 的種子，並通知 QC、Dev-B
-- [ ] **B5** `rubrics` 不可修改觸發器（UPDATE、DELETE、TRUNCATE），說明做法、成本與對 QC 測試清理的影響
-- [ ] **A1** 移除 `ai_runs.node_id` 的 `AI-08`（建議用新遷移，不改 0001）
-- [ ] **A2** `POST /tasks/{id}/adjust-start`（AC-62）；建立時開始日晚於期限回 422（AC-61，回答 B1）。先把 AC-59、61、62 與新端點、警告碼 `START_AFTER_DUE` 寫進 spec
-- [ ] **C** 移除 `frontend/tsconfig.tsbuildinfo` 並加入 `.gitignore`；更新 CLAUDE.md「Git 與 PR」；修 `BulkShiftPage` 偶發失敗的測試
-- [ ] **D2** 回覆 `AdjustDuePanel` 可嵌入介面提案（`taskId`、`expectedVersion`、`onDone`、`onClose`）
-- [ ] **D3** `dev-a-handoff.md` 補 Windows venv 路徑 `.venv\Scripts\python`
+- [x] **A4（高優先）** 各路由補 `response_model`，重新匯出 OpenAPI 後所有 2xx 都有非空 schema；選做：CI 檢查空 schema
+- [x] **B2** 系統種子遷移（`settings` id=1、`rubrics` version=0，文字已由產品負責人確認），冪等；AC-59。同步修正 Dev-A 測試中插入 `rubrics(id=1, version=0)`、`settings(id=1)` 的種子，並通知 QC、Dev-B
+- [x] **B5** `rubrics` 不可修改觸發器（UPDATE、DELETE、TRUNCATE），說明做法、成本與對 QC 測試清理的影響
+- [x] **A1** 移除 `ai_runs.node_id` 的 `AI-08`（建議用新遷移，不改 0001）
+- [x] **A2** `POST /tasks/{id}/adjust-start`（AC-62）；建立時開始日晚於期限回 422（AC-61，回答 B1）。先把 AC-59、61、62 與新端點、警告碼 `START_AFTER_DUE` 寫進 spec
+- [x] **C** 移除 `frontend/tsconfig.tsbuildinfo` 並加入 `.gitignore`；更新 CLAUDE.md「Git 與 PR」；修 `BulkShiftPage` 偶發失敗的測試
+- [~] **D2** 已在 PR #1 回覆提案（建議 `{taskId, onDone, onClose}`，拿掉 `expectedVersion`），等 Dev-C 選擇後實作
+- [x] **D3** `dev-a-handoff.md` 補 Windows venv 路徑 `.venv\Scripts\python`
 - 約束 **D1**：前端 18 個測試必須保持通過；**C**：之後的 PR 回到不超過半個 Phase
 
 ### 需要通知
