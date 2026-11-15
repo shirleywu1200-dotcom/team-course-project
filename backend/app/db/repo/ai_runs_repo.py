@@ -2,6 +2,7 @@
 
 from sqlalchemy import Connection
 
+from app.ai.client import AIInvalidOutput, AITimeout
 from app.db.repo.rows import insert_row
 
 RUN_COLUMNS = {"node_id", "job_id", "status", "attempt", "latency_ms", "raw_output", "error", "created_at"}
@@ -14,3 +15,12 @@ def insert_run(conn: Connection, fields: dict) -> dict:
 
 def insert_feedback(conn: Connection, fields: dict) -> dict:
     return insert_row(conn, "ai_feedback", FEEDBACK_COLUMNS, fields)
+
+
+def status_for(exc: Exception) -> str:
+    """例外對應 ai_runs.status；子類別也正確歸類。"""
+    if isinstance(exc, AITimeout):
+        return "timeout"
+    if isinstance(exc, AIInvalidOutput):
+        return "invalid_output"
+    return "error"

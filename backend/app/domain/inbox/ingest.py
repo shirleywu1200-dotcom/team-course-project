@@ -13,7 +13,7 @@ from datetime import timedelta
 
 from sqlalchemy import Connection
 
-from app.ai.client import AIClient, AIInvalidOutput, AITimeout, AIUnavailable
+from app.ai.client import AIClient, AIInvalidOutput, AIUnavailable
 from app.clock import get_clock
 from app.db.database import Database
 from app.db.repo import ai_runs_repo, candidates_repo, jobs_repo, projects_repo, sources_repo
@@ -107,14 +107,6 @@ def _payload(conn: Connection, source_ids: list[int], project_id: int | None) ->
     return payload, {s["id"]: s["excerpt"] for s in sources}, {t["id"] for t in tasks}
 
 
-def _run_status(exc: Exception) -> str:
-    if isinstance(exc, AITimeout):
-        return "timeout"
-    if isinstance(exc, AIInvalidOutput):
-        return "invalid_output"
-    return "error"
-
-
 def process_sources(db: Database, ai: AIClient, source_ids: list[int], project_id: int | None, *,
                     job_id: int | None = None, attempts_done: int = 0) -> Outcome:
     """呼叫 AI-01 並把結果寫成 open 候選；失敗則續跑，總嘗試次數不超過 MAX_ATTEMPTS。"""
@@ -133,7 +125,7 @@ def process_sources(db: Database, ai: AIClient, source_ids: list[int], project_i
             error = exc
         run = {"node_id": NODE, "job_id": job_id, "attempt": attempt, "created_at": get_clock().now(),
                "latency_ms": int((time.monotonic() - started) * 1000),
-               "status": "ok" if error is None else _run_status(error),
+               "status": "ok" if error is None else ai_runs_repo.status_for(error),
                "error": None if error is None else type(error).__name__,
                "raw_output": None if output is None else json.dumps(output, ensure_ascii=False, default=str)}
         if error is None:

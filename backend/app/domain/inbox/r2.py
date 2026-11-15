@@ -6,18 +6,15 @@ AI 輸出的其他欄位（例如原因推測）一律不讀（FR-DUE-05a、AC-1
 
 import re
 from dataclasses import dataclass
-from datetime import date, timedelta
+from datetime import date
 
 from app.ai.client import AIInvalidOutput
-from app.domain.due import check_date_range
-from app.errors import DomainError
+from app.domain.dates import in_date_range, to_date
 
 AI_KINDS = {"delay", "done", "stuck", "none"}
 HEDGE_WORDS = ("可能", "大概", "應該", "也許")
 QUESTION_MARKERS = ("?", "？", "嗎", "會不會")
 _URL = re.compile(r"https?://\S+")
-YEAR_ROLLOVER_DAYS = 180
-_MONTH_DAY = re.compile(r"^(\d{1,2})\s*[/／月]\s*(\d{1,2})\s*日?$")
 
 
 @dataclass(frozen=True)
@@ -28,40 +25,6 @@ class Draft:
     task_id: int | None
     proposed: dict | None
     suggest: dict | None
-
-
-def to_date(value, today: date) -> date | None:
-    """`YYYY-MM-DD` 或 `M/D`；`M/D` 取今年，比今天早 180 天以上就算明年。轉不出來回 None。"""
-    if not isinstance(value, str):
-        return None
-    value = value.strip()
-    try:
-        return date.fromisoformat(value)
-    except ValueError:
-        pass
-    m = _MONTH_DAY.match(value)
-    if not m:
-        return None
-    try:
-        d = date(today.year, int(m[1]), int(m[2]))
-    except ValueError:
-        return None
-    if d < today - timedelta(days=YEAR_ROLLOVER_DAYS):
-        try:
-            d = d.replace(year=d.year + 1)
-        except ValueError:   # 2/29 跨到非閏年
-            return None
-    return d
-
-
-def _in_range(d: date | None, today: date) -> bool:
-    if d is None:
-        return False
-    try:
-        check_date_range(d, today)
-    except DomainError:
-        return False
-    return True
 
 
 def is_hedged(text: str) -> bool:
@@ -95,7 +58,7 @@ def _draft(source_id: int, it: dict, text: str, task_ids: set[int], today: date)
     if type(task_id) is not int or task_id not in task_ids:   # 不猜（AC-37）
         return Draft(source_id, "unmatched", "to_match", None, None, {"kind": kind})
     new_due = to_date(it.get("new_due"), today) if kind == "delay" else None
-    bad_date = kind == "delay" and not _in_range(new_due, today)
+    bad_date = kind == "delay" and not in_date_range(new_due, today)
     suggest = {"kind": kind, "new_due": new_due.isoformat() if new_due and not bad_date else None}
     if bad_date or is_hedged(text) or it.get("certainty", "sure") != "sure":
         return Draft(source_id, "unclear", "to_clarify", task_id, None, suggest)

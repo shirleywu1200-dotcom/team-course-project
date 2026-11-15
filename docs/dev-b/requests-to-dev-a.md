@@ -43,3 +43,7 @@ Dev-B 開發時發現、需要 Dev-A 處理或知道的事項，**統一記在�
 ### N-03 `POST /ingest` 回應新增 `result.unparsed_lines`　〔已完成，需通知 Dev-C、QC-2〕
 
 - Phase 7 SDD 2.1：無法辨識的行號清單，供使用者修正後重貼。是新增欄位，不改既有欄位。
+
+### N-04 匯入 preview 新增手動對應　〔已完成，需通知 Dev-C、QC-2〕
+
+- Phase 6 SDD Q1：`POST /projects/import/preview` 輸入多一個選填欄位 `column_map`（`{title, owner, start, end}` 欄位索引）；帶了時回 `mapped_by="manual"`。`mapped_by` 原本只有 `rule`、`ai`、`null`，現在多一個值。
