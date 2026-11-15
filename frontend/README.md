@@ -39,3 +39,34 @@ npm run typecheck
 若清單內任一端點的任一 2xx 回應 schema 不再是空物件，檢查會失敗：
 待 Dev-A 補齊契約後，應在後續作業移除對應暫存型別與清單項目，改用生成型別。
 請勿自行補齊、擴充或推測回應欄位。
+
+## 路由與共用版面（11.1）
+
+`src/app/routeDefinitions.ts` 集中管理預留路由與導覽名稱；
+`AppRoutes.tsx` 組合頁面，`AppLayout.tsx` 管理共用導覽與內容區。
+寬度不超過 767px 時，導覽移至底部並優先排列收件匣、今日、任務；
+其餘功能可橫向捲動。網站版導覽位於頂部。
+兩種版面使用相同 Outlet 與頁面元件，改變寬度不重建內容、不清除未送出的輸入。
+版面樣式引用既有 CSS token，沒有新增主題或查詢快取規則。
+
+| 路由 | 對應 todo／目前狀態 |
+| --- | --- |
+| `/` | 工作總覽與導覽入口 |
+| `/projects`、`/projects/:projectId` | 12.1 預留 |
+| `/tasks/:taskId` | 保留 Dev-A 12.2、12.5；12.3 後續在此整合正式任務詳情 |
+| `/tasks` | 任務入口，預留 |
+| `/projects/:projectId/bulk-shift` | 保留 Dev-A 12.4 |
+| `/history`、`/projects/:projectId/history` | 12.6 預留 |
+| `/import` | 12.7 預留 |
+| `/inbox`、`/confirmations` | 12.8 預留 |
+| `/today`、`/tasks/:taskId/feedback` | 12.9 預留；此處未實作完成回報 |
+| `/time-management` | 12.10 預留 |
+| `/setup`、`/settings` | 12.11 預留 |
+| `/goals` | 12.12 預留 |
+| `/reports` | 12.13 預留 |
+| `/data-control` | 12.14 預留 |
+| `/tasks/new` | 12.15 預留；靜態路由優先於任務編號 |
+| 其他網址 | 找不到頁面，可返回工作總覽 |
+
+預留頁面只顯示「此功能尚未開放」，不讀寫 API，也不代表該 todo 已實作。
+TokenGate 與 token 儲存、傳送邏輯沿用原有程式。
