@@ -2,7 +2,8 @@ import { readFileSync, readdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 
 import { errorDefinitions, getErrorFixture } from "./errorFixtures";
-import { adjustStartFixtures, makeSerializedTask, statusFixtures, dueFixtures } from "./fixtures";
+import { adjustStartFixtures, makeSerializedTask, makeTaskDetailFixture, statusFixtures, dueFixtures } from "./fixtures";
+import type { TaskDetailFixtureResponse } from "./fixtureTypes";
 import { adjustStartHandler, errorHandler, markIgnoredHandler, statusHandler } from "./handlers";
 import { API, makeTask, reasons, server } from "./server";
 
@@ -50,6 +51,18 @@ test("status 的 task／event 欄位全集對照後端 serialize.py，不依殘�
   expect(Object.keys(statusFixtures.doing.response.task).sort()).toEqual(taskKeys.sort());
   expect(Object.keys(statusFixtures.doing.response.event).sort()).toEqual(eventKeys.sort());
   expect(statusFixtures.doing.response.event.ts).toMatch(/T\d{2}:\d{2}:\d{2}\+08:00$/);
+});
+
+test("GET 任務詳情的 task 與 events 形狀取自後端 get_task 路由", async () => {
+  const fixture: TaskDetailFixtureResponse = makeTaskDetailFixture();
+  const routes = readFileSync(resolve("../backend/app/api/routes_tasks.py"), "utf8");
+  const getTask = routes.slice(routes.indexOf("def get_task("), routes.indexOf("def change_owner("));
+  const routeKeys = [...getTask.matchAll(/"(\w+)"\s*:/g)].map(([, key]) => key);
+  expect(Object.keys(fixture).sort()).toEqual(routeKeys.sort());
+  expect(fixture.events).toEqual([]);
+  const response = await fetch(`${API}/tasks/4`);
+  expect(response.status).toBe(200);
+  expect(await response.json()).toEqual(fixture);
 });
 
 test("DA-11 MARK_IGNORED 仍為 200 警告，不寫入我的註記", async () => {

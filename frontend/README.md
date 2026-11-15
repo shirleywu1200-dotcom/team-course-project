@@ -129,6 +129,7 @@ Dev-A 測試原有的局部 handler 覆寫保留，沒有刪除或放寬測試�
 | `SerializedTaskFixture` | `task_out` 的 19 欄；只在測試擴充原有 Task，不改產品型別 |
 | `SerializedEventFixture` | `event_out` 的 21 欄；時間戳使用固定 `+08:00` 字串 |
 | `StatusFixtureResponse` | 狀態路由的 `{task,event}`；請求引用生成的 `StatusChange` |
+| `TaskDetailFixtureResponse` | `routes_tasks.py` 的 `get_task`：`{task: task_out(...), events: event_out(...)[]}`；`events: []` 表示範例任務沒有近期歷程 |
 | `AdjustStartFixtureRequest` | 已核准的 `new_start`、`expected_version`、選填 `note` |
 | `AdjustStartFixtureResponse` | 已核准成功輸出與 AC-62 的空 mark／delta_days；不補猜測欄位 |
 

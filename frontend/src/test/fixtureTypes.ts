@@ -33,6 +33,12 @@ export interface StatusFixtureResponse {
   event: SerializedEventFixture;
 }
 
+// backend/app/api/routes_tasks.py：get_task 回傳 task_out 與 event_out 的陣列。
+export interface TaskDetailFixtureResponse {
+  task: SerializedTaskFixture;
+  events: SerializedEventFixture[];
+}
+
 // 待 Dev-A 實作（todo 2.11）：FR-TSK-08、AC-62。
 // 只列明文欄位；保留規劃中的 start_date，不猜測如何與現況 start 統一。
 export interface AdjustStartFixtureRequest {

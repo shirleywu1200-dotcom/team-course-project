@@ -1,5 +1,5 @@
 import type { AdjustDue, AdjustDueResult, StatusChange, Task } from "../api/types";
-import type { AdjustStartFixtureRequest, AdjustStartFixtureResponse, SerializedEventFixture, SerializedTaskFixture, StatusFixtureResponse } from "./fixtureTypes";
+import type { AdjustStartFixtureRequest, AdjustStartFixtureResponse, SerializedEventFixture, SerializedTaskFixture, StatusFixtureResponse, TaskDetailFixtureResponse } from "./fixtureTypes";
 import { getErrorFixture, type ErrorFixtureCode } from "./errorFixtures";
 
 // 原 makeTask 的值、欄位與覆寫方式原樣保留，只有一份基底資料。
@@ -16,6 +16,10 @@ export function makeSerializedTask(over: Partial<SerializedTaskFixture> = {}): S
     ...makeTask(), done_when: "", remind: "morning", expected_stars: 3,
     star_source: "self", rubric_id: 1, goal_id: null, ...over,
   };
+}
+
+export function makeTaskDetailFixture(): TaskDetailFixtureResponse {
+  return { task: makeSerializedTask(), events: [] };
 }
 
 export function makeSerializedEvent(over: Partial<SerializedEventFixture> = {}): SerializedEventFixture {

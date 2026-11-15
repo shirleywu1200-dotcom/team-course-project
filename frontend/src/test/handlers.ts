@@ -1,6 +1,6 @@
 import { http, HttpResponse } from "msw";
 import { getErrorFixture, type ErrorFixtureCode } from "./errorFixtures";
-import { adjustStartFixtures, dueFixtures, makeSerializedTask, statusFixtures } from "./fixtures";
+import { adjustStartFixtures, dueFixtures, makeSerializedTask, makeTaskDetailFixture, statusFixtures } from "./fixtures";
 import { reasons } from "./reasons";
 
 export const API = "http://localhost:3000/api/v1";
@@ -31,7 +31,7 @@ export function adjustStartHandler(scenario: keyof typeof adjustStartFixtures = 
 export const handlers = [
   http.get(`${API}/meta/reasons`, () => HttpResponse.json(reasons)),
   http.get(`${API}/tasks`, () => HttpResponse.json({ items: [makeSerializedTask()], total: 1 })),
-  http.get(`${API}/tasks/4`, () => HttpResponse.json({ task: makeSerializedTask(), events: [] })),
+  http.get(`${API}/tasks/4`, () => HttpResponse.json(makeTaskDetailFixture())),
   http.post(`${API}/tasks/4/adjust-due`, () => HttpResponse.json(dueFixtures.success.response)),
   statusHandler(),
   adjustStartHandler(),
