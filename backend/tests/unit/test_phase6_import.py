@@ -126,7 +126,7 @@ def test_ac32_commit_new_project_creates_tasks_and_one_baseline_event(client, se
     first = tasks[0]
     assert first["orig_due"] == first["latest_due"] and first["orig_due"].isoformat() == "2026-11-18"
     assert {t["star_source"] for t in tasks} == {"import_default"}
-    assert tasks[3]["owner_name"] == "我" and tasks[0]["rubric_id"] == 1
+    assert tasks[3]["owner_name"] == "我" and tasks[0]["rubric_id"] == 2   # RUBRIC（version 1）為目前量表
     [ev] = query("SELECT id, kind, field, origin, task_id, to_value, extra FROM events WHERE kind = 'baseline'")
     assert (ev["id"], ev["field"], ev["origin"], ev["task_id"], ev["to_value"]) == (
         body["event_id"], "import", "import", None, "5")

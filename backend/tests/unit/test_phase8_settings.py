@@ -43,13 +43,13 @@ def excerpts(query):
 
 # ---------- 設定（8.1） ----------
 
-def test_get_settings_creates_single_default_row(client, query):
+def test_get_settings_returns_seeded_row(client, query):
     r = client.get(f"{API}/settings")
     assert r.status_code == 200
     body = r.json()
     assert (body["retention_days"], body["confirm_time"], body["default_scope"], body["onboarded_at"]) == (
         30, "18:00", "work", None)
-    assert body["energy_def_high"] == "需要整段專注，做完會明顯疲累"
+    assert body["energy_def_high"].startswith("需要長時間專注")   # 種子遷移 0003
     assert body["goal_types_enabled"] == ["growth", "time", "expectation"]
     assert "id" not in body
     client.get(f"{API}/settings")
@@ -90,7 +90,7 @@ def test_shorter_retention_recomputes_expiry_and_purges_now(client, seed, query,
     assert count(query, "events") == 1 and count(query, "candidates") == 2
 
 
-def test_onboarding_complete_sets_time_once_and_ensures_v0(client, query, clock):
+def test_onboarding_complete_sets_time_once_and_keeps_seeded_v0(client, query, clock):
     r = client.post(f"{API}/settings/onboarding/complete", json={"skipped": True})
     assert r.status_code == 200
     first = r.json()["onboarded_at"]
@@ -106,8 +106,8 @@ def test_rubrics_default_v0_and_active(client):
     body = client.get(f"{API}/rubrics").json()
     assert body["total"] == 1
     [v0] = body["items"]
-    assert (v0["version"], v0["source"], v0["levels"]) == (
-        0, "default", ["未達成", "部分達成", "符合預設", "優於預設", "遠超預設"])
+    assert (v0["version"], v0["source"], len(v0["levels"])) == (0, "default", 5)
+    assert v0["levels"][0].startswith("未達成：")             # 種子遷移 0003
     assert client.get(f"{API}/rubrics", params={"active": True}).json()["items"] == [v0]
 
 
@@ -122,7 +122,7 @@ def test_interview_returns_draft_and_sends_only_answers_and_current(client, seed
     assert payload == ANSWERS | {"current": ["未達成", "部分達成", "符合預設", "優於預設", "遠超預設"]}
     [run] = query("SELECT node_id, status, raw_output FROM ai_runs")
     assert (run["node_id"], run["status"]) == (NODE, "ok") and "交付且品質好" in run["raw_output"]
-    assert count(query, "rubrics") == 1                    # 草稿不入庫
+    assert count(query, "rubrics") == 2                    # 種子 v0＋RUBRIC；草稿不入庫
 
 
 def test_interview_retries_bad_output_then_succeeds(client, seed, ai, query):
@@ -143,7 +143,7 @@ def test_interview_unavailable_is_503_without_retry(client, seed, query):
     r = client.post(f"{API}/rubrics/interview", json=ANSWERS)
     assert r.status_code == 503
     assert [x["status"] for x in query("SELECT status FROM ai_runs")] == ["error"]
-    assert count(query, "rubrics") == 1
+    assert count(query, "rubrics") == 2
 
 
 def test_interview_rejects_empty_answer(client, seed, ai):
@@ -152,28 +152,25 @@ def test_interview_rejects_empty_answer(client, seed, ai):
     assert ai.calls == []
 
 
-def test_confirm_creates_next_version_and_keeps_old(client, seed, query):
-    seed(RUBRIC)
+def test_confirm_creates_next_version_and_keeps_old(client, query):
     r = client.post(f"{API}/rubrics", json={"levels": LEVELS, "interview": ANSWERS})
     assert r.status_code == 201
     assert r.json()["version"] == 1
     rows = query("SELECT version, levels, source, interview FROM rubrics ORDER BY version")
-    assert rows[0]["levels"] == ["未達成", "部分達成", "符合預設", "優於預設", "遠超預設"]
+    assert (rows[0]["version"], rows[0]["source"]) == (0, "default")
     assert (rows[1]["levels"], rows[1]["source"], rows[1]["interview"]) == (LEVELS, "interview", ANSWERS)
     assert client.get(f"{API}/rubrics", params={"active": True}).json()["items"][0]["version"] == 1
     assert client.post(f"{API}/rubrics", json={"levels": LEVELS, "interview": ANSWERS}).json()["version"] == 2
 
 
-def test_confirm_requires_exactly_five_non_empty_levels(client, seed, query):
-    seed(RUBRIC)
+def test_confirm_requires_exactly_five_non_empty_levels(client, query):
     for bad in (LEVELS[:4], LEVELS + ["多一句"], LEVELS[:4] + [""], LEVELS[:4] + ["字" * 201]):
         r = client.post(f"{API}/rubrics", json={"levels": bad, "interview": ANSWERS})
         assert r.status_code == 422 and r.json()["error"]["code"] == "VALIDATION_ERROR"
     assert count(query, "rubrics") == 1
 
 
-def test_confirm_records_ai_feedback_when_draft_given(client, seed, query):
-    seed(RUBRIC)
+def test_confirm_records_ai_feedback_when_draft_given(client, query):
     client.post(f"{API}/rubrics", json={"levels": LEVELS, "interview": ANSWERS | {"draft": LEVELS}})
     edited = ["改過"] + LEVELS[1:]
     client.post(f"{API}/rubrics", json={"levels": edited, "interview": ANSWERS | {"draft": LEVELS}})
@@ -248,7 +245,7 @@ def test_ac54_export_contains_every_table_with_matching_counts(client, seed, que
         assert len(data["tables"][t]) == data["counts"][t] == count(query, t), t
     src = {s["id"]: s for s in data["tables"]["sources"]}
     assert src[3]["excerpt"] is None and src[1]["received_at"] == "2026-10-01T10:00:00+08:00"
-    assert data["tables"]["rubrics"][0]["levels"][0] == "未達成"
+    assert data["tables"]["rubrics"][0]["levels"][0].startswith("未達成")
     assert data["schema_version"] and data["exported_at"] == "2026-11-11T10:00:00+08:00"
     # 連線池重用連線（pool_pre_ping 會先送 SELECT 1）時，快照設定仍須是交易第一句
     client.get(f"{API}/settings")

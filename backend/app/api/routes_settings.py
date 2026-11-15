@@ -76,7 +76,7 @@ def put_settings(body: SettingsPatch, db: Database = Depends(get_db)):
 
 @router.post("/settings/onboarding/complete")
 def complete_onboarding(body: OnboardingIn, db: Database = Depends(get_db)):
-    return settings_out(db.run(lambda c: settings.complete_onboarding(c, body.skipped)))
+    return settings_out(db.run(lambda c: settings.complete_onboarding(c)))
 
 
 @router.get("/rubrics")

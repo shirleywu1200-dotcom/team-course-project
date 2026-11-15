@@ -3,6 +3,11 @@
 依據：spec 3.1（FR-SET-01～04）、3.2（FR-RUB-01～05）、3.17（FR-GOV-01～03、05）、5.4、5.15、6.6、6.7；todo Phase 8（8.1～8.7，8.8 不做）；AC-52～54；decisions DA-23。
 狀態：**已定案**（2026-11-15 產品負責人：Q1～Q6 全部依建議；Q1 的精力定義預設文字照第 2 節；Q5 已改寫 spec 6.7）。
 
+> **修訂（2026-11-15，PR #1 審查 B2、B5；issue #10）**：**Q1、Q3 已被推翻**，下文第 2、3 節與第 6 節表格中 Q1、Q3 的內容僅供追溯。
+> - Q1 → 設定列（id=1）與量表 v0 改由 Dev-A 的系統種子遷移 0003 寫入，文字以 0003 為唯一來源（spec 4.2.1）。Dev-B 刪除程式補列（`settings.ensure`、`rubrics.ensure_v0`、`settings_repo.insert_default`、`rubrics_repo.insert_if_empty`）與程式內的預設文字，避免兩份來源不一致。
+> - Q3 → `rubrics` 由遷移 0002 加不可修改觸發器（UPDATE、DELETE、TRUNCATE 皆擋）。
+> - `POST /settings/onboarding/complete` 的 `skipped` 保留在請求本文（契約不變），但不再觸發任何寫入：略過時沿用種子值。
+
 ## 1. 端點
 
 | Method | Path | 任務 | 說明 |

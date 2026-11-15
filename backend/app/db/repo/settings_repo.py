@@ -9,13 +9,6 @@ COLUMNS = {"default_scope", "role", "report_audience", "confirm_time", "confirm_
            "onboarded_at"}
 
 
-def insert_default(conn: Connection, energy: dict) -> None:
-    """沒有設定列時建立；其他欄位用 DDL 的預設值。已存在就不動。"""
-    conn.execute(text(
-        "INSERT INTO settings (id, energy_def_high, energy_def_mid, energy_def_low) "
-        "VALUES (1, :high, :mid, :low) ON CONFLICT (id) DO NOTHING"), energy)
-
-
 def get(conn: Connection) -> dict:
     return dict(conn.execute(text("SELECT * FROM settings WHERE id = 1")).mappings().one())
 

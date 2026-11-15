@@ -1,6 +1,7 @@
 """星數量表（todo 8.2～8.4、FR-RUB-01～04；Phase 8 SDD 第 3 節）。
 
-版本不可變：只新增新版本，不改舊版本。AI-06 草稿只回給前端，使用者確認後才成為新版本。
+版本不可變：只新增新版本，不改舊版本（資料庫觸發器擋 UPDATE、DELETE，遷移 0002）。
+量表 v0 由系統種子遷移 0003 寫入（審查 B2），程式不另補。AI-06 草稿只回給前端，使用者確認後才成為新版本。
 """
 
 import json
@@ -21,16 +22,9 @@ NODE = "AI-06"
 MAX_ATTEMPTS = 3                 # 比照 AI-01：逾時與格式不符續跑，供應商不可用不續跑
 LEVEL_COUNT = 5
 MAX_LEVEL_CHARS = 200
-V0_LEVELS = ["未達成", "部分達成", "符合預設", "優於預設", "遠超預設"]   # FR-SET-04
-
-
-def ensure_v0(conn: Connection) -> None:
-    rubrics_repo.insert_if_empty(conn, {"version": 0, "levels": V0_LEVELS, "source": "default",
-                                        "created_at": get_clock().now()})
 
 
 def list_rubrics(conn: Connection, active: bool) -> list[dict]:
-    ensure_v0(conn)
     return [rubrics_repo.latest(conn)] if active else rubrics_repo.list_all(conn)
 
 
@@ -76,7 +70,6 @@ def interview(db: Database, ai: AIClient, answers: dict) -> list[str]:
 
 def confirm(conn: Connection, levels: list[str], answers: dict, draft: list[str] | None) -> dict:
     """確認為新版本（FR-RUB-03）。帶了 AI 草稿時記錄採用情形（SDD Q4）。"""
-    ensure_v0(conn)
     now = get_clock().now()
     row = rubrics_repo.insert(conn, {"version": rubrics_repo.latest(conn)["version"] + 1, "levels": levels,
                                      "source": "interview", "interview": answers, "created_at": now})
