@@ -10,6 +10,7 @@ from sqlalchemy import text
 
 from app.ai.client import AIClient
 from app.api.deps import get_ai, get_db
+from app.api.responses import AnnotationOut, HealthOut, ReasonsOut, TimeMgmtStatsOut
 from app.api.schemas import Annotation
 from app.api.serialize import event_out
 from app.db.database import Database
@@ -19,19 +20,19 @@ from app.domain.reasons import BASELINE_REASONS, BASELINE_TYPES, DUE_REASONS
 router = APIRouter(tags=["events"])
 
 
-@router.post("/events/{event_id}/annotations", status_code=201)
+@router.post("/events/{event_id}/annotations", status_code=201, response_model=AnnotationOut)
 def annotate(event_id: int, body: Annotation, db: Database = Depends(get_db)):
     event, effective = db.run(lambda c: marks.annotate(c, event_id, body.mark, body.reason, body.note))
     return {"event": event_out(event), "effective_mark": effective}
 
 
-@router.get("/stats/time-management")
+@router.get("/stats/time-management", response_model=TimeMgmtStatsOut)
 def time_management(from_: date | None = Query(None, alias="from"), to: date | None = None,
                     db: Database = Depends(get_db)):
     return db.run(lambda c: marks.time_mgmt_stats(c, from_, to))
 
 
-@router.get("/meta/reasons")
+@router.get("/meta/reasons", response_model=ReasonsOut)
 def reasons():
     return {
         "due": DUE_REASONS,
@@ -40,7 +41,7 @@ def reasons():
     }
 
 
-@router.get("/meta/health")
+@router.get("/meta/health", response_model=HealthOut)
 def health(db: Database = Depends(get_db), ai: AIClient = Depends(get_ai)):
     try:
         db.run(lambda c: c.execute(text("SELECT 1")).scalar_one())

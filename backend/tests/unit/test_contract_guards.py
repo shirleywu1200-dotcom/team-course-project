@@ -51,3 +51,24 @@ def test_error_codes_match_spec_table():
     section = SPEC.read_text(encoding="utf-8").split("### 5.2 錯誤碼", 1)[1].split("### 5.3", 1)[0]
     in_spec = {code: int(status) for status, code in re.findall(r"^\| (\d{3}) \| `([A-Z_]+)` \|", section, re.M)}
     assert in_spec == ERROR_STATUS
+
+
+def test_every_route_documents_its_2xx_response_schema():
+    """PR #1 審查 A4：每個操作的 2xx 都要有非空 schema，前端才能由 OpenAPI 產生回應型別。
+
+    新增路由忘了加 response_model 時，這個測試會紅（CI 跑 pytest 時一起檢查）。
+    """
+    from app.export_openapi import build_openapi
+
+    spec = build_openapi()
+    empty = []
+    for path, ops in spec["paths"].items():
+        for method, op in ops.items():
+            for status, resp in op["responses"].items():
+                if not status.startswith("2"):
+                    continue
+                schema = resp.get("content", {}).get("application/json", {}).get("schema", {})
+                if not schema:
+                    empty.append(f"{method.upper()} {path} {status}")
+    assert not empty, f"2xx 回應沒有 schema：{empty}"
+    assert sum(len(ops) for ops in spec["paths"].values()) >= 21
