@@ -56,3 +56,14 @@ Dev-B 開發時發現、需要 Dev-A 處理或知道的事項，**統一記在�
 
 - Phase 8 SDD Q2、Q5（2026-11-15 產品負責人裁定）。spec FR-GOV-01、6.7、AC-52 的「每日排程」改為「清除排程」，QC 的 AC-52 測試措辭請對應。
 - `sources_repo.retention_days` 已移除，收件改從 `app/domain/settings.get_settings` 取保存期限（沒有設定列時自動補預設列）。
+
+### N-07 收件匣（12.8）加進 Dev-A 的前端暫代檔　〔已完成，需通知 Dev-C〕
+
+- 12.8 SDD D-1：沿用 Dev-A 的暫代骨架。Dev-C 做 0.8、Phase 11 時，下列 Dev-B 新增的部分要一併吸收：
+  - `src/api/types.ts`：`Candidate`、`IngestResult`、`IngestJob`、`DecideResult`、`AppSettings`
+  - `src/api/queries.ts`：`keys.candidates`、`keys.settings`、`keys.ingestJob` 與對應讀取函式
+  - `src/test/server.tsx`：`makeCandidate`，以及 `GET /settings`、`GET /candidates` 的預設 handler
+  - `src/components/standin/ErrorBanner.tsx`：`CANDIDATE_NOT_OPEN`、`PAYLOAD_TOO_LARGE` 訊息
+  - `src/styles/base.css`：`.head`、`.tag`、`.quote`、`.done-item`
+  - `src/App.tsx`：`/inbox` 路由
+- 12.9 完成後，收件匣確認「完成」可改成直接開完成回報表單（目前只提示到今日頁補填，D-2）。
