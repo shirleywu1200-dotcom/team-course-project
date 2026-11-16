@@ -4,9 +4,11 @@
 新增節點：在本目錄加一個檔案定義 `NODE`（型別見 base.py），再登記到下方 NODES。
 """
 
-from app.ai.nodes import ai01
+from app.ai.nodes import ai01, ai06, ai07
 from app.ai.nodes.base import Node
 
 NODES: dict[str, Node] = {
     "AI-01": ai01.NODE,
+    "AI-06": ai06.NODE,
+    "AI-07": ai07.NODE,
 }

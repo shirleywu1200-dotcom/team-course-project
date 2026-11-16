@@ -65,6 +65,19 @@ def test_ai01_ok_returns_dict_and_sends_schema_and_timeout():
     assert "報價單延到 11/18" in sdk.kwargs["messages"][0]["content"]
 
 
+AI06_PAYLOAD = {"q1": "交付物可用、沒有返工", "q2": "提前完成且主管直接採用", "q3": "共用一套",
+                "current": ["未達成", "部分達成", "符合預設", "優於預設", "遠超預設"]}
+AI07_PAYLOAD = {"headers": ["項目", "負責", "起", "截止"], "samples": [["報價單", "王", "11/1", "11/14"]]}
+
+
+@pytest.mark.parametrize(("node", "out"), [
+    ("AI-06", {"levels": ["a", "b", "c", "d", "e"]}),
+    ("AI-07", {"title": 0, "owner": 1, "start": 2, "end": 3}),
+])
+def test_registered_nodes_parse(node, out):
+    assert _client(FakeSDK(result=_reply(out))).call(node, {}) == out
+
+
 def test_sdk_retries_disabled():
     assert AnthropicAIClient(api_key="k", model="m").sdk.max_retries == 0
 
@@ -146,10 +159,25 @@ real_ai = pytest.mark.skipif(
     reason="真實 AI 冒煙測試：需 AI_PROVIDER=anthropic 與 ANTHROPIC_API_KEY（會產生費用）")
 
 
+def _real():
+    return AnthropicAIClient(api_key=os.environ["ANTHROPIC_API_KEY"],
+                             model=os.environ.get("AI_MODEL", "claude-sonnet-5-5"))
+
+
 @pytest.mark.real_ai
 @real_ai
 def test_real_ai01_smoke():
-    ai = AnthropicAIClient(api_key=os.environ["ANTHROPIC_API_KEY"],
-                           model=os.environ.get("AI_MODEL", "claude-sonnet-5-5"))
-    out = ai.call("AI-01", AI01_PAYLOAD)
+    out = _real().call("AI-01", AI01_PAYLOAD)
     assert out["items"] and out["items"][0]["ref"] == 1
+
+
+@pytest.mark.real_ai
+@real_ai
+def test_real_ai06_smoke():
+    assert len(_real().call("AI-06", AI06_PAYLOAD)["levels"]) == 5
+
+
+@pytest.mark.real_ai
+@real_ai
+def test_real_ai07_smoke():
+    assert _real().call("AI-07", AI07_PAYLOAD) == {"title": 0, "owner": 1, "start": 2, "end": 3}
