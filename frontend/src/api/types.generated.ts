@@ -1917,8 +1917,16 @@ export interface components {
             worse_by_energy: components["schemas"]["EnergyDistribution"];
             /** Min Sample */
             min_sample: number;
-            /** Judgement */
+            /**
+             * Judgement
+             * @description 樣本不足 min_sample 時為 null；規則見 spec FR-MRK-07
+             */
             judgement: string | null;
+            /**
+             * Judgement Note
+             * @description 判讀說明：樣本不足的說明，或變好／變差次數＋精力洞察（FR-MRK-07）
+             */
+            judgement_note: string;
         };
         /** ValidationError */
         ValidationError: {

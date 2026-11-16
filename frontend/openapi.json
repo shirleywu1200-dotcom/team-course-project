@@ -5978,7 +5978,13 @@
                 "type": "null"
               }
             ],
-            "title": "Judgement"
+            "title": "Judgement",
+            "description": "樣本不足 min_sample 時為 null；規則見 spec FR-MRK-07"
+          },
+          "judgement_note": {
+            "type": "string",
+            "title": "Judgement Note",
+            "description": "判讀說明：樣本不足的說明，或變好／變差次數＋精力洞察（FR-MRK-07）"
           }
         },
         "type": "object",
@@ -5989,7 +5995,8 @@
           "unmarked",
           "worse_by_energy",
           "min_sample",
-          "judgement"
+          "judgement",
+          "judgement_note"
         ],
         "title": "TimeMgmtStatsOut"
       },
