@@ -215,7 +215,8 @@ class TimeMgmtStatsOut(Out):
     unmarked: int
     worse_by_energy: EnergyDistribution
     min_sample: int
-    judgement: str | None
+    judgement: str | None = Field(description="樣本不足 min_sample 時為 null；規則見 spec FR-MRK-07")
+    judgement_note: str = Field(description="判讀說明：樣本不足的說明，或變好／變差次數＋精力洞察（FR-MRK-07）")
 
 
 class DueReasonOut(Out):

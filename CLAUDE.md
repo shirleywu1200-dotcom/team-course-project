@@ -90,6 +90,5 @@
 
 | 項目 | 影響 |
 | --- | --- |
-| DA-12 時間管理判讀的細節（分母、50% 邊界、`judgement_note` 文字）；DA-01～DA-26 其餘已複核（2026-11-16，#15） | `docs/decisions.md` DA-12；FR-MRK-07、spec 5.8 |
 | 衡量值缺口：週報對帳結果、每日確認時間無法從資料算出 | `docs/metrics.md`；Phase 7、10 |
 | spec 9.1 的 D-01、D-03 至 D-07 | 見 todo第 3 節 |

@@ -1,105 +1,35 @@
-// 暫代 Dev-C todo 0.8（由 OpenAPI 產生型別）：先手寫 Dev-A 三頁需要的型別，0.8 完成後改用產生的型別。
+// 請求與回應均引用 OpenAPI 產物；保留既有名稱相容，不另寫資源欄位。
+import type { components } from "./types.generated";
 
 export const OWNER_ME = "我";
 
-export type Mark = "better" | "worse" | "none";
-export type Direction = "earlier" | "later";
+export type AdjustDue = components["schemas"]["AdjustDue"];
+export type Annotation = components["schemas"]["Annotation"];
+export type BaselineCommit = components["schemas"]["BaselineCommit"];
+export type BlockChange = components["schemas"]["BlockChange"];
+export type BulkItem = components["schemas"]["BulkItem"];
+export type BulkShift = components["schemas"]["BulkShift"];
+export type Complete = components["schemas"]["Complete"];
+export type OwnerChange = components["schemas"]["OwnerChange"];
+export type ProjectCreate = components["schemas"]["ProjectCreate"];
+export type ProjectPatch = components["schemas"]["ProjectPatch"];
+export type StatusChange = components["schemas"]["StatusChange"];
+export type TaskCreate = components["schemas"]["TaskCreate"];
+export type BaselinePreviewRequest = components["schemas"]["BaselinePreview"];
 
-export interface Task {
-  id: number;
-  project_id: number | null;
-  title: string;
-  owner: string;
-  scope: "work" | "private";
-  start: string;
-  orig_due: string;
-  latest_due: string;
-  delta_days: number;
-  status: "todo" | "doing" | "done";
-  blocked: boolean;
-  done_date: string | null;
-  version: number;
-}
-
-export interface EventRow {
-  id: number;
-  kind: string;
-  field: string;
-  from_value: string | null;
-  to_value: string | null;
-  delta_days: number | null;
-  mark: Mark | null;
-  reason: string | null;
-  mine: boolean;
-  batch_id: number | null;
-}
-
-export interface DueReason {
-  code: string;
-  label: string;
-  direction: Direction;
-  external: boolean;
-}
-
-export interface CodeLabel {
-  code: string;
-  label: string;
-}
-
-export interface ReasonsMeta {
-  due: DueReason[];
-  baseline_types: CodeLabel[];
-  baseline_reasons: CodeLabel[];
-}
-
-export interface AdjustDueResult {
-  task: Task;
-  event: EventRow;
-  warnings: string[];
-  needs_mark: boolean;
-}
-
-export interface BulkPreviewRow {
-  task_id: number;
-  title: string;
-  owner: string;
-  from: string;
-  to: string;
-  mine: boolean;
-  warnings: string[];
-}
-
-export interface BulkPreview {
-  items: BulkPreviewRow[];
-  mine_count: number;
-  mark_required: boolean;
-}
-
-export interface BulkCommitResult {
-  batch_id: number;
-  updated: number;
-  mine_marked: number;
-  events: number[];
-}
-
-export interface FromTo<T> {
-  from: T;
-  to: T;
-}
-
-export interface BaselinePreview {
-  confirmation_token: string;
-  expires_at: string;
-  impact: {
-    orig_due: FromTo<string>;
-    gap_days: FromTo<number>;
-    project_delayed_count: FromTo<number>;
-    past_due_events_kept: number;
-    old_value_kept_in_history: boolean;
-  };
-}
-
-export interface Paged<T> {
-  items: T[];
-  total: number;
-}
+type Schema = components["schemas"];
+export type Task = Schema["TaskOut"];
+export type EventRow = Schema["EventOut"];
+export type DueReason = Schema["DueReasonOut"];
+export type CodeLabel = Schema["CodeLabelOut"];
+export type ReasonsMeta = Schema["ReasonsOut"];
+export type AdjustDueResult = Schema["AdjustDueOut"];
+export type BulkPreviewRow = Schema["BulkPreviewItemOut"];
+export type BulkPreview = Schema["BulkPreviewOut"];
+export type BulkCommitResult = Schema["BulkCommitOut"];
+export type BaselinePreview = Schema["BaselinePreviewOut"];
+export type Mark = NonNullable<EventRow["mark"]>;
+export type Direction = DueReason["direction"];
+export type FromTo<T> = { [K in keyof Schema["FromToDate"]]: T };
+export type Paged<T> = { [K in keyof Schema["TaskListOut"]]: K extends "items" ? T[] : Schema["TaskListOut"][K] };
+export type AdjustStart = Schema["AdjustStart"];
