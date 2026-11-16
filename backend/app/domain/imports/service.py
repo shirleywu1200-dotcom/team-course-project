@@ -140,6 +140,8 @@ def _record_map_feedback(conn: Connection, event_id: int, ai_run_id: int, sugges
 def commit(conn: Connection, target, new_name: str | None, rows: list[dict],
            ai_run_id: int | None = None, column_map: dict | None = None) -> dict:
     """在呼叫端的交易內執行；任何例外都讓整筆回滾（AC-32）。"""
+    if len(rows) > table.MAX_ROWS:   # 直接呼叫 commit 也不能繞過 preview 的上限（FR-IMP-01）
+        raise DomainError("PAYLOAD_TOO_LARGE", details={"max_rows": table.MAX_ROWS})
     suggested = _ai_suggestion(conn, ai_run_id, column_map)
     checked, skipped = _revalidate(rows)
     project = _existing_target(conn, target) or create_project(conn, name=new_name or "")
