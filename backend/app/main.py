@@ -11,6 +11,10 @@ from app.api.middleware import API_PREFIX, BearerTokenMiddleware, IdempotencyMid
 from app.config import Settings, load_settings
 from app.db.database import Database
 
+# FastAPI 0.162 內建 OpenTelemetry，預設全開：程序裡一有全域 provider，請求路徑、驗證失敗的輸入值
+# 與例外內容就會交給 exporter（CLAUDE.md 資安規則 2、3）。全部關閉，也不讀 FASTAPI_OTEL_AUTO_CONFIGURE。
+TELEMETRY = {"tracing": False, "metrics": False, "logs": False, "operation_spans": False, "auto_configure": False}
+
 
 def create_app(settings: Settings | None = None, db: Database | None = None,
                ai: AIClient | None = None) -> FastAPI:
@@ -18,7 +22,7 @@ def create_app(settings: Settings | None = None, db: Database | None = None,
     # OpenAPI 放在 /api/v1 底下，與其他 API 一樣要 token；/docs、/redoc 在瀏覽器帶不了 token，直接關閉。
     # 不啟動伺服器也能匯出：python -m app.export_openapi > openapi.json
     app = FastAPI(title="個人大總管 APP", version="0.1.0", openapi_url=f"{API_PREFIX}/openapi.json",
-                  docs_url=None, redoc_url=None)
+                  docs_url=None, redoc_url=None, telemetry=TELEMETRY)
     app.state.settings = settings
     app.state.db = db or Database(settings.database_url)
     # 真實供應商在 Phase 13.4 由 Dev-B 接入；在那之前一律用不可用的假實作，所有 AI 端點走退路。
