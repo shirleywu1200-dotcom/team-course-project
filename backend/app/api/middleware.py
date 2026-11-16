@@ -6,7 +6,6 @@
 import hmac
 import json
 import logging
-from datetime import timedelta
 
 from starlette.concurrency import run_in_threadpool
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -14,6 +13,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 
 from app.clock import get_clock
+from app.config import IDEMPOTENCY_TTL
 from app.db.repo import misc_repo
 from app.errors import DomainError
 
@@ -21,7 +21,6 @@ log = logging.getLogger("g4")
 
 API_PREFIX = "/api/v1"
 IDEMPOTENT_METHODS = {"POST", "PUT", "PATCH"}
-IDEMPOTENCY_TTL = timedelta(hours=24)
 # 回應含全部原文，不能存進快取，否則多一份要清除的副本（Phase 8 SDD 第 6 節）
 NO_CACHE_PATHS = {f"{API_PREFIX}/export"}
 

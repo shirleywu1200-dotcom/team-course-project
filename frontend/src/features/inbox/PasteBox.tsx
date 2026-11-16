@@ -9,7 +9,7 @@ import { fetchIngestJob, keys } from "../../api/queries";
 import type { AiStatus, IngestJob, IngestResult, IngestSummary } from "../../api/types";
 import { ErrorBanner } from "../../components/standin/ErrorBanner";
 
-export const POLL_MS = 2_000;
+export const POLL_MS = 3_000;   // FR-INB-05：每 3 秒
 export const POLL_LIMIT_MS = 60_000;   // spec 6.1：超過 60 秒停止輪詢，工作持續
 
 const finished = (job?: IngestJob) => job?.status === "succeeded" || job?.status === "failed";

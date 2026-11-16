@@ -7,8 +7,8 @@ from datetime import date, datetime
 
 from sqlalchemy import Connection
 
-from app.api.middleware import IDEMPOTENCY_TTL
 from app.clock import get_clock
+from app.config import IDEMPOTENCY_TTL
 from app.db.repo import governance_repo, sources_repo
 from app.errors import DomainError
 

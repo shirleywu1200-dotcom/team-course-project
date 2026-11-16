@@ -397,6 +397,7 @@ class DecideOut(Out):
     task: TaskOut | None = Field(None, description="忽略時不出現")
     event: EventOut | None = Field(None, description="忽略、建任務時不出現")
     needs_mark: bool | None = Field(None, description="確認延期時才出現")
+    warnings: list[str] | None = Field(None, description="確認延期時才出現；可含 BEFORE_START（新日期早於開始日）")
     feedback_required: bool | None = Field(None, description="確認完成時才出現")
 
 

@@ -219,6 +219,25 @@ def test_ac39_confirm_delay_mine_needs_mark_and_edited_date(client, seed, query)
     assert query("SELECT outcome FROM ai_feedback")[0]["outcome"] == "edited"
 
 
+def test_confirm_delay_before_start_returns_warning(client, seed):
+    # spec 6.2：新日期早於開始日允許，回警告 BEFORE_START（PR #20 審查 A2）
+    seed(BASE + CANDIDATES)
+    body = post(client, 21, "confirm", expected_version=1, new_due="2026-11-08").json()
+    assert body["task"]["latest_due"] == "2026-11-08" and body["warnings"] == ["BEFORE_START"]
+
+
+def test_clarify_delay_before_start_returns_warning(client, seed):
+    seed(BASE + CANDIDATES)
+    body = post(client, 25, "clarify", expected_version=1, new_due="2026-11-08").json()
+    assert body["warnings"] == ["BEFORE_START"]
+
+
+def test_confirm_delay_without_warning_has_empty_list_and_others_omit_it(client, seed):
+    seed(BASE + CANDIDATES)
+    assert post(client, 21, "confirm", expected_version=1).json()["warnings"] == []
+    assert "warnings" not in post(client, 24, "confirm", expected_version=2).json()
+
+
 def test_confirm_done_requires_feedback(client, seed):
     seed(BASE + CANDIDATES)
     body = post(client, 23, "confirm", expected_version=4).json()

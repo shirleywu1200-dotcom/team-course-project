@@ -42,7 +42,7 @@ def _apply(conn: Connection, cand: dict, kind: str, new_due: date | None, expect
         if new_due is None:
             raise DomainError("VALIDATION_ERROR", "請指定新日期", {"fields": ["new_due"]})
         res = adjust_due(conn, cand["task_id"], new_due, expected_version, None, None, None, True, **ref)
-        return {"task": res.task, "event": res.event, "needs_mark": res.needs_mark}
+        return {"task": res.task, "event": res.event, "needs_mark": res.needs_mark, "warnings": res.warnings}
     if kind == "done":
         task, event, feedback_required = tasks.complete_task(conn, cand["task_id"], expected_version, **ref)
         return {"task": task, "event": event, "feedback_required": feedback_required}
