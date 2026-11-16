@@ -551,6 +551,7 @@ CREATE TABLE idempotency_keys (
 | --- | --- | --- |
 | 0002 結構變更 | `ai_runs.node_id` 的 CHECK 移除 `AI-08`（AI-08 已取消）；`rubrics` 加不可修改觸發器，UPDATE、DELETE、TRUNCATE 皆擋，INSERT 不受影響。`settings` 不加，啟用精靈需要 UPDATE | PR #1 審查 A1、B5（2026-11-15 產品負責人裁定）；FR-RUB-01 |
 | 0003 系統種子 | 寫入 `settings`（id=1，三句精力定義，其餘欄位用 DDL 預設值）與 `rubrics`（version=0、`source='default'`、五句量表），冪等（`ON CONFLICT DO NOTHING`）；降級不刪除種子 | PR #1 審查 B2（種子文字經產品負責人確認，修改文字屬規格變更）；AC-59 |
+| 0004 候選記住收件專案 | `candidates` 加 `project_id BIGINT REFERENCES projects(id)`（可為 NULL，NULL 表示收件時沒有指定專案）與索引 `ix_candidates_project`。只新增欄位與索引 | PR #20 審查 B5（2026-11-16 產品負責人裁定）；FR-INB-14 |
 
 系統種子相關規則（2026-11-15 產品負責人裁定）：
 
