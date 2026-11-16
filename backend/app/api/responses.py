@@ -296,6 +296,8 @@ class ColumnMapOut(Out):
     start: int | None
     end: int | None
     mapped_by: Literal["rule", "ai", "manual"] | None = Field(description="必填欄位對應不到時為 null，rows 為空")
+    ai_run_id: int | None = Field(
+        None, description="mapped_by 為 ai 時才出現；commit 時與 column_map 一起送回（12.7 D-3）")
 
 
 class ImportSummary(Out):

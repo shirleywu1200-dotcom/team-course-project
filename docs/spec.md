@@ -263,7 +263,7 @@
 - FR-AI-01 所有 AI 節點為 L1：輸出只成為候選或草稿，**不直接寫入正式紀錄**。
 - FR-AI-02 每個 AI 呼叫記錄於 `ai_runs`：節點、狀態、嘗試次數、延遲、錯誤。
 - FR-AI-03 每個 AI 節點必須有不依賴 AI 的退路（第 6.6 節）。AI 不可用時，主流程仍可完成。
-- FR-AI-04 AI 的結果被接受、修改、忽略、改選，都記入 `ai_feedback`，供評估。
+- FR-AI-04 AI 的結果被接受、修改、忽略、改選，都記入 `ai_feedback`，供評估。匯入表頭對應（AI-07）：一次匯入寫一筆，錨定該次匯入的 `baseline` 事件，`detail` 只放欄位索引（第 5.6 節）。
 - FR-AI-06 **AI 不得參與對使用者自己的評價**：延期原因、時間管理註記、自評精力、實際達成星數皆由使用者判斷，不設預填或建議。AI-02（預設星數）因屬事前預設而非事後評價，是否採用另見 D-01。
 - FR-AI-05 AI 供應商以介面隔離（`AIClient`），可替換；單次呼叫逾時預設 20 秒〔假設〕。
 
@@ -712,6 +712,13 @@ CREATE TABLE idempotency_keys (
 `mapped_by` 為 `rule` 或 `ai`；`ai` 時前端須顯示對應預覽由你確認。
 
 `commit` 輸入：`{ "target": …, "new_name": "…", "rows": [{ "index": 0, "title": "…", "owner": "…", "start": "…", "end": "…", "skip": false }] }`。伺服器**重新驗證**每列，有 `blocking` 且未略過者拒絕（`VALIDATION_ERROR`，列出列號）。輸出：`{ "project_id", "created": n, "skipped": m, "event_id" }`。
+
+**AI-07 對應回饋（FR-AI-04；2026-11-16 產品負責人核可，#8）**：
+
+- `preview` 輸出的 `column_map` 在 `mapped_by="ai"` 時多一個 `ai_run_id`（該次 AI-07 的 `ai_runs.id`），其他情況不出現。
+- `commit` 輸入可選帶 `ai_run_id` 與使用者最終的 `column_map`（`{title, owner, start, end}` 欄位索引），兩者須一起出現，否則 `VALIDATION_ERROR`。`ai_run_id` 須指向 `status='ok'` 的 AI-07 紀錄，否則 `VALIDATION_ERROR`。不帶時行為不變，也不寫回饋。
+- 伺服器從 `ai_runs` 取 AI 建議（不信前端自報），與最終對應比較：相同寫 `accepted`、不同寫 `changed`；`target_type='import_map'`、`target_id` 為本次 `baseline` 事件 id；`detail = { "ai_run_id", "ai": {四欄索引}, "final": {四欄索引} }`，只含整數或 null，不含任何貼上內容。
+- 同一 `ai_run_id` 已寫過回饋時，匯入照常完成，不再寫第二筆。回饋與匯入在同一交易，失敗一起回滾。
 
 ### 5.7 任務
 
@@ -1202,6 +1209,7 @@ P1 完成 = AC-01 至 AC-42、AC-48 至 AC-53、AC-55 至 AC-57 全數通過，�
   - Given 變好 2 次、變差 3 次，3 個任務中 2 個是低精力；Then `judgement`＝「偏向變差，建議檢視」，`judgement_note`＝「變好 2 次、變差 3 次。變差多集中在低精力任務。」
   - Given 變好 1 次、變差 4 次，4 個任務為低 2、中 2；Then `judgement`＝「偏向變差，建議檢視」，`judgement_note`＝「變好 1 次、變差 4 次。」（剛好一半，不加集中提示）
   - Given 變好 3 次、變差 3 次；Then `judgement`＝「持平」。
+- AC-63〔編號暫定，待產品負責人指定〕 Given 匯入的表頭由 AI-07 對應（`mapped_by="ai"`）；When commit 帶回 `ai_run_id` 與最終 `column_map`；Then 新增恰 1 筆 `ai_feedback`（`node_id='AI-07'`、`target_type='import_map'`、`target_id` 為回應的 `event_id`），最終對應與 AI 建議相同為 `accepted`、不同為 `changed`，`detail` 只含欄位索引；Given 同一 `ai_run_id` 再 commit 一次；Then 匯入成功、回饋仍為 1 筆；Given 只帶其中一項，或 `ai_run_id` 不是 `ok` 的 AI-07 紀錄；Then 422 `VALIDATION_ERROR`，不建立任務也不寫回饋。
 
 ## 8. 技術棧／限制
 

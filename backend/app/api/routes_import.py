@@ -43,9 +43,11 @@ class CommitIn(Strict):
     target: Target = "new"
     new_name: str | None = None
     rows: list[CommitRow]
+    ai_run_id: int | None = None   # 12.7 D-3：preview 回的 column_map.ai_run_id，與 column_map 一起送
+    column_map: ColumnMap | None = None   # 使用者最終確認的對應
 
 
-@router.post("/preview", response_model=ImportPreviewOut)
+@router.post("/preview", response_model=ImportPreviewOut, response_model_exclude_unset=True)
 def preview(body: PreviewIn, db: Database = Depends(get_db), ai: AIClient = Depends(get_ai)):
     cmap = body.column_map.model_dump() if body.column_map else None
     return service.preview(db, ai, body.text, body.target, cmap)
@@ -54,4 +56,5 @@ def preview(body: PreviewIn, db: Database = Depends(get_db), ai: AIClient = Depe
 @router.post("/commit", status_code=201, response_model=ImportCommitOut)
 def commit(body: CommitIn, db: Database = Depends(get_db)):
     rows = [r.model_dump() for r in body.rows]
-    return db.run(lambda c: service.commit(c, body.target, body.new_name, rows))
+    cmap = body.column_map.model_dump() if body.column_map else None
+    return db.run(lambda c: service.commit(c, body.target, body.new_name, rows, body.ai_run_id, cmap))

@@ -80,6 +80,13 @@ Dev-B 開發時發現、需要 Dev-A 處理或知道的事項，**統一記在�
   - `src/App.tsx`：`/import` 路由
 - 12.7 SDD D-3（AI-07 回饋寫入 `ai_feedback`）的契約新增已提請產品負責人裁定（#8），核可後另記 N-09。
 
+### N-09 匯入 AI-07 對應回饋寫入 `ai_feedback`（12.7 D-3，#8 核可）　〔後端已完成，需通知 Dev-C、QC-2〕
+
+- `POST /projects/import/preview`：`column_map` 在 `mapped_by="ai"` 時多出 `ai_run_id`，其他情況不出現（`response_model_exclude_unset`）。
+- `POST /projects/import/commit`：選填 `ai_run_id` 與最終 `column_map`，兩者一起送；只帶一項、或 `ai_run_id` 不是 `ok` 的 AI-07 紀錄，回 422 `VALIDATION_ERROR`。不帶時行為不變。
+- 一次匯入一筆回饋，錨定 baseline 事件；同一 `ai_run_id` 只寫一次。規則寫回 spec FR-AI-04、5.6 與 AC-63（編號暫定）。
+- 前端（Dev-B 12.7）送新欄位要改凍結的 `src/api/types.ts`，先在 #11 告知 Dev-C 再改。
+
 ### N-10 Dev-B 20 個端點補回應模型（審查 A4）　〔已完成，已通知 Dev-C：#11〕
 
 - rebase 到 `dev-a/phase-0-4` 後，`test_contract_guards` 要求每個 2xx 都有 schema。模型附加在 `backend/app/api/responses.py` 的「Phase 5～8，Dev-B」各節。

@@ -177,3 +177,109 @@ def test_ai_invalid_output_reports_invalid_output_status(client, seed, ai):
     ai.script(NODE, {"title": "x"})
     body = client.post(PREVIEW, json={"text": "工項,PIC,起,交期\n需求確認,我,11/16,11/18"}).json()
     assert body["ai_status"] == "invalid_output" and body["column_map"]["mapped_by"] is None
+
+
+# ---------- 12.7 D-3：AI-07 表頭對應回饋（FR-AI-04，#8） ----------
+
+AI_TEXT = "工項,PIC,起,交期\n需求確認,我,11/16,11/18"
+AI_MAP = {"title": 0, "owner": 1, "start": 2, "end": 3}
+
+
+def ai_preview(client, ai):
+    ai.script(NODE, AI_MAP | {"reason": "表頭『工項』是任務名稱"})   # 夾帶文字，不可進 detail
+    return client.post(PREVIEW, json={"text": AI_TEXT}).json()
+
+
+def commit_with(client, body, **extra):
+    return client.post(COMMIT, json={"target": "new", "new_name": "匯入", "rows": rows_from(body)} | extra)
+
+
+def feedback(query):
+    return query("SELECT node_id, target_type, target_id, outcome, detail FROM ai_feedback ORDER BY id")
+
+
+def test_d3_preview_returns_ai_run_id_only_when_ai_mapped(client, seed, ai, query):
+    seed(BASE)
+    body = ai_preview(client, ai)
+    [run] = query("SELECT id FROM ai_runs")
+    assert body["column_map"] == AI_MAP | {"mapped_by": "ai", "ai_run_id": run["id"]}
+    manual = client.post(PREVIEW, json={"text": AI_TEXT, "column_map": AI_MAP}).json()
+    assert "ai_run_id" not in manual["column_map"]
+
+
+def test_d3_accepted_mapping_writes_one_feedback_with_indexes_only(client, seed, ai, query):
+    seed(BASE)
+    body = ai_preview(client, ai)
+    run_id = body["column_map"]["ai_run_id"]
+    r = commit_with(client, body, ai_run_id=run_id, column_map=AI_MAP)
+    assert r.status_code == 201
+    assert feedback(query) == [{"node_id": "AI-07", "target_type": "import_map", "target_id": r.json()["event_id"],
+                                "outcome": "accepted",
+                                "detail": {"ai_run_id": run_id, "ai": AI_MAP, "final": AI_MAP}}]
+
+
+def test_d3_changed_mapping_records_changed(client, seed, ai, query):
+    seed(BASE)
+    body = ai_preview(client, ai)
+    final = AI_MAP | {"owner": None, "start": 1}
+    r = commit_with(client, body, ai_run_id=body["column_map"]["ai_run_id"], column_map=final)
+    assert r.status_code == 201
+    [fb] = feedback(query)
+    assert fb["outcome"] == "changed" and fb["detail"]["ai"] == AI_MAP and fb["detail"]["final"] == final
+
+
+def test_d3_without_ai_run_id_writes_no_feedback(client, seed, ai, query):
+    seed(BASE)
+    r = commit_with(client, ai_preview(client, ai))
+    assert r.status_code == 201 and set(r.json()) == {"project_id", "created", "skipped", "event_id"}
+    assert feedback(query) == []
+
+
+@pytest.mark.parametrize("extra", ["ai_run_id", "column_map"])
+def test_d3_ai_run_id_and_column_map_must_come_together(client, seed, ai, query, extra):
+    seed(BASE)
+    body = ai_preview(client, ai)
+    value = {"ai_run_id": body["column_map"]["ai_run_id"], "column_map": AI_MAP}[extra]
+    r = commit_with(client, body, **{extra: value})
+    assert r.status_code == 422 and r.json()["error"]["code"] == "VALIDATION_ERROR"
+    assert count(query, "tasks") == 7 and feedback(query) == []
+
+
+AI_RUNS_OTHER = """
+INSERT INTO ai_runs (id, node_id, status, attempt, raw_output, created_at) VALUES
+  (901, 'AI-01', 'ok', 1, '{"title": 0, "end": 3}', '2026-11-15T09:00+08:00'),
+  (902, 'AI-07', 'timeout', 1, NULL, '2026-11-15T09:00+08:00');
+"""
+
+
+@pytest.mark.parametrize("run_id", [901, 902, 999])
+def test_d3_ai_run_id_must_be_an_ok_ai07_run(client, seed, query, run_id):
+    seed(BASE + AI_RUNS_OTHER)
+    rows = [{"index": 0, "title": "需求確認", "owner": "我", "start": "11/16", "end": "11/18"}]
+    r = client.post(COMMIT, json={"target": "new", "new_name": "匯入", "rows": rows,
+                                  "ai_run_id": run_id, "column_map": AI_MAP})
+    assert r.status_code == 422 and r.json()["error"]["code"] == "VALIDATION_ERROR"
+    assert count(query, "tasks") == 7 and feedback(query) == []
+
+
+def test_d3_same_ai_run_id_twice_imports_but_feedback_once(client, seed, ai, query):
+    seed(BASE)
+    body = ai_preview(client, ai)
+    run_id = body["column_map"]["ai_run_id"]
+    first = commit_with(client, body, ai_run_id=run_id, column_map=AI_MAP)
+    second = commit_with(client, body, ai_run_id=run_id, column_map=AI_MAP | {"start": None})
+    assert (first.status_code, second.status_code) == (201, 201)
+    assert first.json()["project_id"] != second.json()["project_id"]
+    assert [fb["outcome"] for fb in feedback(query)] == ["accepted"]
+
+
+def test_d3_commit_failure_rolls_back_feedback(client, seed, ai, query, monkeypatch):
+    seed(BASE)
+    body = ai_preview(client, ai)
+
+    def boom(*args, **kwargs):
+        raise RuntimeError("中途失敗")
+
+    monkeypatch.setattr(service, "write_event", boom)
+    r = commit_with(client, body, ai_run_id=body["column_map"]["ai_run_id"], column_map=AI_MAP)
+    assert r.status_code == 500 and feedback(query) == [] and count(query, "tasks") == 7
