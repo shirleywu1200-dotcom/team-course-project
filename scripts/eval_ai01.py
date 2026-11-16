@@ -1,7 +1,8 @@
 """AI-01 評估：用標註集呼叫真實供應商，算出「收件匣結果」的命中率、延遲與費用（13.4 SDD D-5、第 3 節）。
 
 會產生費用。執行前先印估算並等你輸入 y；累計費用超過 --max-cost 就停止。
-輸出只有案例 id、分類與統計，不印訊息原文（資安規則 3）。
+終端機只印案例 id、分類與統計。設了環境變數 EVAL_OUT_DIR（放 env/local.env）時，另存逐則 CSV
+（含訊息、預期、AI 原始輸出、R2 結果，以及空白的「檢視判定」欄供人工標記）；標註集只放虛構對話，所以可以存原文。
 
 用法（需 env/local.env 有 ANTHROPIC_API_KEY）：
     cd backend
@@ -11,6 +12,7 @@
 """
 
 import argparse
+import csv
 import json
 import os
 import sys
@@ -69,10 +71,10 @@ def main() -> int:
         print("已取消")
         return 1
 
-    ai =AnthropicAIClient(api_key=os.environ.get("ANTHROPIC_API_KEY", ""), model=args.model)
+    ai = AnthropicAIClient(api_key=os.environ.get("ANTHROPIC_API_KEY", ""), model=args.model)
     spent, tin_sum, tout_sum, latencies = 0.0, 0, 0, []
     by_cat = defaultdict(lambda: [0, 0])
-    misses = []
+    misses, rows = [], []
     for case in cases:
         if spent >= args.max_cost:
             print(f"已達費用上限 ${args.max_cost}，停止")
@@ -81,8 +83,10 @@ def main() -> int:
                    "messages": [{"ref": 1, "speaker": case["speaker"], "spoken_at": None, "text": case["text"]}]}
         ai.last_usage = (0, 0)
         started = time.monotonic()
+        raw = None
         try:
-            got = outcome(ai.call("AI-01", payload), case, task_ids, today)
+            raw = ai.call("AI-01", payload)
+            got = outcome(raw, case, task_ids, today)
         except AIError as exc:
             got = {"error": type(exc).__name__}
         latencies.append(time.monotonic() - started)
@@ -94,6 +98,15 @@ def main() -> int:
         by_cat[case["category"]][1] += 1
         if not hit:
             misses.append((case["id"], case["category"], case["expect"], got))
+        exp = case["expect"]
+        rows.append({"id": case["id"], "分類": case["category"], "發言者": case["speaker"], "訊息": case["text"],
+                     "命中": "Y" if hit else "N",
+                     "預期_kind": exp["kind"], "預期_task_id": exp["task_id"], "預期_new_due": exp["new_due"],
+                     "實際_kind": got.get("kind", got.get("error")), "實際_task_id": got.get("task_id"),
+                     "實際_new_due": got.get("new_due"),
+                     "AI原始輸出": "" if raw is None else json.dumps(raw, ensure_ascii=False),
+                     "延遲秒": f"{latencies[-1]:.1f}", "輸入token": tin, "輸出token": tout,
+                     "檢視判定": "", "備註": ""})
 
     done = sum(n for _, n in by_cat.values())
     hits = sum(h for h, _ in by_cat.values())
@@ -108,6 +121,15 @@ def main() -> int:
         print("\n未命中（id、分類、預期 → 實際）：")
         for cid, cat, exp, got in misses:
             print(f"  {cid} {cat}：{exp} → {got}")
+    out_dir = os.environ.get("EVAL_OUT_DIR")
+    if out_dir and rows:
+        path = Path(out_dir) / f"{time.strftime('%Y%m%d-%H%M')}_AI-01_{args.model}.csv"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("w", encoding="utf-8-sig", newline="") as f:   # BOM：Excel 開中文不亂碼
+            w = csv.DictWriter(f, fieldnames=list(rows[0]))
+            w.writeheader()
+            w.writerows(rows)
+        print(f"\n逐則結果：{path}")
     return 0
 
 
