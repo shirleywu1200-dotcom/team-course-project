@@ -27,6 +27,7 @@ class AnthropicAIClient(AIClient):
         self.api_key = api_key
         self.model = model
         self.sdk = sdk or (anthropic.Anthropic(api_key=api_key, max_retries=0) if api_key else None)
+        self.last_usage = (0, 0)   # 最近一次成功回應的（輸入, 輸出）token 數
 
     def call(self, node_id: str, payload: dict, *, timeout_s: float = DEFAULT_TIMEOUT_S) -> dict:
         node = NODES.get(node_id)
@@ -46,8 +47,8 @@ class AnthropicAIClient(AIClient):
             if exc.status_code == 429 or exc.status_code >= 500:
                 raise AITimeout(node_id) from exc
             raise AIUnavailable(node_id) from exc
-        log.info("AI %s stop=%s in=%s out=%s", node_id, resp.stop_reason,
-                 resp.usage.input_tokens, resp.usage.output_tokens)
+        self.last_usage = (resp.usage.input_tokens, resp.usage.output_tokens)   # 評估腳本計費用
+        log.info("AI %s stop=%s in=%s out=%s", node_id, resp.stop_reason, *self.last_usage)
         if resp.stop_reason != "end_turn":   # max_tokens 截斷、refusal 拒答
             raise AIInvalidOutput(node_id)
         text = next((b.text for b in resp.content if b.type == "text"), None)

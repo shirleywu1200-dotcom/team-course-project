@@ -26,7 +26,7 @@ class Output(BaseModel):
 
 SYSTEM = """你是工作承諾帳的訊息判讀員。
 輸入是 JSON：today（今天日期）、messages（群組訊息，每則有 ref）、tasks（目前的任務清單）。
-對每一則訊息輸出一個 item：
+對每一則訊息輸出一個 item；一則訊息講到多個任務時，每個任務各輸出一個 item（ref 相同）：
 - ref：訊息的 ref，原樣抄回。
 - kind：delay＝說某任務會延後或改期；done＝說某任務已完成；stuck＝說某任務卡住、做不下去；
   none＝與任務進度無關（閒聊、問候、單純提問、只是分享資訊）。

@@ -1,0 +1,32 @@
+{
+  "_說明": [
+    "AI-01 評估用標註集（13.4 SDD D-5）。暫由 Dev-B 自擬，QC-2 的標註集到位後替換或合併。",
+    "today 與 tasks 是所有案例共用的情境；每則 case 單獨送一次 AI-01。",
+    "expect 寫的是「使用者在收件匣應該看到的結果」，也就是經過 R2 規則之後：",
+    "  kind：delay／done／stuck＝確定的候選；unclear＝待釐清（問句、可能、日期不合理）；unmatched＝待配對（對不到任務）；none＝不產生候選",
+    "  task_id：unmatched 與 none 填 null；new_due：只有 delay 填 YYYY-MM-DD，其他填 null",
+    "category 建議用：明確、問句、不確定語氣、對不到任務、延期與完成同則、閒聊、相對日期",
+    "全部用虛構的人名與任務，不放真實對話。"
+  ],
+  "today": "2026-11-11",
+  "tasks": [
+    {"id": 1, "title": "Q4 報價單", "owner": "王小明", "latest_due": "2026-11-14"},
+    {"id": 2, "title": "官網首頁改版", "owner": "李美華", "latest_due": "2026-11-20"},
+    {"id": 3, "title": "客戶訪談紀錄整理", "owner": "陳大同", "latest_due": "2026-11-12"},
+    {"id": 4, "title": "年度預算初稿", "owner": "王小明", "latest_due": "2026-11-28"},
+    {"id": 5, "title": "新人教育訓練簡報", "owner": "林佳玲", "latest_due": "2026-11-18"},
+    {"id": 6, "title": "供應商合約續約", "owner": "陳大同", "latest_due": "2026-11-25"}
+  ],
+  "cases": [
+    {"id": "c01", "category": "明確", "speaker": "王小明", "text": "報價單我這邊要延到 11/18 才能給",
+     "expect": {"kind": "delay", "task_id": 1, "new_due": "2026-11-18"}},
+    {"id": "c02", "category": "問句", "speaker": "李美華", "text": "首頁改版可以晚兩天交嗎？",
+     "expect": {"kind": "unclear", "task_id": 2, "new_due": null}},
+    {"id": "c03", "category": "不確定語氣", "speaker": "王小明", "text": "預算初稿可能要延到下週五",
+     "expect": {"kind": "unclear", "task_id": 4, "new_due": null}},
+    {"id": "c04", "category": "對不到任務", "speaker": "林佳玲", "text": "那份東西我已經寄出去了",
+     "expect": {"kind": "unmatched", "task_id": null, "new_due": null}},
+    {"id": "c05", "category": "延期與完成同則", "speaker": "陳大同", "text": "訪談紀錄整理好了，合約續約要再等法務，延到 12/2",
+     "expect": {"kind": "done", "task_id": 3, "new_due": null}}
+  ]
+}
