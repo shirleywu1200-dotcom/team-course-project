@@ -6,7 +6,8 @@
 from fastapi import APIRouter, FastAPI
 
 from app import scheduler, worker
-from app.ai.client import AIClient, FakeAIClient
+from app.ai.client import AIClient
+from app.ai.provider import ai_from_settings
 from app.api import (
     error_handlers,
     routes_events,
@@ -36,8 +37,8 @@ def create_app(settings: Settings | None = None, db: Database | None = None,
                   docs_url=None, redoc_url=None, telemetry=TELEMETRY)
     app.state.settings = settings
     app.state.db = db or Database(settings.database_url)
-    # 真實供應商在 Phase 13.4 由 Dev-B 接入；在那之前一律用不可用的假實作，所有 AI 端點走退路。
-    app.state.ai = ai or FakeAIClient(available=False)
+    # AI_PROVIDER 未設定時是不可用的假實作，所有 AI 端點走退路（13.4 SDD D-4）。
+    app.state.ai = ai or ai_from_settings(settings)
 
     error_handlers.install(app)
     app.add_middleware(IdempotencyMiddleware)
