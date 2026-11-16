@@ -80,7 +80,7 @@ Dev-B 開發時發現、需要 Dev-A 處理或知道的事項，**統一記在�
   - `src/App.tsx`：`/import` 路由
 - 12.7 SDD D-3（AI-07 回饋寫入 `ai_feedback`）的契約新增已提請產品負責人裁定（#8），核可後另記 N-09。
 
-### N-09 匯入 AI-07 對應回饋寫入 `ai_feedback`（12.7 D-3，#8 核可）　〔後端已完成，需通知 Dev-C、QC-2〕
+### N-09 匯入 AI-07 對應回饋寫入 `ai_feedback`（12.7 D-3，#8 核可）　〔後端已完成，已通知 Dev-C：#16〕
 
 - `POST /projects/import/preview`：`column_map` 在 `mapped_by="ai"` 時多出 `ai_run_id`，其他情況不出現（`response_model_exclude_unset`）。
 - `POST /projects/import/commit`：選填 `ai_run_id` 與最終 `column_map`，兩者一起送；只帶一項、或 `ai_run_id` 不是 `ok` 的 AI-07 紀錄，回 422 `VALIDATION_ERROR`。不帶時行為不變。
