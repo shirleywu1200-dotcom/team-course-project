@@ -1,5 +1,6 @@
 """Phase 7 純函式：寬鬆解析（SDD 2.1）、R1（AC-42）、R2（AC-35～37、7.9、7.10）。"""
 
+import hashlib
 from datetime import date
 
 import pytest
@@ -55,6 +56,19 @@ def test_parse_text_continuation_date_header_and_unparsed_lines():
 def test_message_hash_uses_time_speaker_and_text():
     a, b, c = (parse_text(t).messages[0] for t in ("[10:12] 阿德：延", "[10:12] 阿德：延", "[10:13] 阿德：延"))
     assert a.hash == b.hash != c.hash
+
+
+def test_message_hash_includes_date_header_when_present():
+    """PR #20 B3：有日期標頭時，日期併入雜湊；沒有日期時雜湊與原本相同（FR-INB-04）。"""
+    line = "[10:12] 阿德：延"
+    no_date = parse_text(line).messages[0]
+    d11 = parse_text(f"2026/11/11（三）\n{line}").messages[0]
+    d11_other_format = parse_text(f"2026年11月11日\n{line}").messages[0]
+    d12 = parse_text(f"2026.11.12 星期四\n{line}").messages[0]
+    assert (d11.date, d12.date, no_date.date) == ("2026-11-11", "2026-11-12", None)
+    assert d11.hash == d11_other_format.hash != d12.hash
+    assert no_date.hash not in (d11.hash, d12.hash)
+    assert no_date.hash == hashlib.sha256("10:12\n阿德\n延".encode()).hexdigest()
 
 
 # ---------- R1（AC-42） ----------

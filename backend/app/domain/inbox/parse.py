@@ -14,7 +14,7 @@ _SPACES = " \t　"
 _TIME = re.compile(r"^[\[［【(（]?\s*(上午|下午)?\s*(\d{1,2})[:：](\d{2})\s*[\]］】)）]?")
 _SPEAKER_COLON = re.compile(r"^([^:：\t]{1," + str(MAX_SPEAKER_LEN) + r"}?)\s*[:：]\s*(\S.*)$")
 _DATE_HEADER = re.compile(
-    r"^\d{4}\s*[/.\-年]\s*\d{1,2}\s*[/.\-月]\s*\d{1,2}\s*日?\s*"
+    r"^(\d{4})\s*[/.\-年]\s*(\d{1,2})\s*[/.\-月]\s*(\d{1,2})\s*日?\s*"
     r"([（(]?\s*(星期|週|周)?\s*[一二三四五六日天]\s*[)）]?)?$"
 )
 
@@ -25,11 +25,14 @@ class Message:
     spoken_at: str | None
     speaker: str
     text: str
+    date: str | None = None   # 前面最近一個日期標頭（YYYY-MM-DD）；沒有標頭時為 None
 
     @property
     def hash(self) -> str:
-        """去重用：時間＋發言者＋內容（FR-INB-04）。"""
+        """去重用：時間＋發言者＋內容（FR-INB-04）；有日期標頭時日期也併入（PR #20 B3）。"""
         key = f"{self.spoken_at or ''}\n{self.speaker}\n{self.text}"
+        if self.date:
+            key = f"{self.date}\n{key}"
         return hashlib.sha256(key.encode("utf-8")).hexdigest()
 
 
@@ -87,16 +90,19 @@ def parse_line(line: str) -> tuple[str | None, str, str] | None:
 
 def parse_text(text: str) -> ParseResult:
     result = ParseResult()
+    current_date = None
     for line_no, raw in enumerate(text.splitlines(), start=1):
         line = raw.strip()
         if not line:
             continue
         result.line_count += 1
-        if _DATE_HEADER.match(line):
+        header = _DATE_HEADER.match(line)
+        if header:
+            current_date = f"{header[1]}-{int(header[2]):02d}-{int(header[3]):02d}"
             continue
         parsed = parse_line(line)
         if parsed:
-            result.messages.append(Message(line_no, *parsed))
+            result.messages.append(Message(line_no, *parsed, date=current_date))
         elif result.messages:
             last = result.messages[-1]
             result.messages[-1] = replace(last, text=f"{last.text}\n{line}")
