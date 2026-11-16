@@ -2,9 +2,11 @@
 
 使用者於 2026-11-13 授權「遇到問題以 Claude 的建議為主，直到工作完成」，下列決定依此先行採用。每一項都需產品負責人事後複核，複核後把結論寫回 spec，並把本項標為「已複核」。
 
+**複核結果（2026-11-16，issue #15）**：DA-01～DA-11、DA-13～DA-25 同意，結論已寫入 spec（條文後標「（DA-xx）」，總結見 spec 9.2 第 9 點）；DA-12 改採新規則，細節待確認；DA-26 已於 2026-11-15 裁定，維持。
+
 格式：選了什麼、為什麼、影響哪些 FR／AC。
 
-## DA-01 資料庫改用 PostgreSQL 【待複核：規格變更】
+## DA-01 資料庫改用 PostgreSQL 【已複核：產品負責人 2026-11-16，#15】
 
 - **決定**：PostgreSQL 15+（本機開發用 17）。spec 4.2 DDL、6.8、8.1–8.3 已改寫；todo 0.7、1.3、1.6 已改寫。原版可在 PR 的 diff 對照（`main` 上的 `docs/spec.md`、`docs/todo.md`）。
 - **型別對應**：
@@ -23,102 +25,107 @@
   - 每個測試一個暫存 SQLite → 每個測試由範本資料庫 `CREATE DATABASE … TEMPLATE` 複製一個獨立資料庫（實測約 0.2 秒）。原因是 `events` 不能 DELETE，測試之間清不掉；並行測試（3.9）和整批回滾（AC-17、AC-57）也需要真的 commit 與兩條連線。
 - **`idempotency_keys.response`**：存 `{"status": 狀態碼, "body": 回應}`，重送時才能回傳相同狀態碼。欄位數不變，型別改為 JSONB。
 
-## DA-02 目錄結構採 `backend/`、`frontend/` 【待複核：規格歧義】
+## DA-02 目錄結構採 `backend/`、`frontend/` 【已複核：產品負責人 2026-11-16，#15】
 
 spec 8.3 原寫 `app/backend/`，todo 0.1 寫 `backend/`。依 todo 0.1，spec 8.3 已同步改寫。
 
-## DA-03 `adjust_due` 簽名加兩個選填關鍵字參數 【待複核：契約變更】
+## DA-03 `adjust_due` 簽名加兩個選填關鍵字參數 【已複核：產品負責人 2026-11-16，#15】
 
 - **決定**：`adjust_due(session, task_id, new_due, expected_version, reason, note, mark, defer_mark, *, origin, batch_id=None, origin_ref=None, source_id=None) -> DueResult`。
 - **原因**：FR-INB-10 要求延期候選的事件「依據為該候選與原句」，對應 `events.origin_ref`（候選 id）與 `events.source_id`。凍結簽名帶不進這兩個值，Dev-B 的 Phase 7 會卡住。新參數是選填關鍵字參數，既有呼叫方式不受影響。
 - **影響**：todo 5.7 契約清單；Dev-B Phase 7.6。
 
-## DA-04 `DueResult.needs_mark` 的單一定義 【待複核：規格歧義】
+## DA-04 `DueResult.needs_mark` 的單一定義 【已複核：產品負責人 2026-11-16，#15】
 
 - **決定**：`needs_mark = mine and mark is None`（我的任務、且這次沒有給註記，也就是選了稍後註記）。
 - **原因**：spec 5.7 寫「我的任務且選了稍後註記」，5.11 寫「負責人是我」。候選確認時沒有註記輸入，Dev-B 以 `defer_mark=True` 呼叫，兩處定義就一致了。
 - **影響**：FR-INB-10、AC-04、AC-39。
 
-## DA-05 非任務事件的 `task_title` 寫空字串 【待複核：規格歧義】
+## DA-05 非任務事件的 `task_title` 寫空字串 【已複核：產品負責人 2026-11-16，#15】
 
 `events.task_title` 是 NOT NULL，但 `project` 事件沒有任務。寫入空字串 `''`，畫面顯示為「—」。影響 FR-HIS-04、FR-PRJ-02。
 
-## DA-06 建立專案與封存專案也寫 `project` 事件 【待複核：規格歧義】
+## DA-06 建立專案與封存專案也寫 `project` 事件 【已複核：產品負責人 2026-11-16，#15】
 
 依 FR-HIS-01「所有變更都是 events 的一筆」：建立寫 `field='created'`，封存寫 `field='archived_at'`。FR-PRJ-02 只規定編輯要寫事件。
 
-## DA-07 `POST /tasks` 的開始日 【待複核：規格歧義】
+## DA-07 `POST /tasks` 的開始日 【已複核：產品負責人 2026-11-16，#15】
 
 `tasks.start_date` 是 NOT NULL，但 spec 5.7 的建立輸入沒有開始日。決定：接受選填的 `start`；沒給時用今天，期限早於今天時用期限當天。影響 FR-TSK-01、甘特圖進行區間。
 
-## DA-08 新增 `POST /tasks/{id}/status`（todo／doing） 【待複核：契約新增】
+## DA-08 新增 `POST /tasks/{id}/status`（todo／doing） 【已複核：產品負責人 2026-11-16，#15】
 
 FR-TSK-04 有 `doing` 狀態，但 spec 5.7 沒有切換到 `doing` 的端點，甘特圖的 `doing` 永遠不會出現。新增 `{"status": "todo"|"doing", "expected_version": n}`；改為 `done` 一律走 `/complete`。
 
-## DA-09 日期調整的原因可空 【待複核：規格歧義】
+## DA-09 日期調整的原因可空 【已複核：產品負責人 2026-11-16，#15】
 
 FR-DUE-05a 規定確認延期候選時原因一律留空，所以 `adjust_due` 的 `reason` 可為 NULL；有給時必須是該方向的選項，否則 `VALIDATION_ERROR`。手動調整的畫面（12.2）把原因設為必選。
 
-## DA-10 `mark` 與 `defer_mark` 同時給 【待複核：規格歧義】
+## DA-10 `mark` 與 `defer_mark` 同時給 【已複核：產品負責人 2026-11-16，#15】
 
 回 `VALIDATION_ERROR`，訊息說明兩者擇一。spec 沒有規定這種情況。
 
-## DA-11 非我的任務帶了註記：警告碼 `MARK_IGNORED` 【待複核：契約新增】
+## DA-11 非我的任務帶了註記：警告碼 `MARK_IGNORED` 【已複核：產品負責人 2026-11-16，#15】
 
 FR-MRK-02 要「忽略並回警告」，但沒有指定警告碼。與 `BEFORE_START` 同樣放在 `warnings`。
 
-## DA-12 時間管理統計的判讀與精力分布 【待複核：規格歧義】
+## DA-12 時間管理統計的判讀與精力分布 【已裁定：產品負責人 2026-11-16，#15；判讀細節待確認】
 
-- `judgement`：FR-MRK-07 只規定樣本少於 5 筆時為 `null`，沒有定義 5 筆以上的判讀規則，所以一律回 `null`。
+- `judgement`（原決定）：FR-MRK-07 只規定樣本少於 5 筆時為 `null`，沒有定義 5 筆以上的判讀規則，所以一律回 `null`。
+- **裁定（2026-11-16，#15）**：改採「二元判讀＋精力洞察」，由程式規則計算，不用 AI。
+  - 樣本＝變好次數＋變差次數（FR-MRK-06 口徑）；樣本不到 `min_sample`（5）時 `judgement=null`。
+  - 樣本足夠時：變好多於變差為「時間管理偏向變好」，變差多於變好為「偏向變差，建議檢視」，相等為「持平」。
+  - 新增 `judgement_note`：寫明變好、變差次數；變差集中在某一精力等級（佔變差過半）時，補一句提示。
+  - 待確認（#15 留言）：過半的分母、「尚未完成」是否算一級、剛好 50% 是否算過半、`judgement_note` 的固定文字。確認後寫回 spec、補 AC，再改 `TimeMgmtStatsOut`。
 - `worse_by_energy` 以任務計數（同一任務多次被標變差只算一次）；沒有完成回報的任務一律算在 `not_done`。
 
-## DA-13 補註記的 `reason` 方向檢查 【待複核：規格歧義】
+## DA-13 補註記的 `reason` 方向檢查 【已複核：產品負責人 2026-11-16，#15】
 
 `POST /events/{id}/annotations` 可帶 `reason`；有給時依原日期事件的方向（提前或延後）檢查選項。`annotation` 事件的 `mine` 沿用原事件的 `mine`，不依現在的負責人（spec 6.2）。
 
-## DA-14 基準更正事件不處理註記 【待複核：規格歧義】
+## DA-14 基準更正事件不處理註記 【已複核：產品負責人 2026-11-16，#15】
 
 FR-MRK-08 寫基準更正事件也依註記規則處理，但 `baseline` 事件沒有 `delta_days`，不屬於 FR-MRK-06 的統計口徑。決定：基準更正不詢問、不寫註記。
 
-## DA-15 單點任務的「已延期數」 【待複核：規格歧義】
+## DA-15 單點任務的「已延期數」 【已複核：產品負責人 2026-11-16，#15】
 
 基準更正的影響說明要列專案「已延期」數的前後值。單點任務沒有專案，改計算全部單點任務的已延期數。
 
-## DA-16 已完成任務再按完成 【待複核：規格歧義】
+## DA-16 已完成任務再按完成 【已複核：產品負責人 2026-11-16，#15】
 
 `POST /tasks/{id}/complete` 對已完成任務回 409 `TASK_DONE`。
 
-## DA-17 改負責人為相同名字 【待複核：規格歧義】
+## DA-17 改負責人為相同名字 【已複核：產品負責人 2026-11-16，#15】
 
 回 422 `NO_CHANGE`，與日期調整一致。
 
-## DA-18 `Idempotency-Key` 的範圍 【待複核：規格歧義】
+## DA-18 `Idempotency-Key` 的範圍 【已複核：產品負責人 2026-11-16，#15】
 
 - 只對 POST、PUT、PATCH 生效；回應狀態碼小於 500 才保存。
 - 同一個鍵用在不同端點回 422 `VALIDATION_ERROR`。
 - 兩個相同鍵的請求同時到達時，不保證只執行一次；整批順延另有 `expected_version` 擋第二次寫入。
 
-## DA-19 新增錯誤碼 `INTERNAL_ERROR`（500） 【待複核：契約新增】
+## DA-19 新增錯誤碼 `INTERNAL_ERROR`（500） 【已複核：產品負責人 2026-11-16，#15】
 
 spec 5.2 沒有伺服器內部錯誤的錯誤碼。未預期的例外回 500 `INTERNAL_ERROR`，訊息固定，不帶例外內容（CLAUDE.md 資安 3）。依 todo 5.7，新增錯誤碼需產品負責人核可。
 
-## DA-20 建立類端點回 201 【待複核：規格歧義】
+## DA-20 建立類端點回 201 【已複核：產品負責人 2026-11-16，#15】
 
 `POST /projects`、`POST /tasks`、`POST /events/{id}/annotations` 回 201，其餘 POST 回 200。spec 只寫輸出內容，沒有指定狀態碼。
 
-## DA-21 基準更正 preview 會寫入 `confirmations` 【待複核：規格歧義】
+## DA-21 基準更正 preview 會寫入 `confirmations` 【已複核：產品負責人 2026-11-16，#15】
 
 AC-20 寫「資料庫未變」。決定：解讀為 `tasks` 與 `events` 不變；確認憑證必須存在 `confirmations` 表才能在 commit 時比對，所以 preview 會新增一列憑證。
 
-## DA-22 狀態與卡住設成相同值回 `NO_CHANGE` 【待複核：規格歧義】
+## DA-22 狀態與卡住設成相同值回 `NO_CHANGE` 【已複核：產品負責人 2026-11-16，#15】
 
 `POST /tasks/{id}/status` 與 `POST /tasks/{id}/block` 設成目前的值時，回 422 `NO_CHANGE`，不寫事件；與日期調整、改負責人一致。
 
-## DA-23 `idempotency_keys` 每次寫入時清除超過 24 小時的列 【待複核：規格歧義】
+## DA-23 `idempotency_keys` 每次寫入時清除超過 24 小時的列 【已複核：產品負責人 2026-11-16，#15】
 
 回應本文可能含原句（例如候選端點），不能無限期保存。Dev-B 做「刪除所有來源原文」（todo 8.6）時，清除範圍也要包含這張表。
 
-## DA-24 OpenAPI 文件需要 token，關閉 `/docs`、`/redoc` 【待複核：規格歧義】
+## DA-24 OpenAPI 文件需要 token，關閉 `/docs`、`/redoc` 【已複核：產品負責人 2026-11-16，#15】
 
 資安審查建議的硬化項目。spec 8.1 依賴 FastAPI 自動產生的 OpenAPI，所以不整個關閉：
 
@@ -126,7 +133,7 @@ AC-20 寫「資料庫未變」。決定：解讀為 `tasks` 與 `events` 不變�
 - `/docs`、`/redoc` 關閉：瀏覽器開這兩頁時帶不了 token，放在受保護路徑下也無法使用。
 - 不啟動伺服器也能匯出：在 `backend/` 下執行 `uv run python -m app.export_openapi > ../frontend/openapi.json`，供 todo 0.8 產生前端型別。
 
-## DA-25 未預期例外不寫入錯誤訊息與 traceback 【待複核：規格歧義】
+## DA-25 未預期例外不寫入錯誤訊息與 traceback 【已複核：產品負責人 2026-11-16，#15】
 
 資安審查發現：PostgreSQL 的錯誤訊息會原文引用輸入值，例如 `invalid input syntax for type integer: "<使用者輸入>"`。原本的做法是用 `exception_handler(Exception)` 回 500，但 Starlette 回應後會把例外再拋出，uvicorn 就把含這段訊息的完整 traceback 寫進 log，違反 CLAUDE.md 資安 3。
 

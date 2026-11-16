@@ -117,9 +117,9 @@
 
 ### 3.3 FR-PRJ 專案（P1）
 
-- FR-PRJ-01 建立專案：名稱必填；範圍、週報對象；收件來源可為「貼上入口」或已告知成員的 LINE 群組。
+- FR-PRJ-01 建立專案：名稱必填；範圍、週報對象；收件來源可為「貼上入口」或已告知成員的 LINE 群組。建立時寫一筆 `project` 事件（`field='created'`，DA-06）。
 - FR-PRJ-02 編輯專案（名稱、範圍、週報對象）。**每個變更欄位各寫一筆 `project` 事件**，記前值與後值。沒有實際變更時不寫事件。
-- FR-PRJ-03 專案不刪除，只封存（`archived_at`）。封存後預設不出現在列表，歷程保留。
+- FR-PRJ-03 專案不刪除，只封存（`archived_at`）。封存後預設不出現在列表，歷程保留。封存寫一筆 `project` 事件（`field='archived_at'`，DA-06）。
 - FR-PRJ-04 專案現況頁顯示：完成數、已延期數（最新預計 > 原訂）、待確認候選數（註明不計入下方數字）、甘特圖、任務表。
 - FR-PRJ-05 甘特圖每列有「進行區間」（開始到最新預計）、「原訂基準框」（開始到原訂，固定）、「延後區間」（原訂之後到最新預計）；已完成任務以完成日為終點；今天以直線標示。最新預計早於原訂時，仍顯示基準框，並在列標籤標「提前 n 天」。
 
@@ -140,9 +140,9 @@
 - FR-TSK-01 建立任務欄位：標題（必填）、負責人（名字，預設「我」）、期限（必填）、範圍、專案（可空，空為單點任務）、完成條件（選填）、提醒、關聯目標（選填）、預設星數（1–5，預設 3）。
 - FR-TSK-02 建立時 `orig_due = latest_due = 期限`，並寫 `task` 事件。
 - FR-TSK-03 預設星數來源 `star_source` 由伺服器判定：沒有 AI 建議時為 `self`；有 AI 建議且未改為 `ai_accepted`；有 AI 建議但改了為 `ai_edited`；匯入為 `import_default`。前端不可直接指定來源。
-- FR-TSK-04 狀態為 `todo`、`doing`、`done`；另有獨立旗標 `blocked`。狀態變化寫 `status` 事件。
+- FR-TSK-04 狀態為 `todo`、`doing`、`done`；另有獨立旗標 `blocked`。狀態變化寫 `status` 事件。`todo`、`doing` 之間以 `POST /tasks/{id}/status` 切換；改為 `done` 一律走 `/complete`（DA-08）。狀態或卡住設成目前的值回 `NO_CHANGE`，不寫事件（DA-22）。已完成任務再按完成回 409 `TASK_DONE`（DA-16）。
 - FR-TSK-05 任務詳情顯示：負責人、原訂（固定）、最新預計、與原訂差距、預設星數與來源、完成回報、此任務的歷程。
-- FR-TSK-06 更改負責人（名字）寫一筆 `task` 事件。更改後，**過去事件的「是否為我的任務」判斷不變**。
+- FR-TSK-06 更改負責人（名字）寫一筆 `task` 事件。更改後，**過去事件的「是否為我的任務」判斷不變**。改為相同名字回 `NO_CHANGE`（DA-17）。
 - FR-TSK-07 已完成任務：不可調整預計完成日、不可更正基準、不可再標卡住。
 - FR-TSK-08 建立任務可指定開始日（選填）；明確填入晚於期限的開始日時拒絕（`VALIDATION_ERROR`，`details.fields` 含 `start`）。未填時沿用 DA-07：今天，期限早於今天時用期限當天。（2026-11-15 產品負責人裁定，PR #1 審查 A2、B1）
 - FR-TSK-09 調整開始日：只改 `start_date`，不問原因與註記；寫一筆 `task` 事件（`field='start_date'`，`delta_days`、`mark` 為 NULL，不進時間管理統計），`version` 加 1。已完成回 `TASK_DONE`；等於目前值回 `NO_CHANGE`；超出「今天前 365 天到後 730 天」回 `DATE_OUT_OF_RANGE`；晚於最新預計日仍成功，回警告 `START_AFTER_DUE`。不新增錯誤碼；整批順延仍不動開始日。（同上）
@@ -154,19 +154,19 @@
 - FR-DUE-03 驗證：任務已完成拒絕（`TASK_DONE`）；新日期等於目前值拒絕（`NO_CHANGE`）；日期超出「今天前 365 天到後 730 天」拒絕（`DATE_OUT_OF_RANGE`）；新日期早於開始日只回警告，不阻擋。
 - FR-DUE-04 每次調整寫一筆 `due` 事件：前值、後值、`delta_days`（提前為負、延後為正）、原因、備註、是否為我的任務、時間管理註記。
 - FR-DUE-05 原因為固定選項。提前：提早完成條件達成、工作量比預期少、前置工作提早到位、其他。延後：估計不準（我低估）、被其他事插隊（我自己排程）、等對方或客戶回覆（外部）、需求變更（外部）、資源或環境未到位（外部）、其他。
-- FR-DUE-05a 原因與註記**只由使用者選擇**。系統與 AI 都不預填、不推測。確認延期候選時，AI-01 只提供新日期與原句，原因欄位一律為空待選。
+- FR-DUE-05a 原因與註記**只由使用者選擇**。系統與 AI 都不預填、不推測。確認延期候選時，AI-01 只提供新日期與原句，原因欄位一律為空待選。因此 `adjust_due` 的原因可為空；有給時必須是該方向的選項，否則 `VALIDATION_ERROR`。手動調整畫面（12.2）把原因設為必選（DA-09）。
 - FR-DUE-06 並行保護：請求帶 `expected_version`（任務版本號），不符回 `STALE_VERSION`。
 
 ### 3.7 FR-MRK 時間管理註記（P1）
 
-- FR-MRK-01 **負責人為「我」**的任務，調整日期時必須回答註記：`better`（變好）、`worse`（變差）、`none`（不計入）；或明確選「稍後註記」（`defer_mark=true`，註記留空）。兩者皆無時拒絕（`MARK_REQUIRED`）。
-- FR-MRK-02 **負責人不是我**的任務，不詢問註記；事件記 `mine=0`，不進時間管理統計。請求中帶了註記時忽略並回警告。
+- FR-MRK-01 **負責人為「我」**的任務，調整日期時必須回答註記：`better`（變好）、`worse`（變差）、`none`（不計入）；或明確選「稍後註記」（`defer_mark=true`，註記留空）。兩者皆無時拒絕（`MARK_REQUIRED`）；兩者同時給回 `VALIDATION_ERROR`，訊息說明擇一（DA-10）。
+- FR-MRK-02 **負責人不是我**的任務，不詢問註記；事件記 `mine=0`，不進時間管理統計。請求中帶了註記時忽略，並在 `warnings` 回 `MARK_IGNORED`（DA-11）。
 - FR-MRK-03 原因屬外部（以「外部」標記的原因）時，介面提示建議「不計入」。**這只是提示，系統不預選、不代判。**
-- FR-MRK-04 補註記與改註記：對 `mine=1` 且 `delta_days≠0` 的日期事件，新增一筆 `annotation` 事件，`ref_event_id` 指向原事件。原事件不改。
+- FR-MRK-04 補註記與改註記：對 `mine=1` 且 `delta_days≠0` 的日期事件，新增一筆 `annotation` 事件，`ref_event_id` 指向原事件。原事件不改。補註記可帶 `reason`，有給時依原日期事件的方向（提前或延後）檢查選項；`annotation` 事件的 `mine` 沿用原事件，不依現在的負責人（DA-13）。
 - FR-MRK-05 有效註記 = 指向該日期事件的最新一筆 `annotation`；沒有則取原事件的註記；皆空為「未註記」。
 - FR-MRK-06 時間管理統計口徑：只算 `mine=1`、`delta_days≠0`、有效註記非空的日期事件。輸出變好次數與提前總天數、變差次數與延後總天數、不計入次數、未註記次數；**未註記與不計入不進變好／變差**。
-- FR-MRK-07 統計另輸出「被標變差的任務完成時的精力分布」（高、中、低、尚未完成），供時間與精力盤點。樣本少於 5 筆時，只回計數，`judgement=null`。
-- FR-MRK-08 整批順延與基準更正產生的事件，都依本節規則處理註記。
+- FR-MRK-07 統計另輸出「被標變差的任務完成時的精力分布」（高、中、低、尚未完成），供時間與精力盤點。分布以任務計數，同一任務多次被標變差只算一次；沒有完成回報的任務算在「尚未完成」（DA-12）。樣本少於 5 筆時，只回計數，`judgement=null`。5 筆以上的判讀規則已由產品負責人裁定（2026-11-16，#15），細節確認後補入本條與 AC。
+- FR-MRK-08 整批順延產生的事件依本節規則處理註記。基準更正的 `baseline` 事件沒有 `delta_days`，不屬於 FR-MRK-06 的統計口徑，所以不詢問、不寫註記（DA-14）。
 
 ### 3.8 FR-BLK 整批順延（P1）
 
@@ -183,8 +183,8 @@
 
 - FR-BAS-01 入口為任務詳情內的小連結，不放在主要操作區。
 - FR-BAS-02 只允許兩種類型：`correction`（更正錯誤）、`rebaseline`（客戶或主管正式改變承諾日）。原因必選：匯入或輸入錯誤、原計畫日期寫錯、客戶或主管正式改變承諾日、其他。
-- FR-BAS-03 **兩段式確認**：第一步（preview）回傳影響說明與一個確認憑證；第二步（commit）必須帶憑證與 `ack=true`（聲明「這不是為了讓延期看起來比較小」）。
-- FR-BAS-04 影響說明包含：此任務與基準的差距變化（舊 → 新）；專案「已延期」數量變化；此任務過去的日期調整事件數（保留，不重算）；舊原訂日將永久留在歷程。
+- FR-BAS-03 **兩段式確認**：第一步（preview）回傳影響說明與一個確認憑證；第二步（commit）必須帶憑證與 `ack=true`（聲明「這不是為了讓延期看起來比較小」）。preview 不改 `tasks`、`events`，但會在 `confirmations` 新增一列憑證，commit 時才能比對（DA-21）。
+- FR-BAS-04 影響說明包含：此任務與基準的差距變化（舊 → 新）；專案「已延期」數量變化（單點任務沒有專案，改算全部單點任務的已延期數，DA-15）；此任務過去的日期調整事件數（保留，不重算）；舊原訂日將永久留在歷程。
 - FR-BAS-05 確認憑證綁定「任務、新日期、類型、原因、當時的原訂日與任務版本」，10 分鐘過期（〔假設〕）；任務在期間內有變動則憑證失效（`CONFIRMATION_INVALID`）。
 - FR-BAS-06 commit 時覆蓋 `orig_due`，寫一筆 `baseline` 事件（欄位 `orig_due`，前值、後值、類型、原因、「二次確認」）。**舊的原訂日只留在歷程，不做基準版本。**
 - FR-BAS-07 更正後：甘特基準框、已延期數、週報延期事項依新基準重算；**既有日期事件與註記不重算**。
@@ -198,7 +198,7 @@
 - FR-HIS-04 每筆顯示：時間、操作者、專案、任務、類型、前值 → 後值、時間管理註記（日期事件）、依據（原句或操作來源）。
 - FR-HIS-05 原句不存在事件本身，而是引用 `sources`；來源原文被刪除後，事件仍在，原句顯示「（原文已依設定刪除）」。
 - FR-HIS-06 任務詳情顯示該任務的歷程；手機的專案標題旁可開專案歷程。
-- FR-HIS-07 事件快照任務標題（`task_title`），改名或改負責人不影響舊事件。
+- FR-HIS-07 事件快照任務標題（`task_title`），改名或改負責人不影響舊事件。非任務事件（例如 `project`）的 `task_title` 寫空字串，畫面顯示為「—」（DA-05）。
 
 ### 3.11 FR-INB 收件、候選與確認（P1，AI-01）
 
@@ -251,7 +251,7 @@
 
 - FR-GOV-01 來源原文依保存期限自動清除（每日排程）。
 - FR-GOV-02 匯出：產生包含所有表的 JSON 檔供下載。
-- FR-GOV-03 刪除所有來源原文：二次確認；刪除後任務、事件仍保留，原句顯示為已刪除。
+- FR-GOV-03 刪除所有來源原文：二次確認；刪除後任務、事件仍保留，原句顯示為已刪除。`idempotency_keys` 存的回應本文可能含原句，一併刪除（屬於暫存，不是歷程，DA-23）。
 - FR-GOV-04 LINE 群組解除綁定即停止處理該群組，不追溯刪除已確認的紀錄。
 - FR-GOV-05 送進 AI 的內容只含必要摘錄；是否遮蔽姓名〔待決〕。
 
@@ -591,9 +591,15 @@ CREATE TABLE idempotency_keys (
 
 - Base URL：`/api/v1`。格式 JSON，UTF-8。日期 `YYYY-MM-DD`，時間戳 ISO 8601。
 - 認證：單使用者；以環境變數設定的 Bearer token 保護（`Authorization: Bearer …`），僅用於避免意外對外暴露；預設只綁定 `127.0.0.1`。
-- 冪等：所有「確認／提交」類 POST 接受 `Idempotency-Key` 標頭，相同鍵 24 小時內回傳首次結果。
+- 冪等：所有「確認／提交」類 POST 接受 `Idempotency-Key` 標頭，相同鍵 24 小時內回傳首次結果（DA-18）：
+  - 只對 POST、PUT、PATCH 生效；回應狀態碼小於 500 才保存（存狀態碼與本文，重送時回相同狀態碼）。
+  - 同一個鍵用在不同端點回 422 `VALIDATION_ERROR`。
+  - 兩個相同鍵的請求同時到達時，不保證只執行一次；整批順延另有 `expected_version` 擋第二次寫入。
+  - 每次寫入時清除超過 24 小時的列（DA-23）。回應本文可能含原句，所以「刪除所有來源原文」（FR-GOV）的清除範圍也包含這張表。
 - 樂觀鎖：修改任務的請求帶 `expected_version`；不符回 409 `STALE_VERSION`。
-- 成功回應：直接回資源或 `{ "data": … }`；列表回 `{ "items": […], "total": n }`。
+- 成功回應：直接回資源或 `{ "data": … }`；列表回 `{ "items": […], "total": n }`。建立類端點（`POST /projects`、`POST /tasks`、`POST /events/{id}/annotations`）回 201，其餘 POST 回 200（DA-20）。
+- OpenAPI 文件放在 `/api/v1/openapi.json`，與其他 API 一樣需要 token；`/docs`、`/redoc` 關閉。不啟動伺服器也能匯出：在 `backend/` 下執行 `uv run python -m app.export_openapi`（DA-24）。
+- 未預期的例外：回 500 `INTERNAL_ERROR`，訊息固定；log 只記例外類型名稱，不寫錯誤訊息與 traceback；資料庫引擎設 `hide_parameters=True`，例外訊息不帶 SQL 參數值（DA-25）。
 - 錯誤回應格式：
 
 ```json
@@ -620,7 +626,7 @@ CREATE TABLE idempotency_keys (
 | 422 | `ACK_REQUIRED` | 基準更正缺少聲明 |
 | 422 | `ANNOTATION_NOT_ALLOWED` | 對非「我的任務」或無日期差的事件補註記 |
 | 503 | `AI_UNAVAILABLE` | 僅限沒有退路的 AI 端點（量表訪談）；其餘端點降級，見 5.3 |
-| 500 | `INTERNAL_ERROR` | 未預期的伺服器錯誤；訊息固定，不帶例外內容（2026-11-13 新增，`docs/decisions.md` DA-19）【待複核：契約新增】 |
+| 500 | `INTERNAL_ERROR` | 未預期的伺服器錯誤；訊息固定，不帶例外內容（2026-11-13 新增，`docs/decisions.md` DA-19；2026-11-16 產品負責人複核同意） |
 
 ### 5.3 AI 降級約定
 
@@ -714,6 +720,7 @@ CREATE TABLE idempotency_keys (
 | PATCH | `/tasks/{id}/owner` | 改負責人 |
 | POST | `/tasks/{id}/adjust-due` | 調整最新預計日 |
 | POST | `/tasks/{id}/adjust-start` | 調整開始日（FR-TSK-09） |
+| POST | `/tasks/{id}/status` | 切換 `todo`／`doing`（DA-08） |
 | POST | `/tasks/{id}/block` | 標為卡住／取消 |
 | POST | `/tasks/{id}/complete` | 標為完成並回傳是否需要完成回報 |
 | POST | `/tasks/suggest-stars` | AI-02 提議預設星數 |
@@ -757,11 +764,15 @@ CREATE TABLE idempotency_keys (
 }
 ```
 
-錯誤：`TASK_DONE`、`NO_CHANGE`、`DATE_OUT_OF_RANGE`、`MARK_REQUIRED`、`STALE_VERSION`、`VALIDATION_ERROR`（原因不在該方向的選項內，例如提前時選了延後原因）。`warnings` 可含 `BEFORE_START`。`needs_mark` 為 `true` 表示我的任務且選了稍後註記，註記留空。
+錯誤：`TASK_DONE`、`NO_CHANGE`、`DATE_OUT_OF_RANGE`、`MARK_REQUIRED`、`STALE_VERSION`、`VALIDATION_ERROR`（原因不在該方向的選項內，例如提前時選了延後原因；或 `mark` 與 `defer_mark` 同時給，DA-10）。`warnings` 可含 `BEFORE_START`，以及非我的任務帶了註記時的 `MARK_IGNORED`（DA-11）。`needs_mark` 的單一定義為「我的任務，且這次沒有給註記」（`mine and mark is None`，DA-04）：手動調整即選了稍後註記；確認延期候選時以 `defer_mark=true` 呼叫，兩處一致。
 
 `POST /tasks/{id}/adjust-start` 輸入：`{ "new_start": "2026-11-14", "expected_version": 4, "note": "…" }`（`note` 選填）。輸出：`{ "task", "event", "warnings": [] }`，`warnings` 可含 `START_AFTER_DUE`。錯誤：`TASK_DONE`、`NO_CHANGE`、`DATE_OUT_OF_RANGE`、`STALE_VERSION`、`VALIDATION_ERROR`。
 
-`POST /tasks/{id}/complete` 輸入：`{ "expected_version": 4, "done_date": "2026-11-12" }`（`done_date` 預設為今天，不可晚於今天）。輸出：`{ "task", "event", "feedback_required": true }`。
+`POST /tasks/{id}/complete` 輸入：`{ "expected_version": 4, "done_date": "2026-11-12" }`（`done_date` 預設為今天，不可晚於今天）。輸出：`{ "task", "event", "feedback_required": true }`。已完成任務回 409 `TASK_DONE`（DA-16）。
+
+`POST /tasks/{id}/status` 輸入：`{ "status": "todo" | "doing", "expected_version": 4 }`。輸出：`{ "task", "event" }`，寫一筆 `status` 事件。錯誤：`TASK_DONE`、`NO_CHANGE`（設成目前的值，DA-22）、`STALE_VERSION`、`VALIDATION_ERROR`（`status` 不是 `todo` 或 `doing`；改為 `done` 請用 `/complete`）。`POST /tasks/{id}/block` 設成目前的值同樣回 `NO_CHANGE`。
+
+`PATCH /tasks/{id}/owner` 改為相同名字回 `NO_CHANGE`（DA-17）。
 
 ### 5.8 註記與歷程
 
@@ -772,7 +783,7 @@ CREATE TABLE idempotency_keys (
 | GET | `/stats/time-management` | 時間管理統計 |
 | GET | `/meta/reasons` | 原因選項（含 `external` 標記、所屬方向） |
 
-`POST /events/{id}/annotations` 輸入：`{ "mark": "worse", "reason": "underestimated", "note": "…" }`。`mark` 必填且為三值之一。輸出：新增的 `annotation` 事件，與更新後的有效註記。錯誤：`NOT_FOUND`、`ANNOTATION_NOT_ALLOWED`、`VALIDATION_ERROR`。
+`POST /events/{id}/annotations` 輸入：`{ "mark": "worse", "reason": "underestimated", "note": "…" }`。`mark` 必填且為三值之一。`reason` 選填，有給時依原日期事件的方向檢查選項（DA-13）。輸出：新增的 `annotation` 事件，與更新後的有效註記。錯誤：`NOT_FOUND`、`ANNOTATION_NOT_ALLOWED`、`VALIDATION_ERROR`。
 
 `GET /events` 參數：`project_id`（或 `none`）、`kind`、`task_id`、`batch_id`、`from`、`to`、`limit`（預設 100，最大 500）、`offset`。輸出：
 
@@ -1064,7 +1075,7 @@ CREATE TABLE idempotency_keys (
 ### 6.7 資料保存與清除
 
 - 每日排程（預設凌晨 03:00）：將 `expires_at` 已過的 `sources.excerpt` 設為 NULL，寫 `purged_at`。`events`、`candidates` 不動。
-- 「刪除所有來源原文」同樣只清除 `excerpt`，事件的原句顯示改為已刪除。
+- 「刪除所有來源原文」清除 `sources.excerpt`，並刪除 `idempotency_keys` 全部列（回應本文可能含原句；這張表是 24 小時的重送暫存，不是歷程，DA-23）。`events`、`candidates`、`tasks` 不動，事件的原句顯示改為已刪除。
 - 匯出檔包含全部表；`sources.excerpt` 已清除者匯出為 `null`。
 
 ### 6.8 並行與一致性
@@ -1107,7 +1118,7 @@ CREATE TABLE idempotency_keys (
 
 ### 7.3 基準更正
 
-- AC-20 Given 任務 `orig_due=11/12`；When preview 新原訂日 11/14；Then 回確認憑證與影響說明（差距與已延期數的前後值、過去日期事件數），資料庫未變。
+- AC-20 Given 任務 `orig_due=11/12`；When preview 新原訂日 11/14；Then 回確認憑證與影響說明（差距與已延期數的前後值、過去日期事件數）；`tasks`、`events` 未變，只在 `confirmations` 新增一列憑證（DA-21）。
 - AC-21 Given 有效憑證；When commit 不帶 `ack=true`；Then 422 `ACK_REQUIRED`，`orig_due` 不變。
 - AC-22 Given 有效憑證與 `ack=true`；When commit；Then `orig_due=11/14`，新增 `baseline` 事件含前值 11/12、後值 11/14、類型與原因；該任務過去的 `due` 事件與註記完全未變。
 - AC-23 Given 憑證已使用或超過 10 分鐘，或任務在 preview 後被改；Then 409 `CONFIRMATION_INVALID`。
@@ -1255,6 +1266,7 @@ frontend/
 6. 整批順延：我的任務套用統一註記，逐項不同在歷程改註記。
 7. 基準更正：**直接覆蓋原訂日，舊值只留在歷程**，不做基準版本；單人版不限制權限，僅靠兩段式確認。
 8. 延期原因與時間管理註記**一律由使用者判斷，不設 AI 節點**（原 AI-08 取消，不列入後續階段）。原因連動「建議不計入」提示再連到註記，任何 AI 預填都會間接影響對自己的評價。（原 D-02，已結案）
+9. Dev-A 開發期間的決定紀錄 DA-01～DA-26（`docs/decisions.md`）已由產品負責人複核（2026-11-16，issue #15）。DA-12 以外全部照原決定，結論已寫入本規格各條，條文後以「（DA-xx）」標示出處。DA-12 新增「二元判讀＋精力洞察」規則，細節確認後補入 FR-MRK-07、5.8 與第 7 章。
 
 ### 9.3 本文件中的〔假設〕清單
 

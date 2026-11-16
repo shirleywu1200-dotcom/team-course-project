@@ -49,7 +49,7 @@
 
 ## 資料庫：PostgreSQL
 
-- 2026-11-13 裁定採用 PostgreSQL；spec 4.2 已改為 PostgreSQL 版 DDL，與 `backend/app/db/migrations/versions/0001_initial.sql` 相同（`docs/decisions.md` DA-01，待產品負責人複核）。
+- 2026-11-13 裁定採用 PostgreSQL；spec 4.2 已改為 PostgreSQL 版 DDL，與 `backend/app/db/migrations/versions/0001_initial.sql` 相同（`docs/decisions.md` DA-01，2026-11-16 產品負責人複核同意，#15）。
 - SQL 種子的布林欄位寫 `true`／`false`；同一份腳本裡同一張表不要混用指定 id 與自動 id（`backend/tests/fixtures/README.md`）。
 - Schema 只經 Alembic 遷移變更；只新增遷移，不改既有欄位語意。
 - `events` 的 UPDATE、DELETE、TRUNCATE 由資料庫觸發器擋下（AC-11）。
@@ -90,6 +90,6 @@
 
 | 項目 | 影響 |
 | --- | --- |
-| Dev-A 的決定紀錄 DA-01～DA-25（PostgreSQL 版 DDL、契約新增、規格歧義） | `docs/decisions.md`；交接重點見 `docs/dev-a-handoff.md` |
+| DA-12 時間管理判讀的細節（分母、50% 邊界、`judgement_note` 文字）；DA-01～DA-26 其餘已複核（2026-11-16，#15） | `docs/decisions.md` DA-12；FR-MRK-07、spec 5.8 |
 | 衡量值缺口：週報對帳結果、每日確認時間無法從資料算出 | `docs/metrics.md`；Phase 7、10 |
 | spec 9.1 的 D-01、D-03 至 D-07 | 見 todo第 3 節 |
