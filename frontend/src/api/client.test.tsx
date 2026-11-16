@@ -143,16 +143,22 @@ test("非 JSON 錯誤回應不把 HTML 原文帶入錯誤訊息", async () => {
 
 test("STALE_VERSION 實際重讀任務，不自動重送；使用者重做才帶新版本提交", async () => {
   let reads = 0;
+  let currentTask = makeTask();
   const bodies: AdjustDue[] = [];
   server.use(
     http.get(`${API}/tasks/4`, () => {
       reads += 1;
-      return HttpResponse.json({ task: makeTask(reads === 1 ? {} : { latest_due: "2026-11-20", version: 2 }) });
+      // D2 面板與頁面共用查詢；額外 GET 不代表伺服器版本改變。
+      return HttpResponse.json({ task: currentTask });
     }),
     http.post(`${API}/tasks/4/adjust-due`, async ({ request }) => {
       bodies.push(await request.json() as AdjustDue);
-      if (bodies.length === 1) return HttpResponse.json({ error: { code: "STALE_VERSION", message: "版本已變更", details: {} } }, { status: 409 });
-      return HttpResponse.json({ task: makeTask({ latest_due: "2026-11-21", version: 3 }), warnings: [], needs_mark: false });
+      if (bodies.length === 1) {
+        currentTask = makeTask({ latest_due: "2026-11-20", version: 2 });
+        return HttpResponse.json({ error: { code: "STALE_VERSION", message: "版本已變更", details: {} } }, { status: 409 });
+      }
+      currentTask = makeTask({ latest_due: "2026-11-21", version: 3 });
+      return HttpResponse.json({ task: currentTask, warnings: [], needs_mark: false });
     }),
   );
   const user = userEvent.setup();
@@ -164,12 +170,22 @@ test("STALE_VERSION 實際重讀任務，不自動重送；使用者重做才帶
   await screen.findByRole("option", { name: "估計不準（我低估）" });
   await user.selectOptions(screen.getByLabelText("原因"), "underestimated");
   await user.click(screen.getByRole("radio", { name: "不計入" }));
+  const readsBeforeSubmit = reads;
   await user.click(screen.getByRole("button", { name: "確認調整" }));
-  expect(await screen.findByRole("alert")).toHaveTextContent("請確認後再操作一次");
-  await waitFor(() => expect(screen.getByTestId("delta")).toHaveTextContent("2026-11-20 → 2026-11-21"));
-  expect(reads).toBe(2);
+  expect(await screen.findByText("資料已更新，請確認後再操作")).toHaveAttribute("role", "alert");
+  expect(reads).toBeGreaterThan(readsBeforeSubmit);
+  expect(screen.getByLabelText("新的預計完成日")).toHaveValue("");
+  expect(screen.getByLabelText("原因")).toHaveValue("");
+  for (const radio of screen.getAllByRole("radio")) expect(radio).not.toBeChecked();
+  expect(screen.getByRole("button", { name: "確認調整" })).toBeDisabled();
   expect(bodies).toHaveLength(1);
   expect(bodies[0].expected_version).toBe(1);
+  // 重讀不重送；必須由使用者重新填寫完整輸入，不能沿用舊內容。
+  fireEvent.change(screen.getByLabelText("新的預計完成日"), { target: { value: "2026-11-21" } });
+  await waitFor(() => expect(screen.getByTestId("delta")).toHaveTextContent("2026-11-20 → 2026-11-21"));
+  await screen.findByRole("option", { name: "估計不準（我低估）" });
+  await user.selectOptions(screen.getByLabelText("原因"), "underestimated");
+  await user.click(screen.getByRole("radio", { name: "不計入" }));
   await user.click(screen.getByRole("button", { name: "確認調整" }));
   await screen.findByRole("status");
   expect(bodies).toHaveLength(2);
