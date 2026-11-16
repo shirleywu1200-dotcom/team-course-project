@@ -251,7 +251,7 @@
 
 - FR-GOV-01 來源原文依保存期限自動清除（每日排程）。
 - FR-GOV-02 匯出：產生包含所有表的 JSON 檔供下載。
-- FR-GOV-03 刪除所有來源原文：二次確認；刪除後任務、事件仍保留，原句顯示為已刪除。
+- FR-GOV-03 刪除所有來源原文：二次確認；刪除後任務、事件仍保留，原句顯示為已刪除。`idempotency_keys` 存的回應本文可能含原句，一併刪除（屬於暫存，不是歷程，DA-23）。
 - FR-GOV-04 LINE 群組解除綁定即停止處理該群組，不追溯刪除已確認的紀錄。
 - FR-GOV-05 送進 AI 的內容只含必要摘錄；是否遮蔽姓名〔待決〕。
 
@@ -1075,7 +1075,7 @@ CREATE TABLE idempotency_keys (
 ### 6.7 資料保存與清除
 
 - 每日排程（預設凌晨 03:00）：將 `expires_at` 已過的 `sources.excerpt` 設為 NULL，寫 `purged_at`。`events`、`candidates` 不動。
-- 「刪除所有來源原文」同樣只清除 `excerpt`，事件的原句顯示改為已刪除。
+- 「刪除所有來源原文」清除 `sources.excerpt`，並刪除 `idempotency_keys` 全部列（回應本文可能含原句；這張表是 24 小時的重送暫存，不是歷程，DA-23）。`events`、`candidates`、`tasks` 不動，事件的原句顯示改為已刪除。
 - 匯出檔包含全部表；`sources.excerpt` 已清除者匯出為 `null`。
 
 ### 6.8 並行與一致性
@@ -1118,7 +1118,7 @@ CREATE TABLE idempotency_keys (
 
 ### 7.3 基準更正
 
-- AC-20 Given 任務 `orig_due=11/12`；When preview 新原訂日 11/14；Then 回確認憑證與影響說明（差距與已延期數的前後值、過去日期事件數），資料庫未變。
+- AC-20 Given 任務 `orig_due=11/12`；When preview 新原訂日 11/14；Then 回確認憑證與影響說明（差距與已延期數的前後值、過去日期事件數）；`tasks`、`events` 未變，只在 `confirmations` 新增一列憑證（DA-21）。
 - AC-21 Given 有效憑證；When commit 不帶 `ack=true`；Then 422 `ACK_REQUIRED`，`orig_due` 不變。
 - AC-22 Given 有效憑證與 `ack=true`；When commit；Then `orig_due=11/14`，新增 `baseline` 事件含前值 11/12、後值 11/14、類型與原因；該任務過去的 `due` 事件與註記完全未變。
 - AC-23 Given 憑證已使用或超過 10 分鐘，或任務在 preview 後被改；Then 409 `CONFIRMATION_INVALID`。
