@@ -683,7 +683,8 @@ CREATE TABLE idempotency_keys (
   - `title` 用任務現值；`owner` 照 AI-01 送名字，D-03（姓名遮蔽）裁定後兩節點一起改。
 - 輸出：`{ "draft": "本週（11/09–11/15）工作進度…", "items": [{ "section": "done", "task_id": 3, "event_id": 41 }, { "section": "next", "task_id": 5, "event_id": null }] }`
   - `draft` 為字串、`items` 為陣列；`section` 為 `done`、`delay`、`next`。`done`、`delay` 的 `event_id` 必填，`next` 必須為 null。
-  - 缺欄位、型別不對、`section` 不在值域內，算 `invalid_output`，同 AI-01 最多再試 2 次。
+  - 缺欄位、型別不對、`section` 不在值域內，算 `invalid_output`。
+- 重試與紀錄（同 AI-01）：任何例外都算一次失敗、繼續重試，總共最多 3 次；只有 `AIUnavailable` 立刻停。每次嘗試寫一列 `ai_runs`（`latency_ms` 失敗也記；`error` 只放例外類別名稱，R4 失敗記 `R4_MISMATCH`）。**AI-05 不存 `raw_output`**。
   - R4 對帳（項目引用的 `task_id`、`event_id` 是否在 payload 裡）不算格式錯誤、不重試：對不上就 `validated=false`。
 
 ### 5.4 設定與量表
