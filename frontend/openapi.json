@@ -5,6 +5,88 @@
     "version": "0.1.0"
   },
   "paths": {
+    "/api/v1/projects/import/preview": {
+      "post": {
+        "tags": [
+          "import"
+        ],
+        "summary": "Preview",
+        "operationId": "preview_api_v1_projects_import_preview_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreviewIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportPreviewOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/import/commit": {
+      "post": {
+        "tags": [
+          "import"
+        ],
+        "summary": "Commit",
+        "operationId": "commit_api_v1_projects_import_commit_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommitIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportCommitOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/projects": {
       "get": {
         "tags": [
@@ -1097,6 +1179,1001 @@
           }
         }
       }
+    },
+    "/api/v1/events": {
+      "get": {
+        "tags": [
+          "history"
+        ],
+        "summary": "List Events",
+        "operationId": "list_events_api_v1_events_get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^(none|\\d+)$"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "kind",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "due",
+                    "annotation",
+                    "status",
+                    "task",
+                    "feedback",
+                    "goal",
+                    "baseline",
+                    "project"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Kind"
+            }
+          },
+          {
+            "name": "task_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Task Id"
+            }
+          },
+          {
+            "name": "batch_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Batch Id"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 500,
+              "minimum": 1,
+              "default": 100,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HistoryListOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/history": {
+      "get": {
+        "tags": [
+          "history"
+        ],
+        "summary": "Project History",
+        "operationId": "project_history_api_v1_projects__project_id__history_get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "kind",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "due",
+                    "annotation",
+                    "status",
+                    "task",
+                    "feedback",
+                    "goal",
+                    "baseline",
+                    "project"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Kind"
+            }
+          },
+          {
+            "name": "task_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Task Id"
+            }
+          },
+          {
+            "name": "batch_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Batch Id"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 500,
+              "minimum": 1,
+              "default": 100,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HistoryListOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/gantt": {
+      "get": {
+        "tags": [
+          "history"
+        ],
+        "summary": "Project Gantt",
+        "operationId": "project_gantt_api_v1_projects__project_id__gantt_get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GanttOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ingest": {
+      "post": {
+        "tags": [
+          "inbox"
+        ],
+        "summary": "Ingest",
+        "operationId": "ingest_api_v1_ingest_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IngestIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/IngestSyncOut"
+                    },
+                    {
+                      "$ref": "#/components/schemas/IngestAsyncOut"
+                    }
+                  ],
+                  "title": "Response Ingest Api V1 Ingest Post",
+                  "discriminator": {
+                    "propertyName": "mode",
+                    "mapping": {
+                      "sync": "#/components/schemas/IngestSyncOut",
+                      "async": "#/components/schemas/IngestAsyncOut"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ingest/jobs/{job_id}": {
+      "get": {
+        "tags": [
+          "inbox"
+        ],
+        "summary": "Get Job",
+        "operationId": "get_job_api_v1_ingest_jobs__job_id__get",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngestJobOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/candidates": {
+      "get": {
+        "tags": [
+          "inbox"
+        ],
+        "summary": "List Candidates",
+        "operationId": "list_candidates_api_v1_candidates_get",
+        "parameters": [
+          {
+            "name": "state",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "open",
+                "confirmed",
+                "ignored"
+              ],
+              "type": "string",
+              "default": "open",
+              "title": "State"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CandidateListOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/candidates/{candidate_id}/confirm": {
+      "post": {
+        "tags": [
+          "inbox"
+        ],
+        "summary": "Confirm",
+        "operationId": "confirm_api_v1_candidates__candidate_id__confirm_post",
+        "parameters": [
+          {
+            "name": "candidate_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Candidate Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DecideOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/candidates/{candidate_id}/clarify": {
+      "post": {
+        "tags": [
+          "inbox"
+        ],
+        "summary": "Clarify",
+        "operationId": "clarify_api_v1_candidates__candidate_id__clarify_post",
+        "parameters": [
+          {
+            "name": "candidate_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Candidate Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DecideOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/candidates/{candidate_id}/create-task": {
+      "post": {
+        "tags": [
+          "inbox"
+        ],
+        "summary": "Create Task",
+        "operationId": "create_task_api_v1_candidates__candidate_id__create_task_post",
+        "parameters": [
+          {
+            "name": "candidate_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Candidate Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTaskIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DecideOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/candidates/{candidate_id}/ignore": {
+      "post": {
+        "tags": [
+          "inbox"
+        ],
+        "summary": "Ignore",
+        "operationId": "ignore_api_v1_candidates__candidate_id__ignore_post",
+        "parameters": [
+          {
+            "name": "candidate_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Candidate Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DecideOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/settings": {
+      "get": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "Get Settings",
+        "operationId": "get_settings_api_v1_settings_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsOut"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "Put Settings",
+        "operationId": "put_settings_api_v1_settings_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SettingsPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/settings/onboarding/complete": {
+      "post": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "Complete Onboarding",
+        "operationId": "complete_onboarding_api_v1_settings_onboarding_complete_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OnboardingIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/rubrics": {
+      "get": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "List Rubrics",
+        "operationId": "list_rubrics_api_v1_rubrics_get",
+        "parameters": [
+          {
+            "name": "active",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Active"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RubricListOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "Confirm Rubric",
+        "operationId": "confirm_rubric_api_v1_rubrics_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RubricIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RubricCreatedOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/rubrics/interview": {
+      "post": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "Interview",
+        "operationId": "interview_api_v1_rubrics_interview_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InterviewIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RubricDraftOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sources/purge": {
+      "post": {
+        "tags": [
+          "governance"
+        ],
+        "summary": "Purge Sources",
+        "operationId": "purge_sources_api_v1_sources_purge_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PurgeIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PurgeOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/export": {
+      "post": {
+        "tags": [
+          "governance"
+        ],
+        "summary": "Export",
+        "description": "直接回傳下載檔，伺服器不落地存檔（SDD 第 6 節）。",
+        "operationId": "export_api_v1_export_post",
+        "responses": {
+          "200": {
+            "description": "下載檔（Content-Disposition: attachment）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExportOut"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1624,6 +2701,182 @@
         ],
         "title": "BulkShift"
       },
+      "CandidateListOut": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CandidateOut"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "CandidateListOut"
+      },
+      "CandidateOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "delay",
+              "done",
+              "stuck",
+              "unclear",
+              "unmatched"
+            ],
+            "title": "Kind"
+          },
+          "certainty": {
+            "type": "string",
+            "enum": [
+              "sure",
+              "to_clarify",
+              "to_match"
+            ],
+            "title": "Certainty"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "open",
+              "confirmed",
+              "ignored"
+            ],
+            "title": "State"
+          },
+          "task": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CandidateTaskOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "proposed": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProposedOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "quote": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quote",
+            "description": "原文已清除時為 null"
+          },
+          "speaker": {
+            "type": "string",
+            "title": "Speaker"
+          },
+          "spoken_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Spoken At"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "suggest": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SuggestOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "certainty",
+          "state",
+          "task",
+          "proposed",
+          "quote",
+          "speaker",
+          "spoken_at",
+          "note",
+          "suggest"
+        ],
+        "title": "CandidateOut"
+      },
+      "CandidateTaskOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "latest_due": {
+            "type": "string",
+            "format": "date",
+            "title": "Latest Due"
+          },
+          "orig_due": {
+            "type": "string",
+            "format": "date",
+            "title": "Orig Due"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "latest_due",
+          "orig_due",
+          "version"
+        ],
+        "title": "CandidateTaskOut"
+      },
       "CodeLabelOut": {
         "properties": {
           "code": {
@@ -1641,6 +2894,255 @@
           "label"
         ],
         "title": "CodeLabelOut"
+      },
+      "ColumnMap": {
+        "properties": {
+          "title": {
+            "type": "integer",
+            "title": "Title"
+          },
+          "end": {
+            "type": "integer",
+            "title": "End"
+          },
+          "owner": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Owner"
+          },
+          "start": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start"
+          }
+        },
+        "type": "object",
+        "required": [
+          "title",
+          "end"
+        ],
+        "title": "ColumnMap"
+      },
+      "ColumnMapOut": {
+        "properties": {
+          "title": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "owner": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Owner"
+          },
+          "start": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start"
+          },
+          "end": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End"
+          },
+          "mapped_by": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "rule",
+                  "ai",
+                  "manual"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mapped By",
+            "description": "必填欄位對應不到時為 null，rows 為空"
+          },
+          "ai_run_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ai Run Id",
+            "description": "mapped_by 為 ai 時才出現；commit 時與 column_map 一起送回（12.7 D-3）"
+          }
+        },
+        "type": "object",
+        "required": [
+          "title",
+          "owner",
+          "start",
+          "end",
+          "mapped_by"
+        ],
+        "title": "ColumnMapOut"
+      },
+      "CommitIn": {
+        "properties": {
+          "target": {
+            "anyOf": [
+              {
+                "type": "string",
+                "const": "new"
+              },
+              {
+                "type": "integer"
+              }
+            ],
+            "title": "Target",
+            "default": "new"
+          },
+          "new_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "New Name"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/CommitRow"
+            },
+            "type": "array",
+            "title": "Rows"
+          },
+          "ai_run_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ai Run Id"
+          },
+          "column_map": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ColumnMap"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "rows"
+        ],
+        "title": "CommitIn"
+      },
+      "CommitRow": {
+        "properties": {
+          "index": {
+            "type": "integer",
+            "title": "Index"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "owner": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Owner"
+          },
+          "start": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start"
+          },
+          "end": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End"
+          },
+          "skip": {
+            "type": "boolean",
+            "title": "Skip",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "index"
+        ],
+        "title": "CommitRow"
       },
       "Complete": {
         "properties": {
@@ -1688,6 +3190,31 @@
         ],
         "title": "CompleteOut"
       },
+      "ConfirmIn": {
+        "properties": {
+          "expected_version": {
+            "type": "integer",
+            "title": "Expected Version"
+          },
+          "new_due": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "New Due"
+          }
+        },
+        "type": "object",
+        "required": [
+          "expected_version"
+        ],
+        "title": "ConfirmIn"
+      },
       "CountDays": {
         "properties": {
           "count": {
@@ -1705,6 +3232,120 @@
           "days"
         ],
         "title": "CountDays"
+      },
+      "CreateTaskIn": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "due": {
+            "type": "string",
+            "format": "date",
+            "title": "Due"
+          },
+          "owner": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Owner"
+          },
+          "project_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "title",
+          "due"
+        ],
+        "title": "CreateTaskIn"
+      },
+      "DecideOut": {
+        "properties": {
+          "candidate": {
+            "$ref": "#/components/schemas/CandidateOut"
+          },
+          "task": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TaskOut"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "忽略時不出現"
+          },
+          "event": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EventOut"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "忽略、建任務時不出現"
+          },
+          "needs_mark": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Needs Mark",
+            "description": "確認延期時才出現"
+          },
+          "warnings": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Warnings",
+            "description": "確認延期時才出現；可含 BEFORE_START（新日期早於開始日）"
+          },
+          "feedback_required": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Feedback Required",
+            "description": "確認完成時才出現"
+          }
+        },
+        "type": "object",
+        "required": [
+          "candidate"
+        ],
+        "title": "DecideOut"
       },
       "DueReasonOut": {
         "properties": {
@@ -1995,6 +3636,52 @@
         ],
         "title": "EventOut"
       },
+      "ExportOut": {
+        "properties": {
+          "exported_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Exported At"
+          },
+          "schema_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Schema Version"
+          },
+          "counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Counts"
+          },
+          "tables": {
+            "additionalProperties": {
+              "items": {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "type": "object",
+            "title": "Tables"
+          }
+        },
+        "type": "object",
+        "required": [
+          "exported_at",
+          "schema_version",
+          "counts",
+          "tables"
+        ],
+        "title": "ExportOut"
+      },
       "FromToDate": {
         "properties": {
           "from": {
@@ -2032,6 +3719,151 @@
           "to"
         ],
         "title": "FromToInt"
+      },
+      "GanttOut": {
+        "properties": {
+          "range": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FromToDate"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "沒有任務時為 null"
+          },
+          "today": {
+            "type": "string",
+            "format": "date",
+            "title": "Today"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/GanttSummary"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/GanttRowOut"
+            },
+            "type": "array",
+            "title": "Rows"
+          }
+        },
+        "type": "object",
+        "required": [
+          "range",
+          "today",
+          "summary",
+          "rows"
+        ],
+        "title": "GanttOut"
+      },
+      "GanttRowOut": {
+        "properties": {
+          "task_id": {
+            "type": "integer",
+            "title": "Task Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "owner": {
+            "type": "string",
+            "title": "Owner"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "todo",
+              "doing",
+              "done"
+            ],
+            "title": "Status"
+          },
+          "start": {
+            "type": "string",
+            "format": "date",
+            "title": "Start"
+          },
+          "orig_due": {
+            "type": "string",
+            "format": "date",
+            "title": "Orig Due"
+          },
+          "latest_due": {
+            "type": "string",
+            "format": "date",
+            "title": "Latest Due"
+          },
+          "delta_days": {
+            "type": "integer",
+            "title": "Delta Days"
+          },
+          "done_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Done Date"
+          },
+          "blocked": {
+            "type": "boolean",
+            "title": "Blocked"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "task_id",
+          "title",
+          "owner",
+          "status",
+          "start",
+          "orig_due",
+          "latest_due",
+          "delta_days",
+          "done_date",
+          "blocked",
+          "version"
+        ],
+        "title": "GanttRowOut"
+      },
+      "GanttSummary": {
+        "properties": {
+          "done": {
+            "type": "integer",
+            "title": "Done"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "delayed": {
+            "type": "integer",
+            "title": "Delayed"
+          },
+          "open_candidates": {
+            "type": "integer",
+            "title": "Open Candidates"
+          }
+        },
+        "type": "object",
+        "required": [
+          "done",
+          "total",
+          "delayed",
+          "open_candidates"
+        ],
+        "title": "GanttSummary"
       },
       "HTTPValidationError": {
         "properties": {
@@ -2072,6 +3904,789 @@
         ],
         "title": "HealthOut"
       },
+      "HistoryItemOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "ts": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Ts"
+          },
+          "project_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project Id"
+          },
+          "task_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Task Id"
+          },
+          "task_title": {
+            "type": "string",
+            "title": "Task Title"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "due",
+              "annotation",
+              "status",
+              "task",
+              "feedback",
+              "goal",
+              "baseline",
+              "project"
+            ],
+            "title": "Kind"
+          },
+          "field": {
+            "type": "string",
+            "title": "Field"
+          },
+          "from_value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "From Value"
+          },
+          "to_value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "To Value"
+          },
+          "origin": {
+            "type": "string",
+            "enum": [
+              "candidate",
+              "manual",
+              "bulk",
+              "import",
+              "baseline_correction",
+              "system"
+            ],
+            "title": "Origin"
+          },
+          "origin_ref": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Origin Ref"
+          },
+          "source_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Id"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "delta_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delta Days"
+          },
+          "mark": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "better",
+                  "worse",
+                  "none"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mark"
+          },
+          "mine": {
+            "type": "boolean",
+            "title": "Mine"
+          },
+          "ref_event_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ref Event Id"
+          },
+          "batch_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Batch Id"
+          },
+          "actor": {
+            "type": "string",
+            "title": "Actor"
+          },
+          "extra": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Extra"
+          },
+          "project_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project Name"
+          },
+          "effective_mark": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "better",
+                  "worse",
+                  "none"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effective Mark"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceRefOut"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "ts",
+          "project_id",
+          "task_id",
+          "task_title",
+          "kind",
+          "field",
+          "from_value",
+          "to_value",
+          "origin",
+          "origin_ref",
+          "source_id",
+          "reason",
+          "note",
+          "delta_days",
+          "mark",
+          "mine",
+          "ref_event_id",
+          "batch_id",
+          "actor",
+          "extra",
+          "project_name",
+          "effective_mark",
+          "source"
+        ],
+        "title": "HistoryItemOut"
+      },
+      "HistoryListOut": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/HistoryItemOut"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "HistoryListOut"
+      },
+      "ImportCommitOut": {
+        "properties": {
+          "project_id": {
+            "type": "integer",
+            "title": "Project Id"
+          },
+          "created": {
+            "type": "integer",
+            "title": "Created"
+          },
+          "skipped": {
+            "type": "integer",
+            "title": "Skipped"
+          },
+          "event_id": {
+            "type": "integer",
+            "title": "Event Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "project_id",
+          "created",
+          "skipped",
+          "event_id"
+        ],
+        "title": "ImportCommitOut"
+      },
+      "ImportIssueOut": {
+        "properties": {
+          "level": {
+            "type": "string",
+            "enum": [
+              "error",
+              "warn"
+            ],
+            "title": "Level"
+          },
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "level",
+          "code",
+          "message"
+        ],
+        "title": "ImportIssueOut"
+      },
+      "ImportPreviewOut": {
+        "properties": {
+          "ai_status": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "unavailable",
+              "invalid_output"
+            ],
+            "title": "Ai Status"
+          },
+          "header": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Header"
+          },
+          "column_map": {
+            "$ref": "#/components/schemas/ColumnMapOut"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/ImportRowOut"
+            },
+            "type": "array",
+            "title": "Rows"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/ImportSummary"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ai_status",
+          "header",
+          "column_map",
+          "rows",
+          "summary"
+        ],
+        "title": "ImportPreviewOut"
+      },
+      "ImportRowOut": {
+        "properties": {
+          "index": {
+            "type": "integer",
+            "title": "Index"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "owner": {
+            "type": "string",
+            "title": "Owner"
+          },
+          "start": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start"
+          },
+          "end": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End"
+          },
+          "blocking": {
+            "type": "boolean",
+            "title": "Blocking"
+          },
+          "issues": {
+            "items": {
+              "$ref": "#/components/schemas/ImportIssueOut"
+            },
+            "type": "array",
+            "title": "Issues"
+          }
+        },
+        "type": "object",
+        "required": [
+          "index",
+          "title",
+          "owner",
+          "start",
+          "end",
+          "blocking",
+          "issues"
+        ],
+        "title": "ImportRowOut"
+      },
+      "ImportSummary": {
+        "properties": {
+          "importable": {
+            "type": "integer",
+            "title": "Importable"
+          },
+          "blocking": {
+            "type": "integer",
+            "title": "Blocking"
+          }
+        },
+        "type": "object",
+        "required": [
+          "importable",
+          "blocking"
+        ],
+        "title": "ImportSummary"
+      },
+      "IngestAsyncOut": {
+        "properties": {
+          "mode": {
+            "type": "string",
+            "const": "async",
+            "title": "Mode"
+          },
+          "job_id": {
+            "type": "integer",
+            "title": "Job Id"
+          },
+          "status": {
+            "type": "string",
+            "const": "queued",
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "mode",
+          "job_id",
+          "status"
+        ],
+        "title": "IngestAsyncOut"
+      },
+      "IngestIn": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "project_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "title": "IngestIn"
+      },
+      "IngestJobOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "queued",
+              "running",
+              "succeeded",
+              "failed"
+            ],
+            "title": "Status"
+          },
+          "attempts": {
+            "type": "integer",
+            "title": "Attempts"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/IngestJobResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "status",
+          "attempts",
+          "result",
+          "error"
+        ],
+        "title": "IngestJobOut"
+      },
+      "IngestJobResult": {
+        "properties": {
+          "created": {
+            "type": "integer",
+            "title": "Created"
+          },
+          "skipped": {
+            "type": "integer",
+            "title": "Skipped"
+          },
+          "duplicates": {
+            "type": "integer",
+            "title": "Duplicates"
+          },
+          "unparsed_lines": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Unparsed Lines"
+          },
+          "ai_status": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "unavailable",
+              "invalid_output"
+            ],
+            "title": "Ai Status"
+          },
+          "candidate_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Candidate Ids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "created",
+          "skipped",
+          "duplicates",
+          "unparsed_lines",
+          "ai_status",
+          "candidate_ids"
+        ],
+        "title": "IngestJobResult"
+      },
+      "IngestSummary": {
+        "properties": {
+          "created": {
+            "type": "integer",
+            "title": "Created"
+          },
+          "skipped": {
+            "type": "integer",
+            "title": "Skipped"
+          },
+          "duplicates": {
+            "type": "integer",
+            "title": "Duplicates"
+          },
+          "unparsed_lines": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Unparsed Lines"
+          }
+        },
+        "type": "object",
+        "required": [
+          "created",
+          "skipped",
+          "duplicates",
+          "unparsed_lines"
+        ],
+        "title": "IngestSummary"
+      },
+      "IngestSyncOut": {
+        "properties": {
+          "mode": {
+            "type": "string",
+            "const": "sync",
+            "title": "Mode"
+          },
+          "ai_status": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "unavailable",
+              "invalid_output"
+            ],
+            "title": "Ai Status"
+          },
+          "result": {
+            "$ref": "#/components/schemas/IngestSummary"
+          },
+          "candidates": {
+            "items": {
+              "$ref": "#/components/schemas/CandidateOut"
+            },
+            "type": "array",
+            "title": "Candidates"
+          }
+        },
+        "type": "object",
+        "required": [
+          "mode",
+          "ai_status",
+          "result",
+          "candidates"
+        ],
+        "title": "IngestSyncOut"
+      },
+      "InterviewAnswers": {
+        "properties": {
+          "q1": {
+            "type": "string",
+            "title": "Q1"
+          },
+          "q2": {
+            "type": "string",
+            "title": "Q2"
+          },
+          "q3": {
+            "type": "string",
+            "title": "Q3"
+          }
+        },
+        "type": "object",
+        "required": [
+          "q1",
+          "q2",
+          "q3"
+        ],
+        "title": "InterviewAnswers"
+      },
+      "InterviewIn": {
+        "properties": {
+          "q1": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Q1"
+          },
+          "q2": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Q2"
+          },
+          "q3": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Q3"
+          }
+        },
+        "type": "object",
+        "required": [
+          "q1",
+          "q2",
+          "q3"
+        ],
+        "title": "InterviewIn"
+      },
+      "InterviewRecord": {
+        "properties": {
+          "q1": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Q1"
+          },
+          "q2": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Q2"
+          },
+          "q3": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Q3"
+          },
+          "draft": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Draft"
+          }
+        },
+        "type": "object",
+        "required": [
+          "q1",
+          "q2",
+          "q3"
+        ],
+        "title": "InterviewRecord"
+      },
+      "OnboardingIn": {
+        "properties": {
+          "skipped": {
+            "type": "boolean",
+            "title": "Skipped",
+            "default": false
+          }
+        },
+        "type": "object",
+        "title": "OnboardingIn"
+      },
       "OwnerChange": {
         "properties": {
           "expected_version": {
@@ -2089,6 +4704,53 @@
           "owner"
         ],
         "title": "OwnerChange"
+      },
+      "PreviewIn": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "type": "string",
+                "const": "new"
+              },
+              {
+                "type": "integer"
+              }
+            ],
+            "title": "Target",
+            "default": "new"
+          },
+          "new_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "New Name"
+          },
+          "column_map": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ColumnMap"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "title": "PreviewIn"
       },
       "ProjectCreate": {
         "properties": {
@@ -2388,6 +5050,50 @@
         ],
         "title": "ProjectPatchOut"
       },
+      "ProposedOut": {
+        "properties": {
+          "new_due": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "New Due"
+          }
+        },
+        "type": "object",
+        "title": "ProposedOut"
+      },
+      "PurgeIn": {
+        "properties": {
+          "confirm": {
+            "type": "boolean",
+            "title": "Confirm"
+          }
+        },
+        "type": "object",
+        "required": [
+          "confirm"
+        ],
+        "title": "PurgeIn"
+      },
+      "PurgeOut": {
+        "properties": {
+          "purged": {
+            "type": "integer",
+            "title": "Purged"
+          }
+        },
+        "type": "object",
+        "required": [
+          "purged"
+        ],
+        "title": "PurgeOut"
+      },
       "ReasonsOut": {
         "properties": {
           "due": {
@@ -2420,6 +5126,453 @@
         ],
         "title": "ReasonsOut"
       },
+      "RubricCreatedOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "version"
+        ],
+        "title": "RubricCreatedOut"
+      },
+      "RubricDraftOut": {
+        "properties": {
+          "ai_status": {
+            "type": "string",
+            "const": "ok",
+            "title": "Ai Status"
+          },
+          "draft": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Draft"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ai_status",
+          "draft"
+        ],
+        "title": "RubricDraftOut"
+      },
+      "RubricIn": {
+        "properties": {
+          "levels": {
+            "items": {
+              "type": "string",
+              "maxLength": 200,
+              "minLength": 1
+            },
+            "type": "array",
+            "maxItems": 5,
+            "minItems": 5,
+            "title": "Levels"
+          },
+          "interview": {
+            "$ref": "#/components/schemas/InterviewRecord"
+          }
+        },
+        "type": "object",
+        "required": [
+          "levels",
+          "interview"
+        ],
+        "title": "RubricIn"
+      },
+      "RubricListOut": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/RubricOut"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "RubricListOut"
+      },
+      "RubricOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "levels": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Levels"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "default",
+              "interview"
+            ],
+            "title": "Source"
+          },
+          "interview": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/InterviewAnswers"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "version",
+          "levels",
+          "source",
+          "interview",
+          "created_at"
+        ],
+        "title": "RubricOut"
+      },
+      "SettingsOut": {
+        "properties": {
+          "default_scope": {
+            "type": "string",
+            "enum": [
+              "work",
+              "private"
+            ],
+            "title": "Default Scope"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "project_owner",
+              "wbs_owner",
+              "both"
+            ],
+            "title": "Role"
+          },
+          "report_audience": {
+            "type": "string",
+            "enum": [
+              "manager",
+              "client",
+              "none"
+            ],
+            "title": "Report Audience"
+          },
+          "confirm_time": {
+            "type": "string",
+            "title": "Confirm Time"
+          },
+          "confirm_cap_min": {
+            "type": "integer",
+            "title": "Confirm Cap Min"
+          },
+          "remind_default": {
+            "type": "string",
+            "enum": [
+              "morning",
+              "eve_before",
+              "none"
+            ],
+            "title": "Remind Default"
+          },
+          "retention_days": {
+            "type": "integer",
+            "title": "Retention Days"
+          },
+          "energy_def_high": {
+            "type": "string",
+            "title": "Energy Def High"
+          },
+          "energy_def_mid": {
+            "type": "string",
+            "title": "Energy Def Mid"
+          },
+          "energy_def_low": {
+            "type": "string",
+            "title": "Energy Def Low"
+          },
+          "goal_types_enabled": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "growth",
+                "time",
+                "expectation"
+              ]
+            },
+            "type": "array",
+            "title": "Goal Types Enabled"
+          },
+          "onboarded_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Onboarded At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "default_scope",
+          "role",
+          "report_audience",
+          "confirm_time",
+          "confirm_cap_min",
+          "remind_default",
+          "retention_days",
+          "energy_def_high",
+          "energy_def_mid",
+          "energy_def_low",
+          "goal_types_enabled",
+          "onboarded_at"
+        ],
+        "title": "SettingsOut"
+      },
+      "SettingsPatch": {
+        "properties": {
+          "default_scope": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "work",
+                  "private"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Scope"
+          },
+          "role": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "project_owner",
+                  "wbs_owner",
+                  "both"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role"
+          },
+          "report_audience": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "manager",
+                  "client",
+                  "none"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Report Audience"
+          },
+          "confirm_time": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "12:00",
+                  "18:00",
+                  "21:00"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confirm Time"
+          },
+          "confirm_cap_min": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "enum": [
+                  3,
+                  5,
+                  10
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confirm Cap Min"
+          },
+          "remind_default": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "morning",
+                  "eve_before",
+                  "none"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Remind Default"
+          },
+          "retention_days": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "enum": [
+                  30,
+                  90,
+                  180
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retention Days"
+          },
+          "energy_def_high": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Energy Def High"
+          },
+          "energy_def_mid": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Energy Def Mid"
+          },
+          "energy_def_low": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Energy Def Low"
+          },
+          "goal_types_enabled": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "growth",
+                    "time",
+                    "expectation"
+                  ]
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Goal Types Enabled"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "SettingsPatch"
+      },
+      "SourceRefOut": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "quote": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quote",
+            "description": "原文已清除或沒有來源時為 null"
+          },
+          "purged": {
+            "type": "boolean",
+            "title": "Purged"
+          }
+        },
+        "type": "object",
+        "required": [
+          "label",
+          "quote",
+          "purged"
+        ],
+        "title": "SourceRefOut"
+      },
       "StatusChange": {
         "properties": {
           "expected_version": {
@@ -2441,6 +5594,36 @@
           "status"
         ],
         "title": "StatusChange"
+      },
+      "SuggestOut": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "delay",
+              "done",
+              "stuck"
+            ],
+            "title": "Kind"
+          },
+          "new_due": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "New Due"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind"
+        ],
+        "title": "SuggestOut"
       },
       "TaskCreate": {
         "properties": {

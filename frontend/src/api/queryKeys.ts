@@ -24,4 +24,9 @@ export const keys = {
   project: (id: number) => [...queryRoots.projects, id] as const,
   projectList: (filter: ProjectFilter = {}) => [...queryRoots.projects, "list", { include_archived: filter.include_archived ?? false }] as const,
   timeManagement: (filter: StatsFilter = {}) => [...queryRoots.timeManagement, filter] as const,
+  // Dev-B 12.8 收件匣、12.11 設定與量表
+  candidates: (state: "open" | "confirmed" | "ignored") => ["candidates", state] as const,
+  ingestJob: (id: number) => ["ingest", "jobs", id] as const,
+  settings: ["settings"] as const,
+  activeRubric: ["rubrics", "active"] as const,
 };

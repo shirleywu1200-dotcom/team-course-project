@@ -6,7 +6,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { ApiError, api, newIdempotencyKey } from "../../api/client";
-import { keys } from "../../api/queries";
+import { queryRoots } from "../../api/queryKeys";
 import type { ColumnIndexes, ImportCommitResult, ImportPreview } from "../../api/types";
 import { ErrorBanner } from "../../components/standin/ErrorBanner";
 import { buildCommitBody, canCommit, type Target } from "./commit";
@@ -55,11 +55,11 @@ export function ImportPage() {
     onSuccess: () => {
       preview.reset();
       setText("");
-      qc.invalidateQueries({ queryKey: keys.projects });
+      qc.invalidateQueries({ queryKey: queryRoots.projects });
       qc.invalidateQueries({ queryKey: ["tasks"] });
     },
     onError: (err) => {
-      if (!commitErrorMessage(err)) qc.invalidateQueries({ queryKey: keys.projects });
+      if (!commitErrorMessage(err)) qc.invalidateQueries({ queryKey: queryRoots.projects });
     },
   });
 

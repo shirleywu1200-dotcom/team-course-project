@@ -11,7 +11,7 @@ export interface Dest {
 }
 
 export function TargetPicker({ dest, onChange }: { dest: Dest; onChange: (d: Dest) => void }) {
-  const projects = useQuery({ queryKey: keys.projects, queryFn: fetchProjects });
+  const projects = useQuery({ queryKey: keys.projectList(), queryFn: fetchProjects });
 
   return (
     <section className="card" aria-label="匯入到">
