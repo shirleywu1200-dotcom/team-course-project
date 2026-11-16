@@ -60,12 +60,37 @@ def time_mgmt_stats(session: Connection, date_from: date | None = None, date_to:
     rows = events_repo.mine_due_events_with_effective_mark(session, date_from, date_to)
     better = [r for r in rows if r["effective_mark"] == "better"]
     worse = [r for r in rows if r["effective_mark"] == "worse"]
+    energy = _energy_of_tasks(session, {r["task_id"] for r in worse})
+    judgement, note = judge(len(better), len(worse), energy)
     return {
         "better": {"count": len(better), "days": sum(abs(r["delta_days"]) for r in better)},
         "worse": {"count": len(worse), "days": sum(abs(r["delta_days"]) for r in worse)},
         "none": sum(1 for r in rows if r["effective_mark"] == "none"),
         "unmarked": sum(1 for r in rows if r["effective_mark"] is None),
-        "worse_by_energy": _energy_of_tasks(session, {r["task_id"] for r in worse}),
+        "worse_by_energy": energy,
         "min_sample": MIN_SAMPLE,
-        "judgement": None,   # 5 筆以上的判讀規則 spec 未定義（DA-12）
+        "judgement": judgement,
+        "judgement_note": note,
     }
+
+
+ENERGY_LABELS = {"high": "高", "mid": "中", "low": "低"}   # not_done 不算一個等級
+
+
+def judge(better: int, worse: int, energy: dict[str, int]) -> tuple[str | None, str]:
+    """二元判讀＋精力洞察（FR-MRK-07、DA-12；#15 裁定）。由程式規則計算，不用 AI。"""
+    sample = better + worse
+    if sample < MIN_SAMPLE:
+        return None, f"樣本 {sample} 筆，不到 {MIN_SAMPLE} 筆，只顯示不下結論"
+    if better > worse:
+        judgement = "時間管理偏向變好"
+    elif worse > better:
+        judgement = "偏向變差，建議檢視"
+    else:
+        judgement = "持平"
+    note = f"變好 {better} 次、變差 {worse} 次。"
+    total = sum(energy.values())   # 分母含 not_done：被標變差的任務數
+    for level, label in ENERGY_LABELS.items():
+        if energy[level] * 2 > total:   # 嚴格過半；剛好一半不算
+            note += f"變差多集中在{label}精力任務。"
+    return judgement, note
