@@ -8,7 +8,9 @@
     cd backend
     PYTHONUTF8=1 .venv/Scripts/python ../scripts/eval_ai01.py --model claude-sonnet-5-5
     選項：--cases 檔案（預設 scripts/eval_data/ai01_cases.json）、--limit 10（只跑前 N 則）、--max-cost 1.0（美元）
-判定：每則案例經 R2 規則後的 kind、task_id、new_due 與 expect 全部相同才算命中。
+判定：每則訊息經 R2 規則後的 kind、task_id、new_due 與 expect 全部相同才算命中。
+上下文案例（有 messages 陣列）整段一起送一次，裡面每則訊息各自計分，id 記為 c16-1、c16-2。
+延遲與 token 是整次呼叫的數字，上下文案例的每一列重複顯示。
 """
 
 import argparse
@@ -42,13 +44,18 @@ def cost(model: str, tin: int, tout: int) -> float:
     return (tin * pin + tout * pout) / 1_000_000
 
 
-def outcome(output: dict, case: dict, task_ids: set[int], today: date) -> dict:
-    drafts = r2.apply(output, {1: case["text"]}, task_ids, today)
-    if not drafts:
-        return {"kind": "none", "task_id": None, "new_due": None}
-    d = drafts[0]
-    new_due = d.proposed["new_due"] if d.kind == "delay" else None
-    return {"kind": d.kind, "task_id": d.task_id, "new_due": new_due}
+def messages_of(case: dict) -> list[dict]:
+    """單則案例（speaker/text/expect）或上下文案例（messages 陣列）都轉成訊息清單。"""
+    return case.get("messages") or [{k: case[k] for k in ("speaker", "text", "expect")}]
+
+
+def outcomes(output: dict, texts: dict[int, str], task_ids: set[int], today: date) -> dict[int, dict]:
+    """經 R2 後每則訊息（ref）在收件匣的結果；沒有候選的訊息為 none。"""
+    got = {ref: {"kind": "none", "task_id": None, "new_due": None} for ref in texts}
+    for d in r2.apply(output, texts, task_ids, today):
+        got[d.source_id] = {"kind": d.kind, "task_id": d.task_id,
+                            "new_due": d.proposed["new_due"] if d.kind == "delay" else None}
+    return got
 
 
 def main() -> int:
@@ -66,7 +73,7 @@ def main() -> int:
     task_ids = {t["id"] for t in data["tasks"]}
 
     est = cost(args.model, EST_IN, EST_OUT) * len(cases)
-    print(f"模型 {args.model}，{len(cases)} 則，估計約 ${est:.3f}（上限 ${args.max_cost}）")
+    print(f"模型 {args.model}，{len(cases)} 次呼叫，估計約 ${est:.3f}（上限 ${args.max_cost}）")
     if input("確定執行？輸入 y：").strip().lower() != "y":
         print("已取消")
         return 1
@@ -79,34 +86,39 @@ def main() -> int:
         if spent >= args.max_cost:
             print(f"已達費用上限 ${args.max_cost}，停止")
             break
+        msgs = messages_of(case)   # 上下文案例整段一起送，與實際收件相同
+        texts = {i: m["text"] for i, m in enumerate(msgs, 1)}
         payload = {"today": data["today"], "tasks": data["tasks"],
-                   "messages": [{"ref": 1, "speaker": case["speaker"], "spoken_at": None, "text": case["text"]}]}
+                   "messages": [{"ref": i, "speaker": m["speaker"], "spoken_at": None, "text": m["text"]}
+                                for i, m in enumerate(msgs, 1)]}
         ai.last_usage = (0, 0)
         started = time.monotonic()
         raw = None
         try:
             raw = ai.call("AI-01", payload)
-            got = outcome(raw, case, task_ids, today)
+            got_by_ref = outcomes(raw, texts, task_ids, today)
         except AIError as exc:
-            got = {"error": type(exc).__name__}
+            got_by_ref = {i: {"error": type(exc).__name__} for i in texts}
         latencies.append(time.monotonic() - started)
         tin, tout = ai.last_usage
         tin_sum, tout_sum = tin_sum + tin, tout_sum + tout
         spent += cost(args.model, tin, tout)
-        hit = got == case["expect"]
-        by_cat[case["category"]][0] += hit
-        by_cat[case["category"]][1] += 1
-        if not hit:
-            misses.append((case["id"], case["category"], case["expect"], got))
-        exp = case["expect"]
-        rows.append({"id": case["id"], "分類": case["category"], "發言者": case["speaker"], "訊息": case["text"],
-                     "命中": "Y" if hit else "N",
-                     "預期_kind": exp["kind"], "預期_task_id": exp["task_id"], "預期_new_due": exp["new_due"],
-                     "實際_kind": got.get("kind", got.get("error")), "實際_task_id": got.get("task_id"),
-                     "實際_new_due": got.get("new_due"),
-                     "AI原始輸出": "" if raw is None else json.dumps(raw, ensure_ascii=False),
-                     "延遲秒": f"{latencies[-1]:.1f}", "輸入token": tin, "輸出token": tout,
-                     "檢視判定": "", "備註": ""})
+        for i, m in enumerate(msgs, 1):   # 每則訊息各自計分
+            mid = case["id"] if len(msgs) == 1 else f"{case['id']}-{i}"
+            exp, got = m["expect"], got_by_ref[i]
+            hit = got == exp
+            by_cat[case["category"]][0] += hit
+            by_cat[case["category"]][1] += 1
+            if not hit:
+                misses.append((mid, case["category"], exp, got))
+            rows.append({"id": mid, "分類": case["category"], "發言者": m["speaker"], "訊息": m["text"],
+                         "命中": "Y" if hit else "N",
+                         "預期_kind": exp["kind"], "預期_task_id": exp["task_id"], "預期_new_due": exp["new_due"],
+                         "實際_kind": got.get("kind", got.get("error")), "實際_task_id": got.get("task_id"),
+                         "實際_new_due": got.get("new_due"),
+                         "AI原始輸出": "" if raw is None else json.dumps(raw, ensure_ascii=False),
+                         "延遲秒": f"{latencies[-1]:.1f}", "輸入token": tin, "輸出token": tout,
+                         "檢視判定": "", "備註": ""})
 
     done = sum(n for _, n in by_cat.values())
     hits = sum(h for h, _ in by_cat.values())
