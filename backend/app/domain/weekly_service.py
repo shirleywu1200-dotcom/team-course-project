@@ -2,18 +2,19 @@
 
 流程：彙整（一個交易）→ 在交易外呼叫 AI-05 → 存檔（一個交易）。AI 呼叫期間不持有資料庫連線。
 三個端點的輸出相同；GET 用存下的 ai_items 對目前的歷程重新對帳（#18 第 1 點 (b)）。
-AI-05 的 ai_runs 紀錄（FR-AI-02）等 PR #20 合併後沿用 Dev-B 的 ai_runs_repo 補上（Phase 10 第三段）。
+每次 AI 嘗試各寫一列 ai_runs（FR-AI-02），在報表交易之外，所以存檔失敗也留得下紀錄。
 """
 
 import logging
+import time
 from datetime import date, timedelta
 
 from sqlalchemy import Connection
 
-from app.ai.client import AIClient, AIInvalidOutput
+from app.ai.client import DEFAULT_TIMEOUT_S, AIClient, AIInvalidOutput, AITimeout
 from app.clock import get_clock
 from app.db.database import Database
-from app.db.repo import reports_repo, weekly_repo
+from app.db.repo import ai_run_log, reports_repo, weekly_repo
 from app.domain import ai05, weekly_report
 from app.domain.due import check_date_range
 from app.errors import DomainError
@@ -21,6 +22,8 @@ from app.errors import DomainError
 log = logging.getLogger("g4")
 
 MANUAL_MAX_CHARS = 20_000
+MAX_ATTEMPTS = 3                       # 逾時與格式錯誤最多重試 2 次（spec 5.14、#22）
+RETRYABLE = {"timeout", "invalid_output"}
 
 
 def check_week_start(week_start: date, today: date) -> None:
@@ -31,18 +34,36 @@ def check_week_start(week_start: date, today: date) -> None:
     check_date_range(week_start, today)
 
 
-def _ask_ai(ai: AIClient, data: weekly_report.WeekData) -> tuple[str, str | None, list[dict] | None]:
-    """回傳 (ai_status, draft, items)。逾時與其他錯誤一律算 unavailable（#18 J3）；log 只記類別。"""
+def _attempt(ai: AIClient, payload: dict, data: weekly_report.WeekData) -> tuple[str, str | None, tuple | None]:
+    """呼叫一次 AI-05。回傳 (ai_runs.status, error, (draft, items) 或 None)。"""
     try:
-        draft, items = ai05.parse_output(ai.call(ai05.NODE, ai05.build_payload(data)))
-    except AIInvalidOutput:
-        return "invalid_output", None, None
+        draft, items = ai05.parse_output(ai.call(ai05.NODE, payload, timeout_s=DEFAULT_TIMEOUT_S))
+    except AITimeout as exc:
+        return "timeout", type(exc).__name__, None
+    except AIInvalidOutput as exc:
+        return "invalid_output", type(exc).__name__, None
     except Exception as exc:   # noqa: BLE001 供應商可能丟出任何例外；AI 失敗一律走退路（spec 5.3）
-        log.warning("AI-05 失敗：%s", type(exc).__name__)
-        return "unavailable", None, None
-    if not weekly_report.reconcile(items, data):   # R4 對不上也算失敗（#18 J2）
-        return "invalid_output", None, None
-    return "ok", draft, items
+        return "error", type(exc).__name__, None
+    if not weekly_report.reconcile(items, data):   # R4 對不上：記成格式不合，不重試（#18 J2、K2）
+        return "invalid_output", "R4_MISMATCH", None
+    return "ok", None, (draft, items)
+
+
+def _ask_ai(db: Database, ai: AIClient, data: weekly_report.WeekData) -> tuple[str, str | None, list[dict] | None]:
+    """回傳 (ai_status, draft, items)。最終狀態以最後一次嘗試為準（#18 J3、K3）；log、error 只記類別。"""
+    payload = ai05.build_payload(data)
+    for attempt in range(1, MAX_ATTEMPTS + 1):
+        started = time.monotonic()
+        status, error, result = _attempt(ai, payload, data)
+        run = {"node_id": ai05.NODE, "status": status, "attempt": attempt, "error": error,
+               "latency_ms": int((time.monotonic() - started) * 1000), "created_at": get_clock().now()}
+        db.run(lambda c, r=run: ai_run_log.insert(c, r))   # raw_output 不存（#18 K1）
+        if result is not None:
+            return "ok", *result
+        if status not in RETRYABLE or error == "R4_MISMATCH":
+            break
+    log.warning("AI-05 失敗：%s", error)
+    return ("invalid_output" if status == "invalid_output" else "unavailable"), None, None
 
 
 def _view(conn: Connection, row: dict) -> dict:
@@ -65,7 +86,7 @@ def _view(conn: Connection, row: dict) -> dict:
 def generate(db: Database, ai: AIClient, week_start: date) -> dict:
     check_week_start(week_start, get_clock().today())
     data = db.run(lambda c: weekly_report.collect(c, week_start))
-    status, draft, items = _ask_ai(ai, data)
+    status, draft, items = _ask_ai(db, ai, data)
 
     def store(conn: Connection) -> dict:
         now = get_clock().now()

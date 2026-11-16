@@ -12,6 +12,7 @@ from app.ai.client import AIInvalidOutput
 from app.domain.weekly_report import SECTIONS, WeekData
 
 NODE = "AI-05"
+DRAFT_MAX_CHARS = 20_000   # 與人工版同一個上限（#18 K8）
 
 
 def _iso(value):
@@ -35,10 +36,15 @@ def parse_output(output) -> tuple[str, list[dict]]:
     if not isinstance(output, dict) or not isinstance(output.get("draft"), str) \
             or not isinstance(output.get("items"), list):
         raise AIInvalidOutput(NODE)
+    if not output["draft"].strip() or len(output["draft"]) > DRAFT_MAX_CHARS:   # #18 K8
+        raise AIInvalidOutput(NODE)
     items: list[dict] = []
     for raw in output["items"]:
-        if not isinstance(raw, dict) or raw.get("section") not in SECTIONS or not _is_id(raw.get("task_id")) \
-                or not (raw.get("event_id") is None or _is_id(raw.get("event_id"))):
+        if not isinstance(raw, dict) or raw.get("section") not in SECTIONS or not _is_id(raw.get("task_id")):
+            raise AIInvalidOutput(NODE)
+        event_id = raw.get("event_id")
+        # done／delay 必須帶事件 id，next 必須為 null（spec 5.14）
+        if (raw["section"] == "next") != (event_id is None) or not (event_id is None or _is_id(event_id)):
             raise AIInvalidOutput(NODE)
         item = {"section": raw["section"], "task_id": raw["task_id"], "event_id": raw.get("event_id")}
         if item not in items:   # 重複的項目合併（#18 J9）

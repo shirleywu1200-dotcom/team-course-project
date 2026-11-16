@@ -78,3 +78,24 @@ def test_0004_downgrade_and_upgrade_with_data():
     finally:
         eng.dispose()
         drop_db(name)
+
+
+def test_ai_runs_survive_when_report_write_fails(app, db, seed, monkeypatch, query):
+    """ai_runs 在報表交易之外寫入：存檔失敗（500）時，AI 呼叫紀錄仍在（FR-AI-02、K4）。"""
+    from fastapi.testclient import TestClient
+
+    from app.db.repo import reports_repo
+    from tests.acceptance.test_weekly_report import AI_OK, DATA, DRAFT, WEEK
+    from tests.conftest import TEST_TOKEN
+
+    seed(DATA)
+    app.state.ai.script("AI-05", AI_OK)
+
+    def boom(*a, **k):
+        raise RuntimeError("store failed")
+
+    monkeypatch.setattr(reports_repo, "save_success", boom)
+    with TestClient(app, headers={"Authorization": f"Bearer {TEST_TOKEN}"}) as c:
+        assert c.post(DRAFT, json={"week_start": WEEK}).status_code == 500
+    assert [r["status"] for r in query("SELECT status FROM ai_runs")] == ["ok"]
+    assert query("SELECT count(*) AS n FROM reports")[0]["n"] == 0

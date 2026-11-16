@@ -5,13 +5,14 @@ Dev-A 暫代撰寫：issue #18 裁定 QC 帳號定案前由 Dev-A 自補，QC-1 
 #18 H1、H2、J1～J10 尚待產品負責人確認，本檔依預設撰寫；AI-05 的輸出格式依 #22 的提案，定案後調整。
 """
 
+import copy
 import json
 from datetime import datetime
 
 import pytest
 from sqlalchemy import text
 
-from app.ai.client import AIInvalidOutput, AITimeout, FakeAIClient
+from app.ai.client import DEFAULT_TIMEOUT_S, AIInvalidOutput, AITimeout, AIUnavailable, FakeAIClient
 from app.clock import TZ
 
 DRAFT = "/api/v1/reports/weekly/draft"
@@ -132,7 +133,7 @@ def test_unreconciled_items_fall_back(client, data, ai, query, bad):
     {"draft": 3, "items": []},
 ])
 def test_malformed_output_is_invalid(client, data, ai, output):
-    ai.script("AI-05", output)
+    ai.script("AI-05", output, output, output)   # 格式錯誤會重試，共 3 次（spec 5.14；2026-11-16 第三段修改）
     body = draft(client).json()
     assert (body["ai_status"], body["validated"]) == ("invalid_output", False)
 
@@ -140,7 +141,7 @@ def test_malformed_output_is_invalid(client, data, ai, output):
 @pytest.mark.parametrize(("error", "status"), [(AIInvalidOutput, "invalid_output"), (AITimeout, "unavailable"),
                                                (RuntimeError(MARK), "unavailable")])
 def test_ai_errors_map_to_status_and_leak_nothing(client, data, ai, caplog, error, status):
-    ai.script("AI-05", error)
+    ai.script("AI-05", error, error, error)   # 逾時與格式錯誤會重試，共 3 次（spec 5.14；2026-11-16 第三段修改）
     r = draft(client)
     assert r.status_code == 200 and r.json()["ai_status"] == status
     assert MARK not in r.text and MARK not in caplog.text
@@ -305,3 +306,159 @@ def test_requires_token_and_has_no_side_effect(app, data, query):
         assert anon.post(DRAFT, json={"week_start": WEEK}).status_code == 401
         assert anon.get(ONE.format(1), headers={"Authorization": "Bearer wrong"}).status_code == 401
     assert rows(query) == []
+
+
+# ---------- 第三段：AI-05 的 ai_runs 紀錄與重試（FR-AI-02、spec 5.14、#22、#18 K1～K8 預設）----------
+
+TOKEN_LIKE = "sk-ant-機密標記XYZ-0000"
+
+
+def runs(query):
+    return query("SELECT node_id, job_id, status, attempt, latency_ms, raw_output, error FROM ai_runs ORDER BY id")
+
+
+def statuses(query):
+    return [(r["status"], r["attempt"]) for r in runs(query)]
+
+
+def test_success_writes_one_run(client, data, ai, query):
+    ai.script("AI-05", AI_OK)
+    draft(client)
+    [r] = runs(query)
+    assert (r["node_id"], r["job_id"], r["status"], r["attempt"], r["error"], r["raw_output"]) == \
+        ("AI-05", None, "ok", 1, None, None)   # K1：AI-05 不存 raw_output
+    assert r["latency_ms"] >= 0
+
+
+@pytest.mark.parametrize(("script", "expected", "final"), [
+    ([AITimeout, AI_OK], [("timeout", 1), ("ok", 2)], "ok"),
+    ([AIInvalidOutput, AI_OK], [("invalid_output", 1), ("ok", 2)], "ok"),
+    ([{"items": []}, AI_OK], [("invalid_output", 1), ("ok", 2)], "ok"),            # 回傳物件驗證不過
+    ([AITimeout, AIInvalidOutput, AI_OK], [("timeout", 1), ("invalid_output", 2), ("ok", 3)], "ok"),
+    ([AIInvalidOutput] * 4, [("invalid_output", 1), ("invalid_output", 2), ("invalid_output", 3)], "invalid_output"),
+    ([AITimeout] * 4, [("timeout", 1), ("timeout", 2), ("timeout", 3)], "unavailable"),
+    ([AIInvalidOutput, AITimeout, AITimeout], [("invalid_output", 1), ("timeout", 2), ("timeout", 3)], "unavailable"),
+    ([AIInvalidOutput, AIUnavailable], [("invalid_output", 1), ("error", 2)], "unavailable"),   # 不可用立刻停
+    ([RuntimeError("x")], [("error", 1)], "unavailable"),                                     # 未預期錯誤不重試
+])
+def test_retry_sequences(client, data, ai, query, script, expected, final):
+    ai.script("AI-05", *script)
+    r = draft(client)
+    assert r.status_code == 200 and r.json()["ai_status"] == final   # AC-50：失敗也 200
+    assert statuses(query) == expected and len(ai.calls) == len(expected)
+    if final != "ok":
+        assert r.json()["draft"] is None and r.json()["validated"] is False
+
+
+def test_unavailable_writes_one_error_run(client, data, ai, query):
+    draft(client)   # 沒排輸出 → AIUnavailable
+    assert [(r["status"], r["error"]) for r in runs(query)] == [("error", "AIUnavailable")]
+
+
+def test_r4_mismatch_is_recorded_and_not_retried(client, data, ai, query):
+    bad = {"draft": f"{MARK} 初稿", "items": [{"section": "delay", "task_id": 2, "event_id": 999}]}
+    ai.script("AI-05", bad, AI_OK)
+    r = draft(client)
+    assert (r.json()["ai_status"], r.json()["validated"], r.json()["draft"]) == ("invalid_output", False, None)
+    assert [(x["status"], x["error"]) for x in runs(query)] == [("invalid_output", "R4_MISMATCH")]   # K2
+    assert len(ai.calls) == 1 and MARK not in r.text
+    assert MARK not in json.dumps(rows(query), ensure_ascii=False, default=str)
+
+
+def test_invalid_then_r4_mismatch_stops(client, data, ai, query):
+    ai.script("AI-05", AIInvalidOutput, {"draft": "x", "items": [{"section": "done", "task_id": 1, "event_id": 21}]})
+    assert draft(client).json()["ai_status"] == "invalid_output"
+    assert [(x["status"], x["error"]) for x in runs(query)] == \
+        [("invalid_output", "AIInvalidOutput"), ("invalid_output", "R4_MISMATCH")]
+
+
+@pytest.mark.parametrize("exc", [AITimeout(TOKEN_LIKE), AIInvalidOutput(TOKEN_LIKE), AIUnavailable(TOKEN_LIKE),
+                                 RuntimeError(TOKEN_LIKE)])
+def test_error_column_and_log_carry_only_class_names(client, data, ai, query, caplog, exc):
+    ai.script("AI-05", exc, exc, exc)
+    r = draft(client)
+    everything = json.dumps(runs(query), ensure_ascii=False, default=str)
+    assert TOKEN_LIKE not in everything and TOKEN_LIKE not in caplog.text and TOKEN_LIKE not in r.text
+    assert {x["error"] for x in runs(query)} == {type(exc).__name__}
+
+
+def test_no_log_of_titles_or_draft_on_failures(client, data, ai, caplog):
+    ai.script("AI-05", AIInvalidOutput, {"draft": MARK, "items": [{"section": "next", "task_id": 4, "event_id": None}]})
+    draft(client)
+    assert "本週完成" not in caplog.text and MARK not in caplog.text
+
+
+@pytest.mark.parametrize("bad_draft", ["", "   ", "字" * 20_001])
+def test_draft_bounds(client, data, ai, query, bad_draft):
+    out = {"draft": bad_draft, "items": AI_ITEMS}
+    ai.script("AI-05", out, out, out)
+    assert draft(client).json()["ai_status"] == "invalid_output"   # K8
+
+
+@pytest.mark.parametrize("output", [
+    {"draft": "x", "items": [{"section": "later", "task_id": 1, "event_id": 11}]},
+    {"draft": "x", "items": [{"section": "done", "task_id": 1, "event_id": None}]},
+    {"draft": "x", "items": [{"section": "next", "task_id": 3, "event_id": 11}]},
+    {"draft": "x", "items": ["not an object"]},
+    {"draft": "x"},
+    ["not", "an", "object"],
+])
+def test_more_malformed_outputs(client, data, ai, query, output):
+    ai.script("AI-05", output, output, output)
+    assert draft(client).json()["ai_status"] == "invalid_output"
+    assert [x["status"] for x in runs(query)] == ["invalid_output"] * 3   # 結構錯誤會重試（spec 5.14）
+
+
+def test_attempts_restart_per_request(client, data, ai, query):
+    ai.script("AI-05", AITimeout, AI_OK, AI_OK)
+    draft(client)
+    draft(client)
+    assert statuses(query) == [("timeout", 1), ("ok", 2), ("ok", 1)]
+
+
+def test_payload_whitelist_and_same_on_every_attempt(client, data, ai, seed):
+    seed("UPDATE tasks SET title = '本週完成（改名）' WHERE id = 1;")   # 事件快照仍是舊標題
+    snapshots = []
+
+    class Recording(FakeAIClient):
+        def call(self, node_id, payload, **kw):
+            snapshots.append(copy.deepcopy(payload))
+            return super().call(node_id, payload, **kw)
+
+    rec = Recording()
+    rec.script("AI-05", AITimeout, AI_OK)
+    client.app.state.ai = rec
+    draft(client)
+    assert len(snapshots) == 2 and snapshots[0] == snapshots[1]
+    p = snapshots[0]
+    assert set(p) == {"week", "done", "delay", "next"} and p["week"] == {"start": "2026-11-09", "end": "2026-11-15"}
+    assert all(set(i) == {"task_id", "title", "owner", "done_date", "event_id"} for i in p["done"])
+    assert all(set(i) == {"task_id", "title", "owner", "orig_due", "latest_due", "event_ids"} for i in p["delay"])
+    assert all(set(i) == {"task_id", "title", "owner", "latest_due", "blocked"} for i in p["next"])
+    assert p["done"][0]["title"] == "本週完成（改名）"
+    assert "私人機密任務" not in json.dumps(p, ensure_ascii=False)
+
+
+def test_uses_default_timeout(client, data):
+    seen = []
+
+    class Timing(FakeAIClient):
+        def call(self, node_id, payload, *, timeout_s=DEFAULT_TIMEOUT_S):
+            seen.append(timeout_s)
+            return AI_OK
+
+    client.app.state.ai = Timing()
+    draft(client)
+    assert seen == [20.0]   # FR-AI-05
+
+
+def test_rejected_requests_never_call_ai(app, client, data, ai, query):
+    from fastapi.testclient import TestClient
+    with TestClient(app) as anon:
+        anon.post(DRAFT, json={"week_start": WEEK})
+    client.post(DRAFT, json={"week_start": "2026-11-10"})
+    rid = draft(client).json()["id"]
+    before = len(ai.calls)
+    client.get(ONE.format(rid))
+    client.put(MANUAL.format(rid), json={"manual_text": "x"})
+    assert len(ai.calls) == before == 1 and len(runs(query)) == 1

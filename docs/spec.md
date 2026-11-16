@@ -990,6 +990,22 @@ CREATE TABLE idempotency_keys (
 - 儲存（第 1 點 (b)）：`POST` 存 `ai_draft`、`ai_items`、`ai_status`，`manual_text` 不動。`GET` 回存下的 `ai_status`，並用存下的 `ai_items` 對**目前**的歷程重新對帳得出 `validated`，所以產生後任務改成私人範圍或做了基準更正，都會反映。
 - `excluded_private` 為產生初稿當下送 AI 前排除的私人任務數（AC-48）。
 - `PUT /reports/weekly/{id}/manual` 輸入：`{ "manual_text": "…" }`。不帶 `expected_version`，後寫的蓋掉先寫的（第 7 點）。可為 null 或空字串（清除人工版）；超過 20,000 字回 413 `PAYLOAD_TOO_LARGE`；內容相同照常儲存，不回 `NO_CHANGE`。【待確認：#18 J5】
+**AI-05 的輸入與輸出**（2026-11-16 Dev-A、Dev-B 協議定案，#22；`AIClient.call("AI-05", payload)`）：
+
+```json
+{
+  "week": { "start": "2026-11-09", "end": "2026-11-15" },
+  "done":  [{ "task_id": 3, "title": "API 介面定義", "owner": "我", "done_date": "2026-11-12", "event_id": 41 }],
+  "delay": [{ "task_id": 2, "title": "畫面規格", "owner": "小薇", "orig_due": "2026-11-12",
+              "latest_due": "2026-11-18", "event_ids": [52] }],
+  "next":  [{ "task_id": 5, "title": "驗收會議", "owner": "我", "latest_due": "2026-11-19", "blocked": false }]
+}
+```
+
+- payload 每一項只放上面列出的鍵（白名單）。不送事件的備註、原因、`extra`、註記、完成回報的星數與精力、`done_when`、原句與專案名稱。`title` 用任務目前的標題；`owner` 照 AI-01 的做法送名字，D-03 裁定後兩邊一起改。
+- 輸出為 `{ "draft": "…", "items": [{ "section", "task_id", "event_id" }] }`。`items` 只保留這三個鍵，其他鍵丟棄；`section` 為 `done`／`delay` 時 `event_id` 必填，為 `next` 時必須為 null。結構不對視為 `invalid_output`。
+- 重試與紀錄：格式錯誤與逾時最多重試 2 次（共 3 次）；AI 不可用、其他錯誤與 R4 對帳失敗不重試。每次嘗試寫一列 `ai_runs`（FR-AI-02），`error` 只放例外類別名稱。
+
 - `GET`、`PUT` 的 id 不存在，或該 id 是目標回報（`kind='goal'`），回 404 `NOT_FOUND`。【待確認：#18 J10】
 - `POST draft`、`PUT manual` 不存冪等快取：重播會略過重新對帳，快取也會多存一份人工版與初稿。【待確認：#18 J7；尚未實作，等 PR #20 的排除清單合併】
 
