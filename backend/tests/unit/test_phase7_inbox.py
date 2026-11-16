@@ -100,6 +100,15 @@ def test_private_project_async_job_does_not_call_ai(client, seed, ai, db, query)
     assert ai.calls == [] and count(query, "ai_runs") == 0 and count(query, "sources") == 31
 
 
+def test_private_project_async_job_error_says_private_not_ai_failure(client, seed, ai, db):
+    """審查：私人專案是刻意不送 AI，工作訊息不能說成 AI 解析失敗。"""
+    seed(BASE + PRIVATE_PROJECT)
+    job_id = ingest(client, long_text(), project_id=3).json()["job_id"]
+    worker.run_once(db, ai)
+    error = client.get(f"{API}/ingest/jobs/{job_id}").json()["error"]
+    assert "私人" in error and "AI 解析失敗" not in error and "手動建立任務" in error
+
+
 def test_ingest_retention_uses_settings_default_30_days(client, seed, ai, query):
     seed(BASE)
     ai.script(NODE, {"items": []})

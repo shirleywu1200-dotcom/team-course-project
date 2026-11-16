@@ -34,7 +34,7 @@ def run_once(db: Database, ai: AIClient) -> int | None:
     fields = {"status": "succeeded" if ok else "failed", "updated_at": get_clock().now(),
               "result": result_summary(outcome, p["duplicates"], p["unparsed_lines"])
               | {"ai_status": outcome.ai_status, "candidate_ids": outcome.candidate_ids},
-              "error": None if ok else FAILED_MESSAGE}
+              "error": None if ok else outcome.message}
     db.run(lambda c: jobs_repo.update(c, job["id"], fields))
     return job["id"]
 

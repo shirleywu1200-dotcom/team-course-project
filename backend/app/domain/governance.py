@@ -23,6 +23,7 @@ def purge_expired(conn: Connection) -> int:
     purged = sources_repo.purge_expired(conn, now)
     retention = timedelta(days=settings_repo.get(conn)["retention_days"])
     ai_runs_repo.clear_raw_output_before(conn, now - retention)
+    ai_runs_repo.clear_raw_output_of_purged_sources(conn)
     if purged:
         governance_repo.delete_all_idempotency(conn)
     else:

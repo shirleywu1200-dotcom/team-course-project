@@ -25,6 +25,20 @@ def clear_raw_output_before(conn: Connection, before) -> int:
         {"b": before}).rowcount
 
 
+def clear_raw_output_of_purged_sources(conn: Connection) -> int:
+    """連得回已清除來源的輸出設為 NULL：經背景工作的 source_ids，或經候選的 ai_run_id。
+
+    背景工作可能在收件後很久才呼叫 AI，只靠 created_at 會比原文晚清（PR #20 審查）。
+    """
+    return conn.execute(text(
+        "UPDATE ai_runs SET raw_output = NULL WHERE raw_output IS NOT NULL AND ("
+        " job_id IN (SELECT j.id FROM jobs j WHERE EXISTS ("
+        "   SELECT 1 FROM sources s WHERE s.excerpt IS NULL"
+        "   AND s.id IN (SELECT jsonb_array_elements_text(j.payload->'source_ids')::bigint)))"
+        " OR id IN (SELECT c.ai_run_id FROM candidates c JOIN sources s ON s.id = c.source_id"
+        "   WHERE s.excerpt IS NULL AND c.ai_run_id IS NOT NULL))")).rowcount
+
+
 def clear_all_raw_output(conn: Connection) -> int:
     return conn.execute(text("UPDATE ai_runs SET raw_output = NULL WHERE raw_output IS NOT NULL")).rowcount
 

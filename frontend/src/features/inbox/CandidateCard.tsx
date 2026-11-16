@@ -6,6 +6,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { api, ApiError, newIdempotencyKey } from "../../api/client";
+import { queryRoots } from "../../api/queryKeys";
 import type { Candidate, DecideResult } from "../../api/types";
 import { ErrorBanner } from "../../components/standin/ErrorBanner";
 
@@ -32,7 +33,10 @@ export function CandidateCard({ candidate: c, onDecided }: Props) {
       api<DecideResult>(`/candidates/${c.id}/${action}`, { body: body ?? {}, idempotencyKey: newIdempotencyKey() }),
     onSuccess: (r) => {
       qc.invalidateQueries({ queryKey: ["candidates"] });
-      qc.invalidateQueries({ queryKey: ["tasks"] });
+      // 確認會改任務、時間管理統計（未註記數）與專案摘要（open_candidates）
+      for (const root of [queryRoots.tasks, queryRoots.timeManagement, queryRoots.projects]) {
+        qc.invalidateQueries({ queryKey: root });
+      }
       onDecided(r);
     },
     onError: (err) => {

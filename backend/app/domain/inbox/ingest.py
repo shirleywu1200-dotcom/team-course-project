@@ -29,6 +29,7 @@ MAX_CHARS = 20_000
 SYNC_LINE_LIMIT = 30
 MAX_ATTEMPTS = 3                 # 1 次＋續跑 2 次（FR-INB-08）
 FAILED_MESSAGE = "AI 解析失敗，可在收件匣手動建立任務"
+PRIVATE_MESSAGE = "私人專案不送 AI 解析，可在收件匣手動建立任務"
 
 
 @dataclass
@@ -37,6 +38,7 @@ class Outcome:
     attempts: int
     candidate_ids: list[int] = field(default_factory=list)
     skipped: int = 0
+    message: str = FAILED_MESSAGE   # 沒有成功時給使用者看的說明
 
 
 def _store_sources(conn: Connection, messages: list[Message]) -> tuple[list[int], int]:
@@ -113,7 +115,7 @@ def process_sources(db: Database, ai: AIClient, source_ids: list[int], project_i
     """呼叫 AI-01 並把結果寫成 open 候選；失敗則續跑，總嘗試次數不超過 MAX_ATTEMPTS。"""
     if project_id is not None and db.run(lambda c: projects_repo.get(c, project_id))["scope"] == "private":
         # 私人專案的原文不送 AI（資安規則 2、PR #20 B1）；原文已存，可在收件匣手動建任務
-        return Outcome("unavailable", attempts_done, skipped=len(source_ids))
+        return Outcome("unavailable", attempts_done, skipped=len(source_ids), message=PRIVATE_MESSAGE)
     payload, texts, task_ids = db.run(lambda c: _payload(c, source_ids, project_id))
     ai_status, attempt = "unavailable", attempts_done
     while attempt < MAX_ATTEMPTS:

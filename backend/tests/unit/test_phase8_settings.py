@@ -216,6 +216,25 @@ def test_scheduled_purge_clears_expired_raw_output_of_every_node(db, seed, query
     assert count(query, "ai_runs") == 3
 
 
+def test_scheduled_purge_clears_raw_output_linked_to_purged_sources_even_if_run_is_newer(db, seed, query):
+    """審查：背景工作晚於收件才呼叫 AI，ai_runs 比來源新；來源原文清除時，連得到的輸出也要一起清。"""
+    seed(BASE + SOURCES + """
+INSERT INTO jobs (id, kind, status, attempts, payload, created_at, updated_at) VALUES
+  (5, 'ingest', 'succeeded', 1, '{"source_ids":[1],"project_id":null,"duplicates":0,"unparsed_lines":[]}',
+      '2026-10-01T10:00+08:00', '2026-10-15T10:00+08:00'),
+  (6, 'ingest', 'failed', 3, '{"source_ids":[2],"project_id":null,"duplicates":0,"unparsed_lines":[]}',
+      '2026-11-01T10:00+08:00', '2026-11-01T10:00+08:00');
+INSERT INTO ai_runs (id, node_id, job_id, status, raw_output, created_at) VALUES
+  (11, 'AI-01', 5, 'invalid_output', '{"bad":"畫面規格"}', '2026-10-15T10:00+08:00'),
+  (12, 'AI-01', NULL, 'ok', '{"items":[{"ref":1}]}', '2026-10-20T10:00+08:00'),
+  (13, 'AI-01', 6, 'invalid_output', '{"bad":"報表"}', '2026-11-01T10:00+08:00');
+UPDATE candidates SET ai_run_id = 12 WHERE id = 21;
+""")
+    scheduler.run_once(db)
+    # 11：工作 5 的來源 1 已清除；12：候選 21 的來源 1 已清除；13：來源 2 未到期，保留
+    assert raw_outputs(query) == {11: None, 12: None, 13: '{"bad":"報表"}'}
+
+
 def test_purge_without_expired_sources_only_drops_stale_cache(db, seed, query):
     seed(BASE + SOURCES.replace("'2026-10-31T10:00+08:00', NULL", "'2026-12-31T10:00+08:00', NULL"))
     assert scheduler.run_once(db) == 0

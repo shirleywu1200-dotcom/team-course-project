@@ -36,7 +36,7 @@ export function TargetPicker({ dest, onChange }: { dest: Dest; onChange: (d: Des
         <select id="import-project" value={dest.projectId ?? ""} disabled={dest.mode !== "existing"}
           onChange={(e) => onChange({ ...dest, projectId: e.target.value ? Number(e.target.value) : null })}>
           <option value="">請選擇</option>
-          {(projects.data ?? []).map((p) => (
+          {(projects.data?.items ?? []).map((p) => (
             <option key={p.id} value={p.id}>
               {p.scope === "private" ? `${p.name}（私人・不會送 AI）` : p.name}
             </option>

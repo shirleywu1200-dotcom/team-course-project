@@ -3,6 +3,7 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
+import { vi } from "vitest";
 
 import type { Candidate } from "../../api/types";
 import { API, apiError, makeCandidate, makeTask, renderWithClient, server } from "../../test/server";
@@ -282,4 +283,21 @@ test("背景解析超過上限：停止輪詢並提示稍後查看", async () =>
   const stopped = polls;
   await new Promise((r) => setTimeout(r, 60));
   expect(polls).toBe(stopped);
+});
+
+// ---------- 快取失效（審查：確認候選會改任務、時間管理統計與專案摘要） ----------
+
+test("確認候選後一併失效任務、時間管理統計與專案查詢", async () => {
+  const user = userEvent.setup();
+  const c = makeCandidate();
+  serveOpen([c], []);
+  capture("/candidates/21/confirm", () => decided(c));
+  const { client } = renderWithClient(<InboxPage />);
+  const spy = vi.spyOn(client, "invalidateQueries");
+  await user.click(await screen.findByRole("button", { name: "確認" }));
+  await waitFor(() => expect(spy).toHaveBeenCalled());
+  const roots = spy.mock.calls.map(([f]) => JSON.stringify(f?.queryKey));
+  for (const root of ['["tasks"]', '["stats","time-management"]', '["projects"]', '["candidates"]']) {
+    expect(roots).toContain(root);
+  }
 });

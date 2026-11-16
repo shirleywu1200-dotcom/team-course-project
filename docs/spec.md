@@ -1118,7 +1118,7 @@ CREATE TABLE idempotency_keys (
 
 ### 6.7 資料保存與清除
 
-- 清除排程（服務啟動時一次，之後每小時一次；冪等）：將 `expires_at` 已過的 `sources.excerpt` 設為 NULL，寫 `purged_at`。有原文被清除時，一併刪除 `idempotency_keys`（DA-23）。`created_at` 加保存天數已過的 `ai_runs.raw_output` 設為 NULL，不分節點（失敗的 AI-01 輸出連不回來源；AI-06、AI-07 的輸出也可能含原文；PR #20 B2）。`events`、`candidates` 不動。（2026-11-15 裁定：原為每日 03:00，本機服務該時段常未開機會漏跑，改為每小時。）
+- 清除排程（服務啟動時一次，之後每小時一次；冪等）：將 `expires_at` 已過的 `sources.excerpt` 設為 NULL，寫 `purged_at`。有原文被清除時，一併刪除 `idempotency_keys`（DA-23）。`created_at` 加保存天數已過的 `ai_runs.raw_output` 設為 NULL，不分節點（失敗的 AI-01 輸出連不回來源；AI-06、AI-07 的輸出也可能含原文；PR #20 B2）；另外，經背景工作的 `source_ids` 或候選的 `ai_run_id` 連得回已清除來源的輸出，也一併設為 NULL（背景工作可能晚於收件才呼叫 AI）。`events`、`candidates` 不動。（2026-11-15 裁定：原為每日 03:00，本機服務該時段常未開機會漏跑，改為每小時。）
 - 修改保存期限時，尚未清除的來源一併重算 `expires_at = received_at + 新天數`（2026-11-15 裁定）。
 - 「刪除所有來源原文」清除 `sources.excerpt`，刪除 `idempotency_keys` 全部列（回應本文可能含原句；這張表是 24 小時的重送暫存，不是歷程，DA-23），並將 `ai_runs.raw_output` 全部設為 NULL（PR #20 B2）。`events`、`candidates`、`tasks` 不動，事件的原句顯示改為已刪除。
 - 匯出檔包含全部表；`sources.excerpt` 已清除者匯出為 `null`。
