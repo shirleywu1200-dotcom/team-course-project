@@ -40,7 +40,7 @@
 ## 測試數字
 
 - 後端 pytest：225 個通過（約 21 秒），含契約保護測試（簽名、錯誤碼、OpenAPI 2xx schema 非空）、log 不含使用者內容、AC-59、AC-61、AC-62。
-- 前端 Vitest：18 個通過。
+- 前端 Vitest：23 個通過（含 D2 的 5 個測試）。
 - ruff：無問題。
 - 前端 tsc：無錯誤。
 
@@ -62,7 +62,7 @@
 - [x] **A1** 移除 `ai_runs.node_id` 的 `AI-08`（建議用新遷移，不改 0001）
 - [x] **A2** `POST /tasks/{id}/adjust-start`（AC-62）；建立時開始日晚於期限回 422（AC-61，回答 B1）。先把 AC-59、61、62 與新端點、警告碼 `START_AFTER_DUE` 寫進 spec
 - [x] **C** 移除 `frontend/tsconfig.tsbuildinfo` 並加入 `.gitignore`；更新 CLAUDE.md「Git 與 PR」；修 `BulkShiftPage` 偶發失敗的測試
-- [~] **D2** 已在 PR #1 回覆提案（建議 `{taskId, onDone, onClose}`，拿掉 `expectedVersion`），等 Dev-C 選擇後實作
+- [x] **D2** Dev-C 選方案 X：`{taskId, onDone, onClose}`；面板讀 `keys.task(taskId)`；填寫期間版本改變就清空並提示（2026-11-16 完成）
 - [x] **D3** `dev-a-handoff.md` 補 Windows venv 路徑 `.venv\Scripts\python`
 - 約束 **D1**：前端 18 個測試必須保持通過；**C**：之後的 PR 回到不超過半個 Phase
 
