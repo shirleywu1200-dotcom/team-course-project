@@ -111,6 +111,9 @@ def _payload(conn: Connection, source_ids: list[int], project_id: int | None) ->
 def process_sources(db: Database, ai: AIClient, source_ids: list[int], project_id: int | None, *,
                     job_id: int | None = None, attempts_done: int = 0) -> Outcome:
     """呼叫 AI-01 並把結果寫成 open 候選；失敗則續跑，總嘗試次數不超過 MAX_ATTEMPTS。"""
+    if project_id is not None and db.run(lambda c: projects_repo.get(c, project_id))["scope"] == "private":
+        # 私人專案的原文不送 AI（資安規則 2、PR #20 B1）；原文已存，可在收件匣手動建任務
+        return Outcome("unavailable", attempts_done, skipped=len(source_ids))
     payload, texts, task_ids = db.run(lambda c: _payload(c, source_ids, project_id))
     ai_status, attempt = "unavailable", attempts_done
     while attempt < MAX_ATTEMPTS:

@@ -73,6 +73,33 @@ def test_ingest_project_scopes_task_list_and_reports_unparsed_lines(client, seed
     assert [t["id"] for t in ai.calls[0][1]["tasks"]] == [7]
 
 
+PRIVATE_PROJECT = """
+INSERT INTO projects (id, name, scope, audience, created_at, updated_at) VALUES
+  (3, '家裡的事', 'private', 'none', '2026-11-01T09:00+08:00', '2026-11-01T09:00+08:00');
+"""
+
+
+def test_private_project_ingest_does_not_call_ai(client, seed, ai, query):
+    """PR #20 B1：私人專案的原文不送 AI（資安規則 2），原文照存，可手動建任務。"""
+    seed(BASE + PRIVATE_PROJECT)
+    ai.script(NODE, {"items": []})
+    r = ingest(client, "[10:12] 阿德：好", project_id=3)
+    assert r.status_code == 200 and r.json()["ai_status"] == "unavailable"
+    assert r.json()["result"]["skipped"] == 1
+    assert ai.calls == []
+    assert count(query, "sources") == 1 and count(query, "ai_runs") == 0
+
+
+def test_private_project_async_job_does_not_call_ai(client, seed, ai, db, query):
+    seed(BASE + PRIVATE_PROJECT)
+    job_id = ingest(client, long_text(), project_id=3).json()["job_id"]
+    ai.script(NODE, {"items": []})
+    worker.run_once(db, ai)
+    job = client.get(f"{API}/ingest/jobs/{job_id}").json()
+    assert (job["status"], job["result"]["ai_status"]) == ("failed", "unavailable")
+    assert ai.calls == [] and count(query, "ai_runs") == 0 and count(query, "sources") == 31
+
+
 def test_ingest_retention_uses_settings_default_30_days(client, seed, ai, query):
     seed(BASE)
     ai.script(NODE, {"items": []})
