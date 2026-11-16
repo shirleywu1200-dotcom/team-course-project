@@ -1,6 +1,6 @@
 """FR-INB-04（PR #20 B3）：有日期標頭時，日期併入去重判斷；沒有標頭維持原規則。檔名暫用，待指定 AC 編號。"""
 
-from tests.acceptance.helpers import SEED_BASE, count, ingest
+from tests.acceptance.helpers import SEED_BASE, ai_calls, count, ingest
 
 MSG = "[10:12] 阿德：今天進度正常"
 TWO_DAYS = f"2026/11/10（二）\n{MSG}\n2026/11/11（三）\n{MSG}"
@@ -17,6 +17,10 @@ def test_fr_inb04_same_message_on_two_dates_is_not_duplicate(client, seed, ai, q
     src = query("SELECT excerpt, excerpt_hash FROM sources ORDER BY id")
     assert [s["excerpt"] for s in src] == ["今天進度正常", "今天進度正常"]
     assert src[0]["excerpt_hash"] != src[1]["excerpt_hash"]
+    # spec 5.3a：本次新收的訊息都送 AI-01（不論是否分批），兩個日期的同一句都要送到
+    ids = {s["id"] for s in query("SELECT id FROM sources")}
+    sent = [m["ref"] for p in ai_calls(ai, "AI-01") for m in p["messages"]]
+    assert sorted(sent) == sorted(ids)
 
 
 def test_fr_inb04_date_header_is_not_stored_as_a_message(client, seed, ai, query):

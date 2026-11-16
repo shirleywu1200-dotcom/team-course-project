@@ -666,6 +666,26 @@ CREATE TABLE idempotency_keys (
 - 輸出：`{ "title": 0, "owner": 1, "start": 2, "end": 3 }`。`title`、`end` 必須是欄位範圍內的整數索引；`owner`、`start` 可為 null；非 null 的索引不可重複。不合規則算 `invalid_output`。
 - 只呼叫 1 次，不重試：失敗時直接走手動指定對應的退路（6.6）。寫一列 `ai_runs`。
 
+**AI-05 週報初稿（FR-RPT，Phase 10；2026-11-16 #22 定案）**
+
+- 呼叫端（Dev-A，Phase 10）組 payload、驗證輸出、R4 對帳；prompt 與真實供應商的節點設定由契約擁有者（Dev-B，13.4）負責。雙方只依本節格式開發，Phase 10 用 `FakeAIClient` 排回傳值。
+- payload 只含以下鍵；每一項只放列出的欄位，其餘一律不送：
+  ```json
+  {
+    "week":  { "start": "2026-11-09", "end": "2026-11-15" },
+    "done":  [{ "task_id": 3, "title": "API 介面定義", "owner": "我", "done_date": "2026-11-12", "event_id": 41 }],
+    "delay": [{ "task_id": 2, "title": "畫面規格", "owner": "小薇", "orig_due": "2026-11-12", "latest_due": "2026-11-18", "event_ids": [52] }],
+    "next":  [{ "task_id": 5, "title": "驗收會議", "owner": "我", "latest_due": "2026-11-19", "blocked": false }]
+  }
+  ```
+  - 只送工作範圍（`scope='work'`）的任務；私人任務在組 payload 前排除，只計數。
+  - 明確不送：事件的 `note`、`reason`、`extra`、註記（`mark`）、完成回報的星數與精力（FR-AI-06）、`done_when`、原句、專案名稱。
+  - `title` 用任務現值；`owner` 照 AI-01 送名字，D-03（姓名遮蔽）裁定後兩節點一起改。
+- 輸出：`{ "draft": "本週（11/09–11/15）工作進度…", "items": [{ "section": "done", "task_id": 3, "event_id": 41 }, { "section": "next", "task_id": 5, "event_id": null }] }`
+  - `draft` 為字串、`items` 為陣列；`section` 為 `done`、`delay`、`next`。`done`、`delay` 的 `event_id` 必填，`next` 必須為 null。
+  - 缺欄位、型別不對、`section` 不在值域內，算 `invalid_output`，同 AI-01 最多再試 2 次。
+  - R4 對帳（項目引用的 `task_id`、`event_id` 是否在 payload 裡）不算格式錯誤、不重試：對不上就 `validated=false`。
+
 ### 5.4 設定與量表
 
 | Method | Path | 說明 |
