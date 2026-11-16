@@ -1,0 +1,12 @@
+.time-management-page h3 { margin: 0 0 var(--space-2); font-size: inherit; }
+.stats-date-fields { display: flex; flex-wrap: wrap; align-items: end; gap: var(--space-3); }
+.stats-date-fields .field { flex: 1 1 12rem; min-width: 0; }
+.stats-date-fields button { margin-bottom: var(--space-2); }
+.stats-count-grid, .stats-energy-levels { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-3); }
+.stats-count-grid > .card, .stats-energy-levels > .card { min-width: 0; }
+.stats-not-done { border-inline-start: var(--space-1) solid var(--color-muted); }
+.stats-server-text { white-space: pre-wrap; overflow-wrap: anywhere; }
+.time-management-page .summary { grid-template-columns: minmax(0, 1fr) max-content; }
+@media (max-width: 767px) {
+  .stats-count-grid, .stats-energy-levels { grid-template-columns: 1fr; }
+}

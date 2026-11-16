@@ -6,6 +6,7 @@ import { vi } from "vitest";
 
 import { API, makeTask, renderWithClient, server } from "../test/server";
 import { AppRoutes } from "./AppRoutes";
+import { timeManagementFixtures } from "../test/fixtures";
 
 function LocationProbe() {
   const location = useLocation();
@@ -56,12 +57,16 @@ test.each([
   ["/goals", "目標與精力"],
   ["/reports", "週報"],
   ["/data-control", "資料控制"],
-])("路由 %s 可直接開啟；Dev-B 實作頁讀取資料，其餘仍預留", async (path, title) => {
+])("路由 %s 可直接開啟；已實作頁讀取資料，其餘仍預留", async (path, title) => {
   const fetchSpy = vi.spyOn(globalThis, "fetch");
   try {
     open(path);
     expect(await screen.findByRole("heading", { name: title, level: 1 })).toBeInTheDocument();
-    if (["/import", "/inbox", "/setup", "/settings"].includes(path)) {
+    if (path === "/time-management") {
+      expect(await screen.findByText(timeManagementFixtures.insufficient.judgement_note)).toBeInTheDocument();
+      expect(screen.queryByText("此功能尚未開放。")).not.toBeInTheDocument();
+      expect(fetchSpy).toHaveBeenCalled();
+    } else if (["/import", "/inbox", "/setup", "/settings"].includes(path)) {
       expect(screen.queryByText("此功能尚未開放。")).not.toBeInTheDocument();
       expect(fetchSpy).toHaveBeenCalled();
     } else {
