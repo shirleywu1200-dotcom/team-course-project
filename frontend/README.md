@@ -179,3 +179,22 @@ Dev-A 測試原有的局部 handler 覆寫保留，沒有刪除或放寬測試�
 自行決定清單：主題儲存鍵 `g4.theme`（派工允許 localStorage，鍵名無依據，待裁定）；控制項置於共用頁首（無依據，待裁定）；「色彩主題／跟隨系統／亮色／暗色」為中性標籤（無逐字文案依據，待裁定）。
 對比自行決定：亮色成功文字由 V4 的 #1c7c4a 加深為 #1b7b49，避免原型 4.49:1 低於本次 4.5:1 檢查門檻；色值非原型原值，待裁定。其餘色值沿用 V4。
 瀏覽器驗證：Microsoft Edge 157，1280／768／390／320，各亮暗色均無頁面水平溢位；手機五入口順序保留。系統切換、手動覆寫與重新載入保存均通過；量測的 8 組文字色配對最低對比亮色 4.55:1、暗色 6.48:1。一般連結亦引用 accent token。
+
+## 共用元件（11.5）
+
+| 元件 | 依據 | 行為測試（shared.test.tsx） |
+| --- | --- | --- |
+| DatePicker | spec 5.1 日期格式、V4 原生日期選擇 | 日期選擇不預填，送出 YYYY-MM-DD 原字串，不轉時區 |
+| ConfirmationPanel | FR-BLK-01、FR-BAS-03；V4 確認面板 | 呼叫者明確允許才可確認，取消不觸發確認 |
+| MarkChoice | FR-MRK-01～03、AC-12；V4 註記面板 | 四選項不預選、各註記只能由使用者選擇、稍後註記 payload |
+| ReasonSelect | FR-DUE-05、FR-MRK-03 | 不預選、方向篩選、外部原因只提示不代選 |
+| ErrorBanner | spec 5.2、既有 11.2 訊息行為 | 空錯誤不顯示、STALE_VERSION 舊訊息、未知錯誤安全退路；client.test.tsx 保留 17 碼測試 |
+
+三個 standin 的實作提升至 components/，舊路徑、props、helper 匯出均保留。
+舊 ReasonSelect 入口保留由 MarkChoice 顯示外部提示的方式，避免 Dev-A 頁面重複提示；
+正式 ReasonSelect 自行顯示外部提示，搭配 MarkChoice 時不用另設 externalHint。
+外部提示文案只有 ExternalReasonHint 一處。原因仍使用 { code, label, direction, external }，不新增選項或改順序。
+ConfirmationPanel 不代算商業規則；呼叫端以 canConfirm 明確授權。日期選擇不預填今日，日期限制由呼叫端提供。
+沒有刪除入口、功能、測試；沒有改動 src/features/。BulkShiftPage 的預設勾選是其自身狀態，共用元件不介入。
+自行決定清單：日期控制項旁另顯示原始 YYYY-MM-DD（格式有規格依據，並列位置無依據，待裁定）；確認面板以既有 card 樣式呈現、取消在確認之前（V4 模式），不自行加入對話框或確認規則。
+瀏覽器驗證：Edge 157，1280／768／390／320，亮暗色各一次，共用元件無水平溢位；320px「稍後註記」自然換到下一行。以共用 fixture 攔截 API 載入實際 BulkShiftPage，未完成任務預設勾選、已完成任務排除、原因保持空白；320px 表格文字與日期會折行（既有版面）。未執行真實後端寫入。

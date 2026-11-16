@@ -39,6 +39,7 @@ input, select, textarea, button {
 }
 
 .theme-control { display: inline-flex; align-items: center; flex-wrap: wrap; gap: var(--space-1); color: var(--color-muted); }
+.date-value { display: inline-block; margin-inline-start: var(--space-2); color: var(--color-muted); }
 :focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
 
 button.primary { background: var(--color-accent); color: var(--color-accent-text); border-color: var(--color-accent); }
