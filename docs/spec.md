@@ -165,7 +165,10 @@
 - FR-MRK-04 補註記與改註記：對 `mine=1` 且 `delta_days≠0` 的日期事件，新增一筆 `annotation` 事件，`ref_event_id` 指向原事件。原事件不改。補註記可帶 `reason`，有給時依原日期事件的方向（提前或延後）檢查選項；`annotation` 事件的 `mine` 沿用原事件，不依現在的負責人（DA-13）。
 - FR-MRK-05 有效註記 = 指向該日期事件的最新一筆 `annotation`；沒有則取原事件的註記；皆空為「未註記」。
 - FR-MRK-06 時間管理統計口徑：只算 `mine=1`、`delta_days≠0`、有效註記非空的日期事件。輸出變好次數與提前總天數、變差次數與延後總天數、不計入次數、未註記次數；**未註記與不計入不進變好／變差**。
-- FR-MRK-07 統計另輸出「被標變差的任務完成時的精力分布」（高、中、低、尚未完成），供時間與精力盤點。分布以任務計數，同一任務多次被標變差只算一次；沒有完成回報的任務算在「尚未完成」（DA-12）。樣本少於 5 筆時，只回計數，`judgement=null`。5 筆以上的判讀規則已由產品負責人裁定（2026-11-16，#15），細節確認後補入本條與 AC。
+- FR-MRK-07 統計另輸出「被標變差的任務完成時的精力分布」（高、中、低、尚未完成），供時間與精力盤點。分布以任務計數，同一任務多次被標變差只算一次；沒有完成回報的任務算在「尚未完成」（DA-12）。判讀由程式規則計算，不用 AI（FR-AI-06）。規則如下（2026-11-16 產品負責人裁定，#15）：
+  - 樣本＝變好次數＋變差次數（FR-MRK-06 口徑）。樣本少於 `min_sample`（5）時 `judgement=null`，`judgement_note`＝「樣本 {n} 筆，不到 {min_sample} 筆，只顯示不下結論」。
+  - 樣本足夠時，`judgement` 三選一：變好多於變差為「時間管理偏向變好」，變差多於變好為「偏向變差，建議檢視」，相等為「持平」。`judgement_note`＝「變好 {b} 次、變差 {w} 次。」
+  - 精力洞察：分母為精力分布四格合計（被標變差的任務數，含「尚未完成」）；高、中、低某一級的任務數**嚴格大於**分母的一半時，`judgement_note` 再接「變差多集中在{高／中／低}精力任務。」剛好一半不算；「尚未完成」不算一個等級。
 - FR-MRK-08 整批順延產生的事件依本節規則處理註記。基準更正的 `baseline` 事件沒有 `delta_days`，不屬於 FR-MRK-06 的統計口徑，所以不詢問、不寫註記（DA-14）。
 
 ### 3.8 FR-BLK 整批順延（P1）
@@ -813,9 +816,12 @@ CREATE TABLE idempotency_keys (
   "unmarked": 0,
   "worse_by_energy": { "high": 0, "mid": 1, "low": 0, "not_done": 1 },
   "min_sample": 5,
-  "judgement": null
+  "judgement": null,
+  "judgement_note": "樣本 3 筆，不到 5 筆，只顯示不下結論"
 }
 ```
+
+`judgement`、`judgement_note` 的規則見 FR-MRK-07。
 
 ### 5.9 整批順延
 
@@ -1189,6 +1195,12 @@ P1 完成 = AC-01 至 AC-42、AC-48 至 AC-53、AC-55 至 AC-57 全數通過，�
 - AC-59 Given 全新資料庫；When 跑完遷移；Then `settings` 恰 1 列、`rubrics` 恰 1 列（version=0、`levels` 剛好 5 句）；When 遷移降級再升級，或重跑種子；Then 兩表仍各 1 列。
 - AC-61 Given 建立任務時指定開始日；Then 任務的 `start_date` 為該日；Given 指定的開始日晚於期限；Then 422 `VALIDATION_ERROR`，`details.fields` 含 `start`，不建立任務也不寫事件。
 - AC-62 Given 未完成任務；When `POST /tasks/{id}/adjust-start` 帶新開始日；Then 只有 `start_date` 改變（`orig_due`、`latest_due` 不變）、`version` 加 1，並新增一筆 `task` 事件（`field='start_date'`，前值、後值，`delta_days` 與 `mark` 為 NULL），該事件不進時間管理統計；Given 新開始日晚於最新預計日；Then 200 且 `warnings` 含 `START_AFTER_DUE`；Given 已完成任務、等於目前值、或超出日期範圍；Then 分別回 `TASK_DONE`、`NO_CHANGE`、`DATE_OUT_OF_RANGE`。
+- AC-64（編號暫定，待產品負責人指定）時間管理判讀（FR-MRK-07）。以下「變差」各在不同任務上：
+  - Given 變好 1 次、變差 3 次（樣本 4）；Then `judgement=null`，`judgement_note`＝「樣本 4 筆，不到 5 筆，只顯示不下結論」。
+  - Given 變好 4 次、變差 2 次；Then `judgement`＝「時間管理偏向變好」，`judgement_note`＝「變好 4 次、變差 2 次。」
+  - Given 變好 2 次、變差 3 次，3 個任務中 2 個是低精力；Then `judgement`＝「偏向變差，建議檢視」，`judgement_note`＝「變好 2 次、變差 3 次。變差多集中在低精力任務。」
+  - Given 變好 1 次、變差 4 次，4 個任務為低 2、中 2；Then `judgement`＝「偏向變差，建議檢視」，`judgement_note`＝「變好 1 次、變差 4 次。」（剛好一半，不加集中提示）
+  - Given 變好 3 次、變差 3 次；Then `judgement`＝「持平」。
 
 ## 8. 技術棧／限制
 
@@ -1266,7 +1278,7 @@ frontend/
 6. 整批順延：我的任務套用統一註記，逐項不同在歷程改註記。
 7. 基準更正：**直接覆蓋原訂日，舊值只留在歷程**，不做基準版本；單人版不限制權限，僅靠兩段式確認。
 8. 延期原因與時間管理註記**一律由使用者判斷，不設 AI 節點**（原 AI-08 取消，不列入後續階段）。原因連動「建議不計入」提示再連到註記，任何 AI 預填都會間接影響對自己的評價。（原 D-02，已結案）
-9. Dev-A 開發期間的決定紀錄 DA-01～DA-26（`docs/decisions.md`）已由產品負責人複核（2026-11-16，issue #15）。DA-12 以外全部照原決定，結論已寫入本規格各條，條文後以「（DA-xx）」標示出處。DA-12 新增「二元判讀＋精力洞察」規則，細節確認後補入 FR-MRK-07、5.8 與第 7 章。
+9. Dev-A 開發期間的決定紀錄 DA-01～DA-26（`docs/decisions.md`）已由產品負責人複核（2026-11-16，issue #15）。DA-12 以外全部照原決定，結論已寫入本規格各條，條文後以「（DA-xx）」標示出處。DA-12 新增「二元判讀＋精力洞察」規則，已寫入 FR-MRK-07、5.8 與 AC-64。
 
 ### 9.3 本文件中的〔假設〕清單
 
