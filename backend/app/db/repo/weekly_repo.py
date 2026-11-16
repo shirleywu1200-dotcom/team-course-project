@@ -5,11 +5,12 @@
 事件的日期一律以台北時區判斷（spec 8.2），不依賴連線的時區設定。
 """
 
-from datetime import date
+from datetime import date, datetime, time, timedelta
+from zoneinfo import ZoneInfo
 
 from sqlalchemy import Connection, text
 
-TZ_NAME = "Asia/Taipei"
+TZ = ZoneInfo("Asia/Taipei")
 
 
 def done_in_range(conn: Connection, start: date, end: date) -> list[dict]:
@@ -41,9 +42,10 @@ def delay_events_in_range(conn: Connection, start: date, end: date) -> list[dict
         SELECT e.id AS event_id, t.id AS task_id, t.title, t.owner_name, t.scope, t.orig_due, t.latest_due
           FROM events e JOIN tasks t ON t.id = e.task_id
          WHERE e.kind = 'due' AND e.delta_days > 0 AND t.latest_due > t.orig_due
-           AND (e.ts AT TIME ZONE :tz)::date BETWEEN :start AND :end
+           AND e.ts >= :ts_from AND e.ts < :ts_to
          ORDER BY t.id, e.id
-    """), {"start": start, "end": end, "tz": TZ_NAME}).mappings()
+    """), {"ts_from": datetime.combine(start, time(), TZ),
+          "ts_to": datetime.combine(end + timedelta(days=1), time(), TZ)}).mappings()
     return [dict(r) for r in rows]
 
 

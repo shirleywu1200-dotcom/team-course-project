@@ -21,13 +21,14 @@ SECTIONS = ("done", "delay", "next")
 @dataclass(frozen=True)
 class WeekData:
     week_start: date
+    week_end: date
     done: list[dict]
     delay: list[dict]
     next: list[dict]
     excluded_private: int
 
 
-def _check_monday(week_start: date) -> None:
+def check_monday(week_start: date) -> None:
     if week_start.weekday() != 0:
         raise DomainError("VALIDATION_ERROR", "week_start 必須是星期一", {"fields": ["week_start"]})
 
@@ -54,7 +55,7 @@ def _next_item(r: dict) -> dict:
 
 
 def collect(conn: Connection, week_start: date) -> WeekData:
-    _check_monday(week_start)
+    check_monday(week_start)
     week_end = week_start + timedelta(days=6)
     next_end = week_start + timedelta(days=13)
     sections = {
@@ -66,6 +67,7 @@ def collect(conn: Connection, week_start: date) -> WeekData:
     work = {name: [r for r in rows if r["scope"] == "work"] for name, rows in sections.items()}
     return WeekData(
         week_start=week_start,
+        week_end=week_end,
         done=[_done_item(r) for r in work["done"]],
         delay=_delay_items(work["delay"]),
         next=[_next_item(r) for r in work["next"]],

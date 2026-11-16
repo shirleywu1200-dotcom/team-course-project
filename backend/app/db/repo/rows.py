@@ -8,7 +8,7 @@ import json
 from sqlalchemy import Connection, text
 
 JSONB_COLUMNS = {"extra", "payload", "result", "proposed", "suggest", "detail", "response",
-                 "levels", "interview", "goal_types_enabled", "ai_items"}
+                 "levels", "interview", "goal_types_enabled"}
 
 
 def _param(col: str, value):

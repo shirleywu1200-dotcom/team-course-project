@@ -25,9 +25,9 @@ MANUAL_MAX_CHARS = 20_000
 
 def check_week_start(week_start: date, today: date) -> None:
     """週一（第 5 點）、不晚於本週（G7）、不早於今天前 365 天（J6）。"""
-    this_monday = today - timedelta(days=today.weekday())
-    if week_start.weekday() != 0 or week_start > this_monday:
-        raise DomainError("VALIDATION_ERROR", "week_start 必須是本週或過去的星期一", {"fields": ["week_start"]})
+    weekly_report.check_monday(week_start)
+    if week_start > today - timedelta(days=today.weekday()):
+        raise DomainError("VALIDATION_ERROR", "week_start 不能晚於本週", {"fields": ["week_start"]})
     check_date_range(week_start, today)
 
 
@@ -72,12 +72,13 @@ def generate(db: Database, ai: AIClient, week_start: date) -> dict:
         if status == "ok":
             rid = reports_repo.save_success(conn, week_start, draft, items, data.excluded_private, now)
             return _view(conn, reports_repo.get_weekly(conn, rid))
-        rid = reports_repo.save_failure(conn, week_start, status, data.excluded_private, now)
-        row = reports_repo.get_weekly(conn, rid)
-        # 這次失敗：回應一律是退路內容，即使存著上一次成功的初稿（#18 H2）
-        return _view(conn, row) | {"ai_status": status, "draft": None, "validated": False,
-                                    "items": weekly_report.fallback_items(data),
-                                    "excluded_private": data.excluded_private}
+        row = reports_repo.get_weekly(conn, reports_repo.save_failure(conn, week_start, status,
+                                                                       data.excluded_private, now))
+        # 這次失敗：回應一律是這次彙整的退路內容，即使存著上一次成功的初稿（#18 H2）
+        return {"id": row["id"], "week_start": week_start, "ai_status": status,
+                "excluded_private": data.excluded_private, "draft": None,
+                "items": weekly_report.fallback_items(data), "validated": False,
+                "manual_text": row["manual_text"], "updated_at": row["updated_at"]}
 
     return db.run(store)
 

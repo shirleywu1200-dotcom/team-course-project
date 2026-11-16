@@ -6,7 +6,7 @@
   其他鍵一律丟掉，不存也不回傳（spec 8.2：AI 輸出須通過結構驗證）。
 """
 
-from datetime import date, timedelta
+from datetime import date
 
 from app.ai.client import AIInvalidOutput
 from app.domain.weekly_report import SECTIONS, WeekData
@@ -21,7 +21,7 @@ def _iso(value):
 def build_payload(data: WeekData) -> dict:
     """只由 collect 的輸出組成；私人任務在 collect 已排除（AC-48）。"""
     return {
-        "week": {"start": data.week_start.isoformat(), "end": (data.week_start + timedelta(days=6)).isoformat()},
+        "week": {"start": data.week_start.isoformat(), "end": data.week_end.isoformat()},
         **{name: [{k: _iso(v) for k, v in item.items()} for item in getattr(data, name)] for name in SECTIONS},
     }
 

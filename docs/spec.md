@@ -248,7 +248,10 @@
   - 下週重點與風險（`next`）：未完成，且符合下列任一：卡住；`latest_due` 在下週；已逾期（`latest_due` 早於下週一）。封存專案的任務不列入；本週的完成與延期照列。【待確認：#18 H1，「逾期」以下週一為基準】
   - 「附依據」為事件 id，由前端依 id 到歷程查原句或操作來源，不經 AI。
 - FR-RPT-03 R4 規則：初稿中每個完成與延期都要對應一筆歷程事件；對不上者不顯示初稿，改顯示事件清單。R4 檢查 AI 回傳的**每一項**（含 `next`）都必須是本週資料裡存在的（段落、任務、事件）組合，避免 AI 帶入私人或不存在的任務（#18 G4）。R4 不要求完整，AI 漏報不算失敗，由畫面並列事件清單比對（G8）。R4 只能檢查結構化的 `items`，不檢查 `draft` 自由文字（已知限制）。
-- FR-RPT-04 AI 初稿與人工版分開保存。人工版由你修改。每週一列；重新產生只更新 AI 初稿，人工版不動（AC-51）。重新產生時 AI 失敗，保留上一次成功的初稿。【待確認：#18 H2】
+  - 產生當下嚴格比對全部項目；`GET` 重新對帳時，`done`、`delay` 仍嚴格比對，`next` 只要求任務仍存在且為工作範圍，不要求仍在下週重點（避免事後完成或改期就讓初稿失效）。【待確認：#18 J1】
+  - AI 有回應但格式不對或對帳失敗，記為 `invalid_output`，當作失敗；AI 逾時或其他錯誤記為 `unavailable`。【待確認：#18 J2、J3】
+  - 已知限制（J9）：基準更正後 `draft` 文字仍是舊的原訂日；`draft` 文字提到、但不在 `items` 裡的任務，事後改私人偵測不到；`items` 為空但 `draft` 有文字依 G8 算通過；重複項目合併。
+- FR-RPT-04 AI 初稿與人工版分開保存。人工版由你修改。每週一列；重新產生只更新 AI 初稿，人工版不動（AC-51）。重新產生時 AI 失敗，保留上一次成功的初稿，整列不動（`excluded_private`、`updated_at` 也不更新）；第一次產生就失敗時建一列，AI 欄位為 null。【待確認：#18 H2、J4】
 - FR-RPT-05 **P1 系統不代發週報**，只提供文字供你複製；送出功能為預留〔待決〕。
 
 ### 3.15 FR-GOV 資料控制（P1）
@@ -554,7 +557,7 @@ CREATE TABLE idempotency_keys (
 | 遷移 | 內容 | 依據 |
 | --- | --- | --- |
 | 0002 結構變更 | `ai_runs.node_id` 的 CHECK 移除 `AI-08`（AI-08 已取消）；`rubrics` 加不可修改觸發器，UPDATE、DELETE、TRUNCATE 皆擋，INSERT 不受影響。`settings` 不加，啟用精靈需要 UPDATE | PR #1 審查 A1、B5（2026-11-15 產品負責人裁定）；FR-RUB-01 |
-| 0004 週報存檔 | `reports` 加 `ai_items JSONB`（AI 回傳的結構化項目）與 `ai_status TEXT`（`ok`、`unavailable`、`invalid_output`，可為 NULL）；加部分唯一索引「每週一列」（`period_start`，`WHERE kind = 'weekly'`）。只新增欄位與索引 | 2026-11-16 產品負責人裁定（#18 第 1 點 (b)）；FR-RPT-03、04 |
+| 0004 週報存檔 | `reports` 加 `ai_items JSONB`（AI 回傳的結構化項目）與 `ai_status TEXT`（`ok`、`unavailable`、`invalid_output`，可為 NULL）；加部分唯一索引「每週一列」（`period_start`，`WHERE kind = 'weekly'`）；加 CHECK「週報列一定要有 `period_start`」（NULL 不受唯一索引約束）【待確認：#18 J8】。只新增欄位、索引與 CHECK | 2026-11-16 產品負責人裁定（#18 第 1 點 (b)）；FR-RPT-03、04 |
 | 0003 系統種子 | 寫入 `settings`（id=1，三句精力定義，其餘欄位用 DDL 預設值）與 `rubrics`（version=0、`source='default'`、五句量表），冪等（`ON CONFLICT DO NOTHING`）；降級不刪除種子 | PR #1 審查 B2（種子文字經產品負責人確認，修改文字屬規格變更）；AC-59 |
 
 系統種子相關規則（2026-11-15 產品負責人裁定）：
@@ -962,7 +965,7 @@ CREATE TABLE idempotency_keys (
 | GET | `/reports/weekly/{id}` | 取得 |
 | PUT | `/reports/weekly/{id}/manual` | 儲存人工版 |
 
-`POST /reports/weekly/draft` 輸入：`{ "week_start": "2026-11-09" }`。`week_start` 必須是星期一，且不能晚於本週（只能產生本週或過去的週報），否則 `VALIDATION_ERROR`（#18 第 5 點、G7）。過去週的「下週重點」依現在的狀態計算，畫面上要註明。回 200（AI 失敗也是 200，附退路內容，spec 5.3）。三個端點的輸出相同：
+`POST /reports/weekly/draft` 輸入：`{ "week_start": "2026-11-09" }`。`week_start` 必須是星期一，且不能晚於本週（只能產生本週或過去的週報），否則 `VALIDATION_ERROR`（#18 第 5 點、G7）；早於今天前 365 天回 `DATE_OUT_OF_RANGE`【待確認：#18 J6】。過去週的「下週重點」依現在的狀態計算，畫面上要註明。回 200（AI 失敗也是 200，附退路內容，spec 5.3）。三個端點的輸出相同：
 
 ```json
 {
@@ -980,8 +983,9 @@ CREATE TABLE idempotency_keys (
 - `validated=true` 時，`draft` 為 AI 初稿，`items` 為 AI 回傳的項目；`validated=false`（AI 失敗或 R4 對不上）時 `draft=null`，`items` 為依歷程列出的事件清單，供手動撰寫（第 4 點）。
 - 儲存（第 1 點 (b)）：`POST` 存 `ai_draft`、`ai_items`、`ai_status`，`manual_text` 不動。`GET` 回存下的 `ai_status`，並用存下的 `ai_items` 對**目前**的歷程重新對帳得出 `validated`，所以產生後任務改成私人範圍或做了基準更正，都會反映。
 - `excluded_private` 為產生初稿當下送 AI 前排除的私人任務數（AC-48）。
-- `PUT /reports/weekly/{id}/manual` 輸入：`{ "manual_text": "…" }`（上限 20,000 字）。不帶 `expected_version`，後寫的蓋掉先寫的（第 7 點）。
-- `GET`、`PUT` 的 id 不存在回 404 `NOT_FOUND`。
+- `PUT /reports/weekly/{id}/manual` 輸入：`{ "manual_text": "…" }`。不帶 `expected_version`，後寫的蓋掉先寫的（第 7 點）。可為 null 或空字串（清除人工版）；超過 20,000 字回 413 `PAYLOAD_TOO_LARGE`；內容相同照常儲存，不回 `NO_CHANGE`。【待確認：#18 J5】
+- `GET`、`PUT` 的 id 不存在，或該 id 是目標回報（`kind='goal'`），回 404 `NOT_FOUND`。【待確認：#18 J10】
+- `POST draft`、`PUT manual` 不存冪等快取：重播會略過重新對帳，快取也會多存一份人工版與初稿。【待確認：#18 J7；尚未實作，等 PR #20 的排除清單合併】
 
 ### 5.15 資料控制與維運
 
