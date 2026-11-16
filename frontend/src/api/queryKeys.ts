@@ -7,6 +7,7 @@ type StatsFilter = NonNullable<paths["/api/v1/stats/time-management"]["get"]["pa
 export const queryRoots = {
   tasks: ["tasks"], projects: ["projects"], timeManagement: ["stats", "time-management"],
   reasons: ["meta", "reasons"], health: ["meta", "health"],
+  candidates: ["candidates"], settings: ["settings"], rubrics: ["rubrics"],
 } as const;
 
 const projectTasks = (id: number) => [...queryRoots.tasks, "project", id] as const;
@@ -25,8 +26,8 @@ export const keys = {
   projectList: (filter: ProjectFilter = {}) => [...queryRoots.projects, "list", { include_archived: filter.include_archived ?? false }] as const,
   timeManagement: (filter: StatsFilter = {}) => [...queryRoots.timeManagement, filter] as const,
   // Dev-B 12.8 收件匣、12.11 設定與量表
-  candidates: (state: "open" | "confirmed" | "ignored") => ["candidates", state] as const,
+  candidates: (state: "open" | "confirmed" | "ignored") => [...queryRoots.candidates, state] as const,
   ingestJob: (id: number) => ["ingest", "jobs", id] as const,
-  settings: ["settings"] as const,
-  activeRubric: ["rubrics", "active"] as const,
+  settings: queryRoots.settings,
+  activeRubric: [...queryRoots.rubrics, "active"] as const,
 };

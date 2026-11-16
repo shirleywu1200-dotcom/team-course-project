@@ -97,7 +97,7 @@ code／message 必須是非空字串，details 必須是非陣列物件。
 
 查詢鍵只定義在 `src/api/queryKeys.ts`，舊 `queries.ts` 匯出與鍵值保留；
 `makeQueryClient` 移至獨立檔案，保留禁重試、禁焦點重讀設定。
-目前 OpenAPI 22 個操作：7 個 GET（專案列表／詳情、任務列表／詳情、時間管理、原因、健康），15 個動作如下。
+11.3 時 OpenAPI 有 22 個操作：7 個 GET（專案列表／詳情、任務列表／詳情、時間管理、原因、健康），15 個動作如下；其後 Dev-B（#20）新增的 13 個動作接在表尾。
 
 | 動作 | 失效查詢資源 | 依據 |
 | --- | --- | --- |
@@ -116,6 +116,19 @@ code／message 必須是非空字串，details 必須是非陣列物件。
 | `POST /tasks/{task_id}/baseline-correction/preview` | 無 | FR-BAS-03；DA-21 僅確認憑證，非正式查詢資料 |
 | `POST /tasks/{task_id}/baseline-correction/commit` | tasks、projects | FR-BAS-06、07；ProjectDetailOut.baseline_saved_at |
 | `POST /events/{event_id}/annotations` | tasks、timeManagement | FR-MRK-04–06，任務詳情含 events |
+| `POST /projects/import/preview` | 無 | FR-IMP-01，預覽不寫入 |
+| `POST /projects/import/commit` | projects、tasks | FR-IMP-06、07，建立專案與任務 |
+| `POST /ingest` | candidates | FR-INB-01、05，只新增候選 |
+| `POST /candidates/{candidate_id}/confirm` | candidates、tasks、timeManagement、projects | FR-INB-09–12；ProjectDetailOut.open_candidates |
+| `POST /candidates/{candidate_id}/clarify` | candidates、tasks、timeManagement、projects | FR-INB-13（12.8 四個動作共用同一套失效） |
+| `POST /candidates/{candidate_id}/create-task` | candidates、tasks、timeManagement、projects | FR-INB-14 |
+| `POST /candidates/{candidate_id}/ignore` | candidates、tasks、timeManagement、projects | FR-INB-09、13、14 |
+| `PUT /settings` | settings | FR-SET-02、03 |
+| `POST /settings/onboarding/complete` | settings | FR-SET-01，啟用精靈完成 |
+| `POST /rubrics/interview` | 無 | FR-RUB-02、03，只回草稿 |
+| `POST /rubrics` | rubrics | FR-RUB-03，確認後成立新版本 |
+| `POST /sources/purge` | candidates、tasks | FR-GOV-03；候選與任務歷程的原句由 `sources.excerpt` 帶出，清除後變空 |
+| `POST /export` | 無 | FR-GOV-02，只讀 |
 
 資源前綴涵蓋全部列表、詳情及篩選查詢。原因、健康不受上述寫入影響。
 `runMutationWithInvalidation` 只在成功後失效，等待使用中的查詢重讀，未使用的查詢留待下次讀取。
