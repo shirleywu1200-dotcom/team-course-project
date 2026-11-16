@@ -126,6 +126,21 @@ code／message 必須是非空字串，details 必須是非陣列物件。
 自行決定：以資源前綴失效，沿用既有 tasks 前綴慣例。
 後端目前完成操作尚未寫精力回報；complete 保留 FR-MRK-07 所需統計失效，避免後續讀到舊統計。
 
+### 專案查詢失效核對（Dev-A 77e3e02）
+
+`status`、`block`、`complete`、`bulk-shift/commit` 對 `projects` 查詢：**已核對，無需失效**。
+此結論只適用目前回應欄位，沒有省略任務與時間管理查詢原有的失效規則。
+
+- `backend/app/api/responses.py`：`ProjectOut` 只有 id、name、scope、audience、line_group_id、created_at、updated_at、archived_at，沒有任務進度、完成數或到期日彙總；`ProjectListOut.items` 使用此模型。
+- `backend/app/api/routes_projects.py`：列表路由使用 `ProjectListOut`，由 `projects_repo.list_all` 取得專案資料，再經 `project_out` 序列化；`backend/app/db/repo/projects_repo.py` 的列表只查 projects，沒有任務彙總或 join。
+- 詳情的 `ProjectDetailOut` 另有 `task_count`、`baseline_saved_at`。依 `backend/app/domain/projects.py` 與 repo 查詢，前者是全部任務數、後者只取 kind=baseline 事件的最新 ts；上述四個動作不增減任務數，也不寫 baseline 事件。
+- 任務更新改的是 tasks 的 updated_at；專案 updated_at 由 projects_repo.update 在編輯／封存專案時更新，不是任務活動日期彙總。依據為 projects_repo、tasks_repo 與 domain/projects.py。
+
+建立任務仍使 projects 失效（task_count），基準更正 commit 仍使 projects 失效（baseline_saved_at）。
+既有 `queryCache.test.ts` 對這四個動作各有行為測試，同時驗證專案列表與詳情保持有效，並核對 README 與實作一致。
+此項是後端模型／路由／查詢的唯讀核對與文件補充，未修改失效實作、後端或 Dev-A 的功能程式／測試。
+未啟動資料庫驗證實際專案 HTTP 回應；若後續模型或路由加入進度／日期彙總，需重新檢查本結論。
+
 ## MSW 共用資料集（11.7）
 
 測試仍從 `src/test/server.tsx` 匯入 `API`、`server`、`reasons`、`makeTask`、`apiError`、
