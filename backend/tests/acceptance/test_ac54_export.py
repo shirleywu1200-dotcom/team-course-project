@@ -80,7 +80,6 @@ def test_sec1_export_and_purge_require_token(app, seed, query):
     assert query("SELECT count(*) AS n FROM sources WHERE excerpt IS NOT NULL")[0]["n"] == 8
 
 
-@pytest.mark.xfail(reason="待裁定 Q1：尚未清除的 ai_runs.raw_output 匯出時要不要帶", strict=False)
 def test_ac54_export_includes_unpurged_raw_output(export):
     runs = export.json()["tables"]["ai_runs"]
     assert f"{MARK}RAW" in (runs[0]["raw_output"] or "")

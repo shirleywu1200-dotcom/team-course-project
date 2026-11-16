@@ -81,9 +81,9 @@ def test_ac32_failure_midway_leaves_nothing(client, seed, query):
         assert count(query, t) == 0
 
 
-def test_spec51_import_commit_returns_200(client):
-    """spec 5.1（DA-20）：回 201 的只有 POST /projects、/tasks、/events/{id}/annotations，其餘 POST 回 200。"""
-    assert _commit(client).status_code == 200
+def test_spec51_import_commit_returns_201(client):
+    """spec 5.1（DA-20，2026-11-16 擴充）：匯入確認會建立資源，回 201。"""
+    assert _commit(client).status_code == 201
 
 
 def test_fr_imp07_unknown_target_project_is_not_found(client, seed, query):

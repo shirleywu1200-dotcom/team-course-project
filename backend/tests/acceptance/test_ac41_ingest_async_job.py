@@ -1,6 +1,5 @@
 """AC-41：超過 30 行改走背景工作，狀態可查詢（FR-INB-05、spec 5.11、6.1）。"""
 
-import pytest
 
 from app import worker
 from tests.acceptance.helpers import API, MARK, SEED_BASE, count, ingest, lines
@@ -88,7 +87,6 @@ def test_spec52_exactly_20000_chars_is_accepted(client, seed, ai):
     assert r.status_code == 200, r.text
 
 
-@pytest.mark.xfail(reason="待裁定 Q6：空字串收件的行為", strict=False)
 def test_ac41_empty_text_returns_zero_created(client, seed, ai, query):
     seed(SEED_BASE)
     r = ingest(client, "")

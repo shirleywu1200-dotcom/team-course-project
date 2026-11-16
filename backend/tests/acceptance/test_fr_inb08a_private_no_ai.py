@@ -1,6 +1,5 @@
 """FR-INB-08a（PR #20 B1）：私人專案的收件不呼叫 AI-01（資安 2）。檔名暫用，待指定 AC 編號。"""
 
-import pytest
 
 from app import worker
 from tests.acceptance.helpers import API, MARK, SEED_BASE, ai_calls, count, ingest, lines
@@ -68,7 +67,6 @@ def test_fr_inb08a_work_project_still_calls_ai(client, seed, ai):
     assert len(ai_calls(ai, "AI-01")) == 1
 
 
-@pytest.mark.xfail(reason="待裁定 Q2：排隊期間專案改為私人，以收件當下還是執行當下的範圍為準", strict=False)
 def test_fr_inb08a_project_turned_private_while_queued_is_not_sent(client, seed, ai, query, db):
     seed(SEED_BASE)
     job_id = ingest(client, lines(31, MARK), project_id=1).json()["job_id"]

@@ -89,6 +89,5 @@ def test_ac27_limit_500_is_accepted(client, data):
     assert client.get(f"{API}/events", params={"limit": 500}).status_code == 200
 
 
-@pytest.mark.xfail(reason="待裁定 Q6：limit 超過上限的行為", strict=False)
 def test_ac27_limit_over_500_is_rejected(client, data):
     assert client.get(f"{API}/events", params={"limit": 501}).status_code == 422

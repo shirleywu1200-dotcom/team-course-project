@@ -66,11 +66,11 @@ def test_fr_inb14_create_task_from_unmatched(client, seed, query):
     assert query("SELECT state FROM candidates WHERE id = 5")[0]["state"] == "confirmed"
 
 
-def test_spec51_create_task_from_candidate_returns_200(client, seed):
-    """spec 5.1（DA-20）：回 201 的只有三個端點，其餘 POST 回 200。"""
+def test_spec51_create_task_from_candidate_returns_201(client, seed):
+    """spec 5.1（DA-20，2026-11-16 擴充）：由候選建任務會建立資源，回 201。"""
     seed(SEED_BASE + SEED_CANDIDATES)
     r = client.post(f"{API}/candidates/5/create-task", json={"title": "報表處理", "owner": "阿德", "due": "2026-12-20"})
-    assert r.status_code == 200
+    assert r.status_code == 201
 
 
 def test_fr_inb14_unmatched_cannot_use_confirm_endpoint(client, seed, query):

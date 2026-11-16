@@ -2,8 +2,6 @@
 
 import time
 
-import pytest
-
 from tests.acceptance.helpers import API, ai_calls
 
 HEADER = "任務,負責人,開始,結束"
@@ -35,7 +33,6 @@ def test_fr_imp01_501_rows_is_too_large(client):
     assert r.json()["error"]["code"] == "PAYLOAD_TOO_LARGE"
 
 
-@pytest.mark.xfail(reason="待裁定 Q5：匯入超過 50,000 字元的錯誤碼", strict=False)
 def test_fr_imp01_over_50000_chars_is_too_large(client):
     text = HEADER + "\n" + "長" * 50001 + ",我,2026-11-16,2026-11-18"
     r = _preview(client, text)

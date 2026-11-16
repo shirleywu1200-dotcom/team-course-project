@@ -75,7 +75,6 @@ def test_spec511_date_out_of_range_is_rejected(client, data, query):
     assert count(query, "events") == 0
 
 
-@pytest.mark.xfail(reason="待裁定 Q4：確認時新日期等於目前值", strict=False)
 def test_ac39_new_due_equal_to_current_is_no_change(client, data, query):
     r = _confirm(client, 2, new_due="2026-11-14")
     assert r.status_code == 422

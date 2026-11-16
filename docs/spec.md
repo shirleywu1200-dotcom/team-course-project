@@ -601,7 +601,7 @@ CREATE TABLE idempotency_keys (
   - 兩個相同鍵的請求同時到達時，不保證只執行一次；整批順延另有 `expected_version` 擋第二次寫入。
   - 每次寫入時清除超過 24 小時的列（DA-23）。回應本文可能含原句，所以「刪除所有來源原文」（FR-GOV）的清除範圍也包含這張表。
 - 樂觀鎖：修改任務的請求帶 `expected_version`；不符回 409 `STALE_VERSION`。
-- 成功回應：直接回資源或 `{ "data": … }`；列表回 `{ "items": […], "total": n }`。建立類端點（`POST /projects`、`POST /tasks`、`POST /events/{id}/annotations`）回 201，其餘 POST 回 200（DA-20）。
+- 成功回應：直接回資源或 `{ "data": … }`；列表回 `{ "items": […], "total": n }`。建立類端點（`POST /projects`、`POST /tasks`、`POST /events/{id}/annotations`、`POST /projects/import/commit`、`POST /candidates/{id}/create-task`、`POST /rubrics`）回 201，其餘 POST 回 200（DA-20；後三個為 2026-11-16 擴充）。
 - OpenAPI 文件放在 `/api/v1/openapi.json`，與其他 API 一樣需要 token；`/docs`、`/redoc` 關閉。不啟動伺服器也能匯出：在 `backend/` 下執行 `uv run python -m app.export_openapi`（DA-24）。
 - 未預期的例外：回 500 `INTERNAL_ERROR`，訊息固定；log 只記例外類型名稱，不寫錯誤訊息與 traceback；資料庫引擎設 `hide_parameters=True`，例外訊息不帶 SQL 參數值（DA-25）。
 - 錯誤回應格式：

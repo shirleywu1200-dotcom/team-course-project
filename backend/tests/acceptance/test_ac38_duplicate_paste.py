@@ -81,7 +81,6 @@ def test_fr_inb04_duplicates_are_not_merged(client, seed, ai, query):
     assert (query("SELECT * FROM sources ORDER BY id"), query("SELECT * FROM candidates ORDER BY id")) == before
 
 
-@pytest.mark.xfail(reason="待裁定 Q3：原文已清除後再貼同一段文字", strict=False)
 def test_ac38_repaste_after_purge_is_duplicate_and_stays_purged(client, seed, ai, query):
     seed(SEED_BASE)
     ai.script("AI-01", {"items": []})
