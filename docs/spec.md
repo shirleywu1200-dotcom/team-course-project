@@ -126,7 +126,7 @@
 ### 3.4 FR-IMP 專案匯入（P1，AI-07）
 
 - FR-IMP-01 匯入入口為貼上表格（逗號或 Tab 分隔，首列表頭）。檔案上傳列為後續。單次最多 500 列、50,000 字元。
-- FR-IMP-02 表頭先由規則比對（任務／名稱、負責人、開始、結束／期限／完成）；規則辨認不出時才呼叫 AI-07 建議對應，並顯示對應預覽由你確認。
+- FR-IMP-02 表頭先由規則比對（任務／名稱、負責人、開始、結束／期限／完成）；規則辨認不出時才呼叫 AI-07 建議對應，並顯示對應預覽由你確認。匯入目標為私人範圍的既有專案時不呼叫 AI-07、不寫 `ai_runs`，回 `ai_status="unavailable"`、`mapped_by=null`，可帶 `column_map` 手動對應；`target="new"` 視為工作範圍（Phase 6 SDD Q4；PR #20 B1 比照；資安規則 2）。
 - FR-IMP-03 日期格式接受 `YYYY-MM-DD`、`M/D`（無年份時依專案期間推年）。無法解析視為缺日期。
 - FR-IMP-04 診斷規則：
   - 錯誤（該列不匯入，除非補正或略過）：缺任務名稱；缺結束日期；結束日期早於開始日期。
@@ -718,7 +718,7 @@ CREATE TABLE idempotency_keys (
 
 - `preview` 輸出的 `column_map` 在 `mapped_by="ai"` 時多一個 `ai_run_id`（該次 AI-07 的 `ai_runs.id`），其他情況不出現。
 - `commit` 輸入可選帶 `ai_run_id` 與使用者最終的 `column_map`（`{title, owner, start, end}` 欄位索引），兩者須一起出現，否則 `VALIDATION_ERROR`。`ai_run_id` 須指向 `status='ok'` 的 AI-07 紀錄，否則 `VALIDATION_ERROR`。不帶時行為不變，也不寫回饋。
-- 伺服器從 `ai_runs` 取 AI 建議（不信前端自報），與最終對應比較：相同寫 `accepted`、不同寫 `changed`；`target_type='import_map'`、`target_id` 為本次 `baseline` 事件 id；`detail = { "ai_run_id", "ai": {四欄索引}, "final": {四欄索引} }`，只含整數或 null，不含任何貼上內容。
+- 伺服器從 `ai_runs` 取 AI 建議（不信前端自報），與最終對應比較：相同寫 `accepted`、不同寫 `changed`；`target_type='import_map'`、`target_id` 為本次 `baseline` 事件 id；`detail = { "ai_run_id", "ai": {四欄索引}, "final": {四欄索引} }`，只含整數或 null，不含任何貼上內容。該筆 `ai_runs.raw_output` 已因清除原文設為 NULL 時，照未帶 `ai_run_id` 處理：匯入照常成功，不寫回饋（PR #20 B2）。
 - 同一 `ai_run_id` 已寫過回饋時，匯入照常完成，不再寫第二筆。回饋與匯入在同一交易，失敗一起回滾。
 
 ### 5.7 任務
