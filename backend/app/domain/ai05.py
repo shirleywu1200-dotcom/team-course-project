@@ -12,7 +12,7 @@ from app.ai.client import AIInvalidOutput
 from app.domain.weekly_report import SECTIONS, WeekData
 
 NODE = "AI-05"
-DRAFT_MAX_CHARS = 20_000   # 與人工版同一個上限（#18 K8）
+TEXT_MAX_CHARS = 20_000   # AI 初稿與人工版共用的上限（#18 J5、K8）
 
 
 def _iso(value):
@@ -36,7 +36,9 @@ def parse_output(output) -> tuple[str, list[dict]]:
     if not isinstance(output, dict) or not isinstance(output.get("draft"), str) \
             or not isinstance(output.get("items"), list):
         raise AIInvalidOutput(NODE)
-    if not output["draft"].strip() or len(output["draft"]) > DRAFT_MAX_CHARS:   # #18 K8
+    draft = output["draft"]
+    # 空白、超過上限、含 NUL（PostgreSQL 文字欄位不收，存檔會失敗）都算格式錯誤（#18 K8）
+    if not draft.strip() or len(draft) > TEXT_MAX_CHARS or "\x00" in draft:
         raise AIInvalidOutput(NODE)
     items: list[dict] = []
     for raw in output["items"]:

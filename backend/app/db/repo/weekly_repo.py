@@ -6,11 +6,10 @@
 """
 
 from datetime import date, datetime, time, timedelta
-from zoneinfo import ZoneInfo
 
 from sqlalchemy import Connection, text
 
-TZ = ZoneInfo("Asia/Taipei")
+from app.clock import TZ
 
 
 def done_in_range(conn: Connection, start: date, end: date) -> list[dict]:

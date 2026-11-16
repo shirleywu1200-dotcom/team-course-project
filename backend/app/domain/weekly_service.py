@@ -21,7 +21,7 @@ from app.errors import DomainError
 
 log = logging.getLogger("g4")
 
-MANUAL_MAX_CHARS = 20_000
+MANUAL_MAX_CHARS = ai05.TEXT_MAX_CHARS
 MAX_ATTEMPTS = 3                       # 逾時與格式錯誤最多重試 2 次（spec 5.14、#22）
 RETRYABLE = {"timeout", "invalid_output"}
 
@@ -66,8 +66,18 @@ def _ask_ai(db: Database, ai: AIClient, data: weekly_report.WeekData) -> tuple[s
     return ("invalid_output" if status == "invalid_output" else "unavailable"), None, None
 
 
-def _view(conn: Connection, row: dict) -> dict:
-    """依目前的歷程組出回應：validated 由存下的 ai_items 重新對帳。"""
+def _view(conn: Connection, row: dict, failed: tuple[str, weekly_report.WeekData] | None = None) -> dict:
+    """依目前的歷程組出回應：validated 由存下的 ai_items 重新對帳。
+
+    failed＝(這次的 ai_status, 這次的彙整)：這次產生失敗，回應一律是這次的退路內容，
+    即使存著上一次成功的初稿（#18 H2）。
+    """
+    if failed is not None:
+        status, data = failed
+        return {"id": row["id"], "week_start": row["period_start"], "ai_status": status,
+                "excluded_private": data.excluded_private, "draft": None,
+                "items": weekly_report.fallback_items(data), "validated": False,
+                "manual_text": row["manual_text"], "updated_at": row["updated_at"]}
     data = weekly_report.collect(conn, row["period_start"])
     valid = False
     if row["ai_status"] == "ok" and row["ai_items"] is not None:
@@ -93,13 +103,8 @@ def generate(db: Database, ai: AIClient, week_start: date) -> dict:
         if status == "ok":
             rid = reports_repo.save_success(conn, week_start, draft, items, data.excluded_private, now)
             return _view(conn, reports_repo.get_weekly(conn, rid))
-        row = reports_repo.get_weekly(conn, reports_repo.save_failure(conn, week_start, status,
-                                                                       data.excluded_private, now))
-        # 這次失敗：回應一律是這次彙整的退路內容，即使存著上一次成功的初稿（#18 H2）
-        return {"id": row["id"], "week_start": week_start, "ai_status": status,
-                "excluded_private": data.excluded_private, "draft": None,
-                "items": weekly_report.fallback_items(data), "validated": False,
-                "manual_text": row["manual_text"], "updated_at": row["updated_at"]}
+        rid = reports_repo.save_failure(conn, week_start, status, data.excluded_private, now)
+        return _view(conn, reports_repo.get_weekly(conn, rid), failed=(status, data))
 
     return db.run(store)
 

@@ -388,7 +388,7 @@ def test_no_log_of_titles_or_draft_on_failures(client, data, ai, caplog):
     assert "本週完成" not in caplog.text and MARK not in caplog.text
 
 
-@pytest.mark.parametrize("bad_draft", ["", "   ", "字" * 20_001])
+@pytest.mark.parametrize("bad_draft", ["", "   ", "字" * 20_001, "本週\x00進度"])   # NUL 會讓存檔失敗
 def test_draft_bounds(client, data, ai, query, bad_draft):
     out = {"draft": bad_draft, "items": AI_ITEMS}
     ai.script("AI-05", out, out, out)

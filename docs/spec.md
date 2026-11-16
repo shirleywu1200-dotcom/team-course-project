@@ -1004,7 +1004,7 @@ CREATE TABLE idempotency_keys (
 
 - payload 每一項只放上面列出的鍵（白名單）。不送事件的備註、原因、`extra`、註記、完成回報的星數與精力、`done_when`、原句與專案名稱。`title` 用任務目前的標題；`owner` 照 AI-01 的做法送名字，D-03 裁定後兩邊一起改。
 - 輸出為 `{ "draft": "…", "items": [{ "section", "task_id", "event_id" }] }`。`items` 只保留這三個鍵，其他鍵丟棄；`section` 為 `done`／`delay` 時 `event_id` 必填，為 `next` 時必須為 null。結構不對視為 `invalid_output`。
-- 重試與紀錄：格式錯誤與逾時最多重試 2 次（共 3 次）；AI 不可用、其他錯誤與 R4 對帳失敗不重試。每次嘗試寫一列 `ai_runs`（FR-AI-02），`error` 只放例外類別名稱。
+- 重試與紀錄：格式錯誤與逾時最多重試 2 次（共 3 次）；AI 不可用、其他錯誤與 R4 對帳失敗不重試。每次嘗試寫一列 `ai_runs`（FR-AI-02），`error` 只放例外類別名稱；R4 對帳失敗記為 `status='invalid_output'`、`error='R4_MISMATCH'`，可據以算出週報對帳結果，也和供應商的格式錯誤（`error` 為 `AIInvalidOutput`）分得開。AI-05 不存 `raw_output`。【待確認：#18 K1、K2】
 
 - `GET`、`PUT` 的 id 不存在，或該 id 是目標回報（`kind='goal'`），回 404 `NOT_FOUND`。【待確認：#18 J10】
 - `POST draft`、`PUT manual` 不存冪等快取：重播會略過重新對帳，快取也會多存一份人工版與初稿。【待確認：#18 J7；尚未實作，等 PR #20 的排除清單合併】
