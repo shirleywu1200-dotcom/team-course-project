@@ -1,16 +1,15 @@
-// 暫代 Dev-C todo 11.1（路由與版面）：只掛 Dev-A 的三個頁面。Phase 11 完成後併入正式路由。
+// 路由與共用版面由 11.1 管理；TokenGate 與 QueryClient 設定沿用既有實作。
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
-import { BrowserRouter, Link, Route, Routes } from "react-router-dom";
+import { BrowserRouter } from "react-router-dom";
 
 import { getToken, setToken } from "./api/client";
-import { BulkShiftPage } from "./features/bulk-shift/BulkShiftPage";
-import { TaskDuePage } from "./features/due-adjust/TaskDuePage";
+import { AppRoutes } from "./app/AppRoutes";
+import { makeQueryClient } from "./api/queryClient";
+import { ThemeProvider } from "./theme/Theme";
 
-export function makeQueryClient() {
-  return new QueryClient({ defaultOptions: { queries: { retry: false, refetchOnWindowFocus: false } } });
-}
+export { makeQueryClient } from "./api/queryClient";
 
 function TokenGate({ children }: { children: ReactNode }) {
   const [token, setLocal] = useState(getToken());
@@ -38,31 +37,15 @@ function TokenGate({ children }: { children: ReactNode }) {
   );
 }
 
-function Home() {
-  return (
-    <main>
-      <h1>個人大總管（Dev-A 頁面）</h1>
-      <p className="muted">
-        日期調整與基準更正：<code>/tasks/:taskId</code>；整批順延：<code>/projects/:projectId/bulk-shift</code>
-      </p>
-      <Link to="/projects/1/bulk-shift">專案 1 整批順延</Link>
-    </main>
-  );
-}
-
 export function App() {
   const [client] = useState(makeQueryClient);
   return (
-    <QueryClientProvider client={client}>
+    <ThemeProvider><QueryClientProvider client={client}>
       <TokenGate>
         <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/tasks/:taskId" element={<TaskDuePage />} />
-            <Route path="/projects/:projectId/bulk-shift" element={<BulkShiftPage />} />
-          </Routes>
+          <AppRoutes />
         </BrowserRouter>
       </TokenGate>
-    </QueryClientProvider>
+    </QueryClientProvider></ThemeProvider>
   );
 }

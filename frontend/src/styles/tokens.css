@@ -1,8 +1,8 @@
-/* 暫代 Dev-C todo 11.4：色彩與字型 token 只放這裡，提供亮色與暗色兩套（CLAUDE.md 前端規範 2）。
-   元件只引用變數名稱。Phase 11 完成後以 Dev-C 的主題檔取代。 */
+/* 11.4：沿用原型 V4 色彩與字型，保留既有 token 名稱。 */
 
 :root {
-  --font-sans: "Noto Sans TC", system-ui, sans-serif;
+  color-scheme: light;
+  --font-sans: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
   --font-size: 14px;
   --radius: 6px;
   --space-1: 4px;
@@ -10,51 +10,53 @@
   --space-3: 12px;
   --space-4: 16px;
 
-  --color-bg: #f7f7f5;
+  --color-bg: #eef2f4;
   --color-surface: #ffffff;
-  --color-text: #1f2328;
-  --color-muted: #59636e;
-  --color-border: #d1d9e0;
-  --color-accent: #0b62d6;
+  --color-text: #14212b;
+  --color-muted: #566772;
+  --color-border: #d7e0e5;
+  --color-accent: #0b6e75;
   --color-accent-text: #ffffff;
-  --color-warn-bg: #fff4d6;
-  --color-warn-text: #6b4a00;
-  --color-error-bg: #ffe5e5;
-  --color-error-text: #8a1c1c;
-  --color-ok-bg: #e3f6e8;
-  --color-ok-text: #145c2c;
+  --color-warn-bg: #fbeccf;
+  --color-warn-text: #9a5b00;
+  --color-error-bg: #fbe3e1;
+  --color-error-text: #b3261e;
+  --color-ok-bg: #dff3e6;
+  --color-ok-text: #1b7b49; /* 亮色成功文字最小加深，確保一般文字對比 ≥ 4.5:1。 */
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --color-bg: #15181c;
-    --color-surface: #1d2126;
-    --color-text: #e6e8eb;
-    --color-muted: #9aa4af;
-    --color-border: #343b44;
-    --color-accent: #5aa2ff;
-    --color-accent-text: #0b1320;
-    --color-warn-bg: #3a2f10;
-    --color-warn-text: #f3d38a;
-    --color-error-bg: #3d1a1a;
-    --color-error-text: #ffb3b3;
-    --color-ok-bg: #12321f;
-    --color-ok-text: #9be3b2;
+    color-scheme: dark;
+    --color-bg: #0d1418;
+    --color-surface: #151f25;
+    --color-text: #e6eef2;
+    --color-muted: #9bb0bb;
+    --color-border: #2a3a44;
+    --color-accent: #4cc3c9;
+    --color-accent-text: #06262a;
+    --color-warn-bg: #3d2d10;
+    --color-warn-text: #f0b24f;
+    --color-error-bg: #41191a;
+    --color-error-text: #ff8a80;
+    --color-ok-bg: #173a29;
+    --color-ok-text: #5fcf94;
   }
 }
 
 :root[data-theme="dark"] {
-  --color-bg: #15181c;
-  --color-surface: #1d2126;
-  --color-text: #e6e8eb;
-  --color-muted: #9aa4af;
-  --color-border: #343b44;
-  --color-accent: #5aa2ff;
-  --color-accent-text: #0b1320;
-  --color-warn-bg: #3a2f10;
-  --color-warn-text: #f3d38a;
-  --color-error-bg: #3d1a1a;
-  --color-error-text: #ffb3b3;
-  --color-ok-bg: #12321f;
-  --color-ok-text: #9be3b2;
+  color-scheme: dark;
+  --color-bg: #0d1418;
+  --color-surface: #151f25;
+  --color-text: #e6eef2;
+  --color-muted: #9bb0bb;
+  --color-border: #2a3a44;
+  --color-accent: #4cc3c9;
+  --color-accent-text: #06262a;
+  --color-warn-bg: #3d2d10;
+  --color-warn-text: #f0b24f;
+  --color-error-bg: #41191a;
+  --color-error-text: #ff8a80;
+  --color-ok-bg: #173a29;
+  --color-ok-text: #5fcf94;
 }

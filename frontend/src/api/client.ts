@@ -1,4 +1,4 @@
-// 暫代 Dev-C todo 11.2（API client）：只做 Dev-A 三頁需要的部分。
+// 11.2 通用 API client：保留既有認證與送出方式，解析統一錯誤格式。
 // 規則：解析統一錯誤格式；收到 STALE_VERSION 由呼叫端重新載入，讓使用者重做，不自動重送。
 
 const TOKEN_KEY = "g4.token";
@@ -40,6 +40,26 @@ interface RequestOptions {
   idempotencyKey?: string;
 }
 
+function asRecord(value: unknown): Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {};
+}
+
+function nonEmptyString(value: unknown, fallback: string): string {
+  return typeof value === "string" && value.trim() !== "" ? value : fallback;
+}
+
+function parseError(response: Response, data: unknown): ApiError {
+  const error = asRecord(asRecord(data).error);
+  return new ApiError(
+    response.status,
+    nonEmptyString(error.code, "HTTP_ERROR"),
+    nonEmptyString(error.message, response.statusText || `HTTP ${response.status}`),
+    asRecord(error.details),
+  );
+}
+
 export async function api<T>(path: string, opts: RequestOptions = {}): Promise<T> {
   const headers: Record<string, string> = { Authorization: `Bearer ${getToken()}` };
   if (opts.body !== undefined) headers["Content-Type"] = "application/json";
@@ -49,10 +69,9 @@ export async function api<T>(path: string, opts: RequestOptions = {}): Promise<T
     headers,
     body: opts.body === undefined ? undefined : JSON.stringify(opts.body),
   });
-  const data = await res.json().catch(() => null);
+  const data: unknown = await res.json().catch(() => null);
   if (!res.ok) {
-    const err = data?.error ?? {};
-    throw new ApiError(res.status, err.code ?? "HTTP_ERROR", err.message ?? res.statusText, err.details ?? {});
+    throw parseError(res, data);
   }
   return data as T;
 }
