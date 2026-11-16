@@ -125,7 +125,7 @@
 
 ### 3.4 FR-IMP 專案匯入（P1，AI-07）
 
-- FR-IMP-01 匯入入口為貼上表格（逗號或 Tab 分隔，首列表頭）。檔案上傳列為後續。單次最多 500 列、50,000 字元。
+- FR-IMP-01 匯入入口為貼上表格（逗號或 Tab 分隔，首列表頭）。檔案上傳列為後續。單次最多 500 列、50,000 字元；超過任一上限回 413 `PAYLOAD_TOO_LARGE`（2026-11-16 裁定，PR #20 Q5）。
 - FR-IMP-02 表頭先由規則比對（任務／名稱、負責人、開始、結束／期限／完成）；規則辨認不出時才呼叫 AI-07 建議對應，並顯示對應預覽由你確認。匯入目標為私人範圍的既有專案時不呼叫 AI-07、不寫 `ai_runs`，回 `ai_status="unavailable"`、`mapped_by=null`，可帶 `column_map` 手動對應；`target="new"` 視為工作範圍（Phase 6 SDD Q4；PR #20 B1 比照；資安規則 2）。
 - FR-IMP-03 日期格式接受 `YYYY-MM-DD`、`M/D`（無年份時依專案期間推年）。無法解析視為缺日期。
 - FR-IMP-04 診斷規則：
@@ -208,14 +208,14 @@
 - FR-INB-01 入口：貼上文字（預設）；LINE webhook（P1b，需已綁定且已告知成員的群組）。
 - FR-INB-02 R1 規則：LINE 群組未綁定或未確認告知成員者一律丟棄，不存原文。
 - FR-INB-03 只存必要摘錄（`sources.excerpt`），不存整段對話；依保存期限到期清除。
-- FR-INB-04 重複訊息以「時間＋發言者＋內容」雜湊判斷，**只回報重複數，不自動合併**。貼上內容有日期標頭（例如 `2026/11/11（三）`）時，標頭之後的訊息以「日期＋時間＋發言者＋內容」判斷；沒有日期標頭時維持原規則（2026-11-16 裁定，PR #20 B3）。
+- FR-INB-04 重複訊息以「時間＋發言者＋內容」雜湊判斷，**只回報重複數，不自動合併**。貼上內容有日期標頭（例如 `2026/11/11（三）`）時，標頭之後的訊息以「日期＋時間＋發言者＋內容」判斷；沒有日期標頭時維持原規則（2026-11-16 裁定，PR #20 B3）。原文清除後再貼同一段文字仍算重複，原文維持清除、不回存（2026-11-16 裁定，PR #20 Q3）。
 - FR-INB-05 解析規模：不超過 30 行同步處理；超過則建立背景工作，回傳工作編號，前端輪詢（每 3 秒，最多 60 秒）。〔假設〕
 - FR-INB-06 AI-01 輸出候選：種類（`delay`、`done`、`stuck`）、對應任務、新值、原句、確定度。AI 原始輸出先保存為中間產物。
 - FR-INB-07 R2 規則（程式，不由 AI 決定）：驗證輸出格式；日期轉值；問句、含「可能、大概、應該、也許」者降級為 `unclear`（待釐清）；認不出任務的承接語句為 `unmatched`（待配對），**不猜**；無關訊息略過並計數。
 - FR-INB-08 AI 逾時或輸出不合格式：從 AI-01 續跑最多重試 2 次；仍失敗則工作標為 `failed`，保留摘錄，提示可手動建立任務。
-- FR-INB-08a 收件指定的專案為私人範圍（`scope='private'`）時，不呼叫 AI-01、不寫 `ai_runs`，回 `ai_status="unavailable"`（背景工作標為 `failed`），摘錄照存、可手動建立任務（2026-11-16 裁定，PR #20 B1；資安規則 2）。
+- FR-INB-08a 收件指定的專案為私人範圍（`scope='private'`）時，不呼叫 AI-01、不寫 `ai_runs`，回 `ai_status="unavailable"`（背景工作標為 `failed`），摘錄照存、可手動建立任務（2026-11-16 裁定，PR #20 B1；資安規則 2）。背景工作以**執行當下**的專案範圍判斷：排隊期間專案改為私人，執行時同樣不呼叫 AI-01（2026-11-16 裁定，PR #20 Q2）。
 - FR-INB-09 候選狀態：`open`、`confirmed`、`ignored`。`open` 候選**不進任何正式統計、甘特圖或週報**。
-- FR-INB-10 確認 `delay` 候選：可先改日期；寫 `due` 事件（依據為該候選與原句）；更新 `latest_due`；若任務負責人是我，回傳 `needs_mark=true` 與事件 id，前端接著開註記面板（FR-MRK）。
+- FR-INB-10 確認 `delay` 候選：可先改日期；寫 `due` 事件（依據為該候選與原句）；更新 `latest_due`；若任務負責人是我，回傳 `needs_mark=true` 與事件 id，前端接著開註記面板（FR-MRK）。新日期等於目前 `latest_due` 時回 422 `NO_CHANGE`，候選維持 `open`、不寫事件（同 AC-07）（2026-11-16 裁定，PR #20 Q4）。
 - FR-INB-11 確認 `done` 候選：任務標為完成、記完成日，並開啟完成回報（FR-FBK）。
 - FR-INB-12 確認 `stuck` 候選：任務 `blocked=1`，寫 `status` 事件。
 - FR-INB-13 `unclear` 候選：提供「我確認」（依建議值，事件依據註記為「待釐清，你確認」）與「忽略」。
@@ -620,7 +620,7 @@ CREATE TABLE idempotency_keys (
 | 409 | `STALE_VERSION` | `expected_version` 與目前不符 |
 | 409 | `CONFIRMATION_INVALID` | 基準更正憑證過期、已使用或任務已變動 |
 | 409 | `CANDIDATE_NOT_OPEN` | 候選已處理 |
-| 413 | `PAYLOAD_TOO_LARGE` | 貼上文字超過 20,000 字，或匯入超過 500 列 |
+| 413 | `PAYLOAD_TOO_LARGE` | 貼上文字超過 20,000 字，或匯入超過 500 列或 50,000 字元 |
 | 422 | `VALIDATION_ERROR` | 欄位缺漏或格式錯誤（`details` 列出欄位） |
 | 422 | `NO_CHANGE` | 新值等於目前值 |
 | 422 | `DATE_OUT_OF_RANGE` | 日期超出允許範圍 |
@@ -847,7 +847,7 @@ CREATE TABLE idempotency_keys (
 
 `POST /events/{id}/annotations` 輸入：`{ "mark": "worse", "reason": "underestimated", "note": "…" }`。`mark` 必填且為三值之一。`reason` 選填，有給時依原日期事件的方向檢查選項（DA-13）。輸出：新增的 `annotation` 事件，與更新後的有效註記。錯誤：`NOT_FOUND`、`ANNOTATION_NOT_ALLOWED`、`VALIDATION_ERROR`。
 
-`GET /events` 參數：`project_id`（或 `none`）、`kind`、`task_id`、`batch_id`、`from`、`to`、`limit`（預設 100，最大 500）、`offset`。`from`、`to` 為日期，兩端皆包含（以事件時間戳的台北日期判斷）。輸出：
+`GET /events` 參數：`project_id`（或 `none`）、`kind`、`task_id`、`batch_id`、`from`、`to`、`limit`（預設 100，最大 500；超過回 422 `VALIDATION_ERROR`（2026-11-16 裁定，PR #20 Q6））、`offset`。`from`、`to` 為日期，兩端皆包含（以事件時間戳的台北日期判斷）。輸出：
 
 ```json
 {
@@ -945,7 +945,7 @@ CREATE TABLE idempotency_keys (
 | POST | `/candidates/{id}/ignore` | 忽略 |
 | POST | `/candidates/{id}/create-task` | 待配對：建立新任務 |
 
-`POST /ingest` 輸入：`{ "text": "[10:12] 阿德：畫面規格 v1 確定延到 11/18", "project_id": 1 }`。
+`POST /ingest` 輸入：`{ "text": "[10:12] 阿德：畫面規格 v1 確定延到 11/18", "project_id": 1 }`。`text` 為空字串時回 200、`created=0`，不建立來源（2026-11-16 裁定，PR #20 Q6）。
 
 輸出（同步完成）：
 
@@ -1142,7 +1142,7 @@ CREATE TABLE idempotency_keys (
 - 清除排程（服務啟動時一次，之後每小時一次；冪等）：將 `expires_at` 已過的 `sources.excerpt` 設為 NULL，寫 `purged_at`。有原文被清除時，一併刪除 `idempotency_keys`（DA-23）。`created_at` 加保存天數已過的 `ai_runs.raw_output` 設為 NULL，不分節點（失敗的 AI-01 輸出連不回來源；AI-06、AI-07 的輸出也可能含原文；PR #20 B2）；另外，經背景工作的 `source_ids` 或候選的 `ai_run_id` 連得回已清除來源的輸出，也一併設為 NULL（背景工作可能晚於收件才呼叫 AI）。`events`、`candidates` 不動。（2026-11-15 裁定：原為每日 03:00，本機服務該時段常未開機會漏跑，改為每小時。）
 - 修改保存期限時，尚未清除的來源一併重算 `expires_at = received_at + 新天數`（2026-11-15 裁定）。
 - 「刪除所有來源原文」清除 `sources.excerpt`，刪除 `idempotency_keys` 全部列（回應本文可能含原句；這張表是 24 小時的重送暫存，不是歷程，DA-23），並將 `ai_runs.raw_output` 全部設為 NULL（PR #20 B2）。`events`、`candidates`、`tasks` 不動，事件的原句顯示改為已刪除。
-- 匯出檔包含全部表；`sources.excerpt` 已清除者匯出為 `null`。
+- 匯出檔包含全部表；`sources.excerpt` 已清除者匯出為 `null`。尚未清除的 `ai_runs.raw_output` 照帶，已清除者為 `null`（2026-11-16 裁定，PR #20 Q1）。
 
 ### 6.8 並行與一致性
 
