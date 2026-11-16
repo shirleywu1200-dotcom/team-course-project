@@ -11,7 +11,7 @@ from datetime import date, timedelta
 
 from sqlalchemy import Connection
 
-from app.ai.client import DEFAULT_TIMEOUT_S, AIClient, AIInvalidOutput, AITimeout
+from app.ai.client import DEFAULT_TIMEOUT_S, AIClient, AIInvalidOutput, AITimeout, AIUnavailable
 from app.clock import get_clock
 from app.db.database import Database
 from app.db.repo import ai_run_log, reports_repo, weekly_repo
@@ -22,8 +22,8 @@ from app.errors import DomainError
 log = logging.getLogger("g4")
 
 MANUAL_MAX_CHARS = ai05.TEXT_MAX_CHARS
-MAX_ATTEMPTS = 3                       # 逾時與格式錯誤最多重試 2 次（spec 5.14、#22）
-RETRYABLE = {"timeout", "invalid_output"}
+MAX_ATTEMPTS = 3   # 任何失敗都算一次、最多 3 次；只有 AI 不可用與 R4 失敗立刻停（#22，與 process_sources 一致）
+STOP_ERRORS = {"AIUnavailable", "R4_MISMATCH"}
 
 
 def check_week_start(week_start: date, today: date) -> None:
@@ -42,6 +42,8 @@ def _attempt(ai: AIClient, payload: dict, data: weekly_report.WeekData) -> tuple
         return "timeout", type(exc).__name__, None
     except AIInvalidOutput as exc:
         return "invalid_output", type(exc).__name__, None
+    except AIUnavailable as exc:
+        return "error", type(exc).__name__, None
     except Exception as exc:   # noqa: BLE001 供應商可能丟出任何例外；AI 失敗一律走退路（spec 5.3）
         return "error", type(exc).__name__, None
     if not weekly_report.reconcile(items, data):   # R4 對不上：記成格式不合，不重試（#18 J2、K2）
@@ -60,7 +62,7 @@ def _ask_ai(db: Database, ai: AIClient, data: weekly_report.WeekData) -> tuple[s
         db.run(lambda c, r=run: ai_run_log.insert(c, r))   # raw_output 不存（#18 K1）
         if result is not None:
             return "ok", *result
-        if status not in RETRYABLE or error == "R4_MISMATCH":
+        if error in STOP_ERRORS:
             break
     log.warning("AI-05 失敗：%s", error)
     return ("invalid_output" if status == "invalid_output" else "unavailable"), None, None

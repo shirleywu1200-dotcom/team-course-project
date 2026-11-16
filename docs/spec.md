@@ -560,9 +560,9 @@ CREATE TABLE idempotency_keys (
 | 遷移 | 內容 | 依據 |
 | --- | --- | --- |
 | 0002 結構變更 | `ai_runs.node_id` 的 CHECK 移除 `AI-08`（AI-08 已取消）；`rubrics` 加不可修改觸發器，UPDATE、DELETE、TRUNCATE 皆擋，INSERT 不受影響。`settings` 不加，啟用精靈需要 UPDATE | PR #1 審查 A1、B5（2026-11-15 產品負責人裁定）；FR-RUB-01 |
-| 0004 週報存檔 | `reports` 加 `ai_items JSONB`（AI 回傳的結構化項目）與 `ai_status TEXT`（`ok`、`unavailable`、`invalid_output`，可為 NULL）；加部分唯一索引「每週一列」（`period_start`，`WHERE kind = 'weekly'`）；加 CHECK「週報列一定要有 `period_start`」（NULL 不受唯一索引約束）【待確認：#18 J8】。只新增欄位、索引與 CHECK | 2026-11-16 產品負責人裁定（#18 第 1 點 (b)）；FR-RPT-03、04 |
 | 0003 系統種子 | 寫入 `settings`（id=1，三句精力定義，其餘欄位用 DDL 預設值）與 `rubrics`（version=0、`source='default'`、五句量表），冪等（`ON CONFLICT DO NOTHING`）；降級不刪除種子 | PR #1 審查 B2（種子文字經產品負責人確認，修改文字屬規格變更）；AC-59 |
 | 0004 候選記住收件專案 | `candidates` 加 `project_id BIGINT REFERENCES projects(id)`（可為 NULL，NULL 表示收件時沒有指定專案）與索引 `ix_candidates_project`。只新增欄位與索引 | PR #20 審查 B5（2026-11-16 產品負責人裁定）；FR-INB-14 |
+| 0005 週報存檔 | `reports` 加 `ai_items JSONB`（AI 回傳的結構化項目）與 `ai_status TEXT`（`ok`、`unavailable`、`invalid_output`，可為 NULL）；加部分唯一索引「每週一列」（`period_start`，`WHERE kind = 'weekly'`）；加 CHECK「週報列一定要有 `period_start`」（NULL 不受唯一索引約束）【待確認：#18 J8】。只新增欄位、索引與 CHECK | 2026-11-16 產品負責人裁定（#18 第 1 點 (b)）；FR-RPT-03、04 |
 
 系統種子相關規則（2026-11-15 產品負責人裁定）：
 
@@ -1005,7 +1005,7 @@ CREATE TABLE idempotency_keys (
 
 - payload 每一項只放上面列出的鍵（白名單）。不送事件的備註、原因、`extra`、註記、完成回報的星數與精力、`done_when`、原句與專案名稱。`title` 用任務目前的標題；`owner` 照 AI-01 的做法送名字，D-03 裁定後兩邊一起改。
 - 輸出為 `{ "draft": "…", "items": [{ "section", "task_id", "event_id" }] }`。`items` 只保留這三個鍵，其他鍵丟棄；`section` 為 `done`／`delay` 時 `event_id` 必填，為 `next` 時必須為 null。結構不對視為 `invalid_output`。
-- 重試與紀錄：格式錯誤與逾時最多重試 2 次（共 3 次）；AI 不可用、其他錯誤與 R4 對帳失敗不重試。每次嘗試寫一列 `ai_runs`（FR-AI-02），`error` 只放例外類別名稱；R4 對帳失敗記為 `status='invalid_output'`、`error='R4_MISMATCH'`，可據以算出週報對帳結果，也和供應商的格式錯誤（`error` 為 `AIInvalidOutput`）分得開。AI-05 不存 `raw_output`。【待確認：#18 K1、K2】
+- 重試與紀錄：任何失敗（逾時、格式錯誤、其他例外）都算一次，最多 3 次；只有 AI 不可用（`AIUnavailable`）與 R4 對帳失敗立刻停止（與 AI-01 的 `process_sources` 一致，#22）。最終 `ai_status`：最後一次為格式錯誤或 R4 失敗回 `invalid_output`，其餘回 `unavailable`。每次嘗試寫一列 `ai_runs`（FR-AI-02），`error` 只放例外類別名稱；R4 對帳失敗記為 `status='invalid_output'`、`error='R4_MISMATCH'`，可據以算出週報對帳結果，也和供應商的格式錯誤（`error` 為 `AIInvalidOutput`）分得開。AI-05 不存 `raw_output`。【待確認：#18 K1、K2】
 
 - `GET`、`PUT` 的 id 不存在，或該 id 是目標回報（`kind='goal'`），回 404 `NOT_FOUND`。【待確認：#18 J10】
 - `POST draft`、`PUT manual` 不存冪等快取：重播會略過重新對帳，快取也會多存一份人工版與初稿。【待確認：#18 J7；尚未實作，等 PR #20 的排除清單合併】

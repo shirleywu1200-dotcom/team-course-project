@@ -1,4 +1,4 @@
-"""週報（reports, kind='weekly'）的讀寫（todo 10.4；遷移 0004）。
+"""週報（reports, kind='weekly'）的讀寫（todo 10.4；遷移 0005）。
 
 每週一列由部分唯一索引保證；寫入一律用 INSERT … ON CONFLICT，同一週同時產生也不會撞號。
 AI 欄位與人工版分開更新：AI 寫入不碰 manual_text，人工版寫入不碰 AI 欄位（AC-51）。

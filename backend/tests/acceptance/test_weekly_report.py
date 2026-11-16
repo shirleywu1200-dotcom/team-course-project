@@ -339,7 +339,10 @@ def test_success_writes_one_run(client, data, ai, query):
     ([AITimeout] * 4, [("timeout", 1), ("timeout", 2), ("timeout", 3)], "unavailable"),
     ([AIInvalidOutput, AITimeout, AITimeout], [("invalid_output", 1), ("timeout", 2), ("timeout", 3)], "unavailable"),
     ([AIInvalidOutput, AIUnavailable], [("invalid_output", 1), ("error", 2)], "unavailable"),   # 不可用立刻停
-    ([RuntimeError("x")], [("error", 1)], "unavailable"),                                     # 未預期錯誤不重試
+    # 其他例外也算一次失敗、繼續重試；只有 AI 不可用立刻停（#22 Dev-B 對齊 process_sources；2026-11-17 修改）
+    ([RuntimeError("x")] * 3, [("error", 1), ("error", 2), ("error", 3)], "unavailable"),
+    ([RuntimeError("x"), AI_OK], [("error", 1), ("ok", 2)], "ok"),
+    ([RuntimeError("x"), AIUnavailable], [("error", 1), ("error", 2)], "unavailable"),
 ])
 def test_retry_sequences(client, data, ai, query, script, expected, final):
     ai.script("AI-05", *script)

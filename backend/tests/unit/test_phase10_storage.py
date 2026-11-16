@@ -1,4 +1,4 @@
-"""Phase 10 第二段：遷移 0004（reports 的 ai_items、ai_status、每週一列、週次 CHECK）。
+"""Phase 10 第二段：遷移 0005（reports 的 ai_items、ai_status、每週一列、週次 CHECK）。
 
 依 spec 4.2.1 與 #18 第 1 點 (b)、J8。
 """
@@ -53,18 +53,18 @@ def test_ai_items_is_jsonb(db, query):
     assert query("SELECT ai_items FROM reports")[0]["ai_items"] == [{"section": "next", "task_id": 1, "event_id": None}]
 
 
-def test_0004_downgrade_and_upgrade_with_data():
-    name = f"g4_test_0004_{uuid.uuid4().hex[:8]}"
+def test_0005_downgrade_and_upgrade_with_data():
+    name = f"g4_test_0005_{uuid.uuid4().hex[:8]}"
     url = create_empty_db(name)
     cfg = alembic_config(url)
     eng = create_engine(url)
     try:
-        command.upgrade(cfg, "0003")
+        command.upgrade(cfg, "0004")
         with eng.begin() as c:
             c.execute(text("INSERT INTO reports (kind, period_start, created_at, updated_at) "
                            "VALUES ('weekly', '2026-11-09', now(), now())"))
         command.upgrade(cfg, "head")
-        command.downgrade(cfg, "0003")
+        command.downgrade(cfg, "0004")
         with eng.connect() as c:
             cols = set(c.execute(text("SELECT column_name FROM information_schema.columns "
                                       "WHERE table_name = 'reports'")).scalars())
