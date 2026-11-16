@@ -127,8 +127,9 @@ def test_delay_uses_current_orig_and_latest_due(week):
 # 8、下週重點（裁定 E）
 def test_next_week_due_or_blocked_unfinished(week):
     # 13、14：下週一、下週日到期；9：私人專案底下的工作任務；10：卡住（期限在更後面）
+    # 4：最新預計 11/15，早於下週一 → 逾期，列入（#18 G6，以下週一為基準 H1；2026-11-16 依裁定修改預期值）
     # 11 已完成、12 下下週一、6 私人：不列入
-    assert sorted(ids(week.next)) == [9, 10, 13, 14]
+    assert sorted(ids(week.next)) == [4, 9, 10, 13, 14]
     assert next(i for i in week.next if i["task_id"] == 10)["blocked"] is True
 
 
@@ -215,3 +216,87 @@ def test_reconcile_rejects_items_not_backed_by_week_events(week, bad):
 def test_reconcile_rejects_items_when_week_is_empty(db):
     w = db.run(lambda c: weekly_report.collect(c, WEEK))
     assert weekly_report.reconcile([{"section": "done", "task_id": 1, "event_id": 102}], w) is False
+
+
+# ---------- 第二段：#18 G1、G3、G5、G6、G4（2026-11-16 裁定）----------
+
+G_DATA = f"""
+INSERT INTO projects (id, name, scope, audience, created_at, updated_at, archived_at) VALUES
+  (3, '封存專案', 'work', 'none', {TS}, {TS}, '2026-11-10T09:00+08:00');
+INSERT INTO tasks (id, project_id, title, owner_name, scope, start_date, orig_due, latest_due,
+                   status, done_date, blocked, version, created_at, updated_at) VALUES
+  (30, 1, '更正後不延期',   '我', 'work',    '2026-11-01', '2026-11-20', '2026-11-20', 'todo', NULL, false, 3, {TS}, {TS}),
+  (31, 1, '提前回原日',     '我', 'work',    '2026-11-01', '2026-11-20', '2026-11-19', 'todo', NULL, false, 3, {TS}, {TS}),
+  (32, 1, '完成無事件',     '我', 'work',    '2026-11-01', '2026-11-10', '2026-11-10', 'done', '2026-11-10', false, 2, {TS}, {TS}),
+  (33, 3, '封存卡住',       '我', 'work',    '2026-11-01', '2026-12-30', '2026-12-30', 'todo', NULL, true, 1, {TS}, {TS}),
+  (34, 3, '封存下週到期',   '我', 'work',    '2026-11-01', '2026-11-18', '2026-11-18', 'todo', NULL, false, 1, {TS}, {TS}),
+  (35, 3, '封存本週完成',   '我', 'work',    '2026-11-01', '2026-11-12', '2026-11-12', 'done', '2026-11-12', false, 2, {TS}, {TS}),
+  (36, 3, '封存私人卡住',   '我', 'private', '2026-11-01', '2026-12-30', '2026-12-30', 'todo', NULL, true, 1, {TS}, {TS}),
+  (37, 1, '久已逾期',       '我', 'work',    '2026-10-01', '2026-10-20', '2026-10-20', 'todo', NULL, false, 1, {TS}, {TS}),
+  (38, 1, '私人逾期',       '我', 'private', '2026-10-01', '2026-10-20', '2026-10-20', 'todo', NULL, false, 1, {TS}, {TS}),
+  (39, 1, '逾期又卡住',     '我', 'work',    '2026-10-01', '2026-10-20', '2026-10-20', 'doing', NULL, true, 1, {TS}, {TS}),
+  (40, 1, '逾期已完成',     '我', 'work',    '2026-10-01', '2026-10-20', '2026-10-20', 'done', '2026-10-21', false, 2, {TS}, {TS});
+INSERT INTO events (id, ts, project_id, task_id, task_title, kind, field, from_value, to_value, origin,
+                    delta_days, mine) VALUES
+  (300, '2026-11-10T10:00+08:00', 1, 30, '更正後不延期', 'due', 'latest_due', '2026-11-12', '2026-11-20', 'manual', 8, true),
+  (301, '2026-11-11T10:00+08:00', 1, 30, '更正後不延期', 'baseline', 'orig_due', '2026-11-12', '2026-11-20', 'baseline_correction', NULL, true),
+  (310, '2026-11-10T10:00+08:00', 1, 31, '提前回原日', 'due', 'latest_due', '2026-11-20', '2026-11-25', 'manual', 5, true),
+  (311, '2026-11-11T10:00+08:00', 1, 31, '提前回原日', 'due', 'latest_due', '2026-11-25', '2026-11-19', 'manual', -6, true),
+  (350, '2026-11-12T10:00+08:00', 3, 35, '封存本週完成', 'status', 'status', 'todo', 'done', 'manual', NULL, true);
+"""
+
+
+@pytest.fixture
+def gweek(db, seed):
+    seed(DATA + G_DATA)
+    return db.run(lambda c: weekly_report.collect(c, WEEK))
+
+
+def test_g1_not_listed_when_no_longer_delayed(gweek):
+    # 30：基準更正後 latest_due = orig_due；31：之後提前使 latest_due < orig_due
+    assert not {30, 31} & set(ids(gweek.delay))
+
+
+def test_g3_done_without_done_event_is_not_listed(gweek):
+    assert 32 not in ids(gweek.done)
+
+
+def test_g5_archived_project_excluded_from_next_but_done_still_listed(gweek):
+    assert not {33, 34} & set(ids(gweek.next))
+    assert 35 in ids(gweek.done)
+
+
+def test_g6_overdue_unfinished_is_next_once(gweek):
+    nxt = ids(gweek.next)
+    assert 37 in nxt and nxt.count(39) == 1 and 40 not in nxt
+
+
+def test_excluded_private_follows_g5_and_g6(gweek):
+    # 原本的 6、7，加上逾期的私人任務 38；封存專案裡卡住的私人任務 36 不會進任何一段，不計
+    assert gweek.excluded_private == 3
+
+
+# G4：AI 回傳的每一項（含 next）都要對得上本週資料
+def test_reconcile_accepts_valid_next(week):
+    assert weekly_report.reconcile([{"section": "next", "task_id": 13, "event_id": None}], week) is True
+
+
+@pytest.mark.parametrize("bad", [
+    {"section": "next", "task_id": 999, "event_id": None},   # 不存在
+    {"section": "next", "task_id": 8, "event_id": None},     # 私人
+    {"section": "next", "task_id": 11, "event_id": None},    # 已完成
+    {"section": "next", "task_id": 1, "event_id": None},     # 只在 done
+    {"section": "next", "task_id": 13, "event_id": 102},     # next 不該帶事件
+    {"section": "later", "task_id": 13, "event_id": None},   # 段落不在值域
+])
+def test_reconcile_rejects_bad_next(week, bad):
+    assert weekly_report.reconcile([bad], week) is False
+
+
+def test_reconcile_on_read_relaxes_next_membership_only(week):
+    # J1：GET 時 next 只要求任務仍存在且為工作範圍，不要求仍在下週重點；done／delay 仍嚴格
+    moved = {"section": "next", "task_id": 12, "event_id": None}   # 不在本週 next，但仍是工作任務
+    assert weekly_report.reconcile([moved], week, next_allowed={12}) is True
+    assert weekly_report.reconcile([moved], week, next_allowed=set()) is False
+    bad_delay = {"section": "delay", "task_id": 4, "event_id": 999}
+    assert weekly_report.reconcile([bad_delay], week, next_allowed={4}) is False

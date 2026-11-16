@@ -1,0 +1,307 @@
+"""週報端點驗收測試（spec 5.14、FR-RPT-01～04、AC-25、48～51、65～67）。
+
+Dev-A 暫代撰寫：issue #18 裁定 QC 帳號定案前由 Dev-A 自補，QC-1 帳號定案後移交複核或接手。
+只經 HTTP 與 SQL 種子操作，不呼叫 app 內部函式。
+#18 H1、H2、J1～J10 尚待產品負責人確認，本檔依預設撰寫；AI-05 的輸出格式依 #22 的提案，定案後調整。
+"""
+
+import json
+from datetime import datetime
+
+import pytest
+from sqlalchemy import text
+
+from app.ai.client import AIInvalidOutput, AITimeout, FakeAIClient
+from app.clock import TZ
+
+DRAFT = "/api/v1/reports/weekly/draft"
+ONE = "/api/v1/reports/weekly/{}"
+MANUAL = "/api/v1/reports/weekly/{}/manual"
+WEEK = "2026-11-09"
+MARK = "機密標記XYZ"
+KEYS = {"id", "week_start", "ai_status", "excluded_private", "draft", "items", "validated", "manual_text",
+        "updated_at"}
+
+TS = "'2026-11-01T09:00+08:00'"
+DATA = f"""
+INSERT INTO projects (id, name, scope, audience, created_at, updated_at) VALUES
+  (1, '工作專案', 'work', 'manager', {TS}, {TS});
+INSERT INTO tasks (id, project_id, title, owner_name, scope, start_date, orig_due, latest_due,
+                   status, done_date, blocked, version, created_at, updated_at) VALUES
+  (1, 1, '本週完成', '我',   'work',    '2026-11-01', '2026-11-10', '2026-11-10', 'done', '2026-11-10', false, 2, {TS}, {TS}),
+  (2, 1, '延期任務', '小薇', 'work',    '2026-11-01', '2026-11-12', '2026-11-15', 'todo', NULL, false, 2, {TS}, {TS}),
+  (3, 1, '下週到期', '我',   'work',    '2026-11-01', '2026-11-18', '2026-11-18', 'todo', NULL, false, 1, {TS}, {TS}),
+  (4, 1, '私人機密任務', '我', 'private', '2026-11-01', '2026-11-12', '2026-11-18', 'todo', NULL, false, 2, {TS}, {TS});
+INSERT INTO events (id, ts, project_id, task_id, task_title, kind, field, from_value, to_value, origin,
+                    delta_days, mine) VALUES
+  (11, '2026-11-10T18:00+08:00', 1, 1, '本週完成', 'status', 'status', 'todo', 'done', 'manual', NULL, true),
+  (21, '2026-11-10T10:00+08:00', 1, 2, '延期任務', 'due', 'latest_due', '2026-11-12', '2026-11-15', 'manual', 3, false),
+  (41, '2026-11-11T10:00+08:00', 1, 4, '私人機密任務', 'due', 'latest_due', '2026-11-12', '2026-11-18', 'manual', 6, true);
+"""
+
+AI_ITEMS = [{"section": "done", "task_id": 1, "event_id": 11},
+            {"section": "delay", "task_id": 2, "event_id": 21},
+            {"section": "next", "task_id": 3, "event_id": None}]
+AI_OK = {"draft": "本週（11/09–11/15）工作進度\n【本週完成】本週完成", "items": AI_ITEMS}
+FALLBACK = [{"section": "done", "task_id": 1, "event_id": 11},
+            {"section": "delay", "task_id": 2, "event_id": 21},
+            {"section": "next", "task_id": 2, "event_id": None},    # 2：最新預計 11/15，早於下週一（G6、H1）
+            {"section": "next", "task_id": 3, "event_id": None}]
+
+
+@pytest.fixture
+def data(seed):
+    seed(DATA)
+
+
+def draft(client, week=WEEK):
+    return client.post(DRAFT, json={"week_start": week})
+
+
+def rows(query):
+    return query("SELECT id, ai_status, ai_draft, ai_items, manual_text, excluded_private FROM reports")
+
+
+# ---------- AI 不可用（AC-50）與第一次產生 ----------
+
+def test_first_draft_with_ai_unavailable_returns_fallback(client, data, query):
+    r = draft(client)
+    assert r.status_code == 200
+    body = r.json()
+    assert set(body) == KEYS
+    assert (body["ai_status"], body["validated"], body["draft"], body["manual_text"]) == \
+        ("unavailable", False, None, None)
+    assert body["items"] == FALLBACK and body["excluded_private"] == 1 and body["week_start"] == WEEK
+    assert body["updated_at"].endswith("+08:00")
+    [row] = rows(query)
+    assert (row["ai_status"], row["ai_draft"], row["ai_items"]) == ("unavailable", None, None)
+
+
+def test_empty_week_creates_a_row(client, query):
+    body = draft(client).json()
+    assert (body["items"], body["excluded_private"]) == ([], 0) and len(rows(query)) == 1
+
+
+def test_second_draft_reuses_the_same_row(client, data, query):
+    first = draft(client).json()["id"]
+    assert draft(client).json()["id"] == first and len(rows(query)) == 1
+
+
+# ---------- AC-48：私人範圍 ----------
+
+def test_private_tasks_never_reach_ai_or_response(client, data, ai):
+    ai.script("AI-05", AI_OK)
+    body = draft(client).json()
+    sent = json.dumps(ai.calls, ensure_ascii=False, default=str)
+    assert "私人機密任務" not in sent and '"task_id": 4' not in sent and "41" not in sent
+    out = json.dumps(body, ensure_ascii=False)
+    assert "私人機密任務" not in out and body["excluded_private"] == 1
+
+
+# ---------- AI 成功、對帳（AC-49、AC-66、G4）----------
+
+def test_successful_draft_is_stored_and_returned(client, data, ai, query):
+    ai.script("AI-05", {"draft": AI_OK["draft"],
+                        "items": [dict(i, title=MARK) for i in AI_ITEMS]})   # 多餘的鍵不保存
+    body = draft(client).json()
+    assert (body["ai_status"], body["validated"], body["draft"]) == ("ok", True, AI_OK["draft"])
+    assert body["items"] == AI_ITEMS
+    [row] = rows(query)
+    assert row["ai_status"] == "ok" and row["ai_items"] == AI_ITEMS and MARK not in json.dumps(row, default=str)
+
+
+@pytest.mark.parametrize("bad", [
+    {"section": "delay", "task_id": 2, "event_id": 999},   # AC-49：歷程中找不到
+    {"section": "done", "task_id": 1, "event_id": 21},     # 別的任務的事件
+    {"section": "next", "task_id": 4, "event_id": None},   # 私人任務（G4）
+    {"section": "next", "task_id": 999, "event_id": None},  # 不存在的任務
+])
+def test_unreconciled_items_fall_back(client, data, ai, query, bad):
+    ai.script("AI-05", {"draft": "x", "items": [*AI_ITEMS, bad]})
+    body = draft(client).json()
+    assert (body["validated"], body["draft"], body["items"], body["ai_status"]) == \
+        (False, None, FALLBACK, "invalid_output")
+    [row] = rows(query)
+    assert (row["ai_status"], row["ai_draft"], row["ai_items"]) == ("invalid_output", None, None)
+
+
+@pytest.mark.parametrize("output", [
+    {"items": AI_ITEMS},                                    # 缺 draft
+    {"draft": "x", "items": "not a list"},
+    {"draft": "x", "items": [{"section": "done", "task_id": "1", "event_id": 11}]},
+    {"draft": 3, "items": []},
+])
+def test_malformed_output_is_invalid(client, data, ai, output):
+    ai.script("AI-05", output)
+    body = draft(client).json()
+    assert (body["ai_status"], body["validated"]) == ("invalid_output", False)
+
+
+@pytest.mark.parametrize(("error", "status"), [(AIInvalidOutput, "invalid_output"), (AITimeout, "unavailable"),
+                                               (RuntimeError(MARK), "unavailable")])
+def test_ai_errors_map_to_status_and_leak_nothing(client, data, ai, caplog, error, status):
+    ai.script("AI-05", error)
+    r = draft(client)
+    assert r.status_code == 200 and r.json()["ai_status"] == status
+    assert MARK not in r.text and MARK not in caplog.text
+
+
+# ---------- H2、AC-51：重新產生 ----------
+
+def test_failed_regenerate_keeps_previous_success(client, data, ai, query):
+    ai.script("AI-05", AI_OK)
+    rid = draft(client).json()["id"]
+    before = rows(query)
+    again = draft(client).json()                      # 沒排輸出 → 不可用
+    assert (again["ai_status"], again["validated"], again["draft"]) == ("unavailable", False, None)
+    assert rows(query) == before                      # 整列不動（J4）
+    got = client.get(ONE.format(rid)).json()
+    assert (got["ai_status"], got["validated"], got["draft"]) == ("ok", True, AI_OK["draft"])
+
+
+def test_failure_then_success_and_manual_text_kept(client, data, ai, query):
+    rid = draft(client).json()["id"]
+    client.put(MANUAL.format(rid), json={"manual_text": "我的人工版"})
+    ai.script("AI-05", AI_OK, {"draft": "第二版", "items": AI_ITEMS})
+    assert draft(client).json()["ai_status"] == "ok"
+    body = draft(client).json()
+    assert (body["draft"], body["manual_text"]) == ("第二版", "我的人工版")   # AC-51
+
+
+def test_concurrent_row_creation_does_not_fail(client, data, db, query):
+    # AI 呼叫期間，同一週的列被另一個請求建立了：仍回 200、只有一列，對方寫的人工版不被蓋掉
+    class Racing(FakeAIClient):
+        def call(self, node_id, payload, **kw):
+            db.run(lambda c: c.execute(text(
+                "INSERT INTO reports (kind, period_start, manual_text, created_at, updated_at) "
+                "VALUES ('weekly', '2026-11-09', '他處人工版', now(), now())")))
+            return AI_OK
+    client.app.state.ai = Racing()
+    r = draft(client)
+    assert r.status_code == 200 and r.json()["validated"] is True
+    [row] = rows(query)
+    assert row["manual_text"] == "他處人工版" and row["ai_status"] == "ok"
+
+
+# ---------- GET 重新對帳（第 1 點 (b)、AC-25、J1）----------
+
+def generate_ok(client, ai):
+    ai.script("AI-05", AI_OK)
+    return draft(client).json()["id"]
+
+
+def test_get_revalidates_after_task_turns_private(client, data, ai, seed):
+    rid = generate_ok(client, ai)
+    seed("UPDATE tasks SET scope = 'private' WHERE id = 2;")
+    got = client.get(ONE.format(rid)).json()
+    assert (got["validated"], got["draft"]) == (False, None)
+    assert client.put(MANUAL.format(rid), json={"manual_text": "x"}).json()["validated"] is False
+
+
+def test_get_revalidates_after_baseline_correction(client, data, ai, seed):
+    rid = generate_ok(client, ai)
+    seed("UPDATE tasks SET orig_due = '2026-11-15' WHERE id = 2;"
+         "INSERT INTO events (ts, project_id, task_id, task_title, kind, field, from_value, to_value, origin, mine) "
+         "VALUES ('2026-11-11T11:00+08:00', 1, 2, '延期任務', 'baseline', 'orig_due', '2026-11-12', '2026-11-15', "
+         "'baseline_correction', false);")
+    assert client.get(ONE.format(rid)).json()["validated"] is False
+
+
+def test_get_tolerates_next_drift(client, data, ai, seed):
+    rid = generate_ok(client, ai)
+    seed("UPDATE tasks SET latest_due = '2026-12-30' WHERE id = 3;")   # 改期到下下週之後
+    assert client.get(ONE.format(rid)).json()["validated"] is True
+
+
+# ---------- GET、PUT（AC-67、J5、J10）----------
+
+def test_put_manual_updates_only_manual_text(client, data, ai, query, clock):
+    rid = generate_ok(client, ai)
+    before = client.get(ONE.format(rid)).json()
+    clock.set(datetime(2026, 11, 11, 12, 0, tzinfo=TZ))
+    body = client.put(MANUAL.format(rid), json={"manual_text": "人工版", "ai_status": "invalid_output",
+                                                 "excluded_private": 99}).json()
+    assert body["manual_text"] == "人工版" and body["updated_at"] != before["updated_at"]
+    for k in ("ai_status", "draft", "items", "excluded_private", "week_start"):
+        assert body[k] == before[k]
+    assert client.put(MANUAL.format(rid), json={"manual_text": None}).json()["manual_text"] is None
+
+
+def test_manual_text_limits(client, data):
+    rid = draft(client).json()["id"]
+    assert client.put(MANUAL.format(rid), json={"manual_text": "字" * 20_000}).status_code == 200
+    r = client.put(MANUAL.format(rid), json={"manual_text": MARK + "字" * 20_000})
+    assert r.status_code == 413 and r.json()["error"]["code"] == "PAYLOAD_TOO_LARGE" and MARK not in r.text
+    r = client.put(MANUAL.format(rid), json={"manual_text": f"{MARK}\x00"})
+    assert r.status_code == 422 and MARK not in r.text
+    assert client.put(MANUAL.format(rid), json={}).status_code == 422
+
+
+@pytest.mark.parametrize("rid", ["999", "abc", "0", "-1", "99999999999999999999"])
+def test_unknown_or_bad_ids(client, rid):
+    for r in (client.get(ONE.format(rid)), client.put(MANUAL.format(rid), json={"manual_text": "x"})):
+        assert r.status_code in (404, 422)
+        assert r.json()["error"]["code"] in ("NOT_FOUND", "VALIDATION_ERROR")
+
+
+def test_goal_report_id_is_not_found(client, seed, query):
+    seed("INSERT INTO reports (id, kind, created_at, updated_at) VALUES (50, 'goal', now(), now());")
+    assert client.get(ONE.format(50)).status_code == 404
+    assert client.put(MANUAL.format(50), json={"manual_text": "x"}).status_code == 404
+
+
+def test_get_and_put_do_not_call_ai(client, data, ai):
+    rid = draft(client).json()["id"]
+    calls = len(ai.calls)
+    client.get(ONE.format(rid))
+    client.put(MANUAL.format(rid), json={"manual_text": "x"})
+    assert len(ai.calls) == calls
+
+
+def test_endpoints_never_touch_history(client, data, ai, query):
+    def snapshot():
+        return query("SELECT count(*) AS n FROM events")[0]["n"], query("SELECT id, version FROM tasks ORDER BY id")
+
+    before = snapshot()
+    rid = generate_ok(client, ai)
+    client.get(ONE.format(rid))
+    client.put(MANUAL.format(rid), json={"manual_text": "x"})
+    assert snapshot() == before
+
+
+# ---------- week_start（第 5 點、G7、J6）----------
+
+@pytest.mark.parametrize("week", ["2026-11-10", "2026-11-08", "2026-11-16", "2026-11-9", "x", None])
+def test_bad_week_start(client, week):
+    r = client.post(DRAFT, json={"week_start": week})
+    assert r.status_code == 422 and r.json()["error"]["details"]["fields"] == ["week_start"]
+
+
+def test_missing_week_start(client):
+    r = client.post(DRAFT, json={})
+    assert r.status_code == 422 and r.json()["error"]["details"]["fields"] == ["week_start"]
+
+
+def test_past_monday_ok_and_too_old_rejected(client):
+    assert draft(client, "2026-11-02").status_code == 200
+    r = draft(client, "2025-11-03")     # 早於今天前 365 天
+    assert r.status_code == 422 and r.json()["error"]["code"] == "DATE_OUT_OF_RANGE"
+
+
+@pytest.mark.parametrize(("now", "week", "status"), [
+    (datetime(2026, 11, 15, 23, 59, tzinfo=TZ), "2026-11-16", 422),   # 台北週日晚上，下週一還不行
+    (datetime(2026, 11, 16, 0, 30, tzinfo=TZ), "2026-11-16", 200),    # 台北週一 00:30（UTC 仍是週日）
+])
+def test_this_week_follows_taipei_clock(client, clock, now, week, status):
+    clock.set(now)
+    assert draft(client, week).status_code == status
+
+
+# ---------- 認證（資安規則 1）----------
+
+def test_requires_token_and_has_no_side_effect(app, data, query):
+    from fastapi.testclient import TestClient
+    with TestClient(app) as anon:
+        assert anon.post(DRAFT, json={"week_start": WEEK}).status_code == 401
+        assert anon.get(ONE.format(1), headers={"Authorization": "Bearer wrong"}).status_code == 401
+    assert rows(query) == []

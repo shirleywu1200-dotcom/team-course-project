@@ -169,6 +169,26 @@ class BaselinePreviewOut(Out):
     impact: BaselineImpactOut
 
 
+# ---------- 週報（Phase 10，Dev-A；spec 5.14）----------
+
+class WeeklyItemOut(Out):
+    section: Literal["done", "delay", "next"]
+    task_id: int
+    event_id: int | None = Field(description="next 項目為 null")
+
+
+class WeeklyReportOut(Out):
+    id: int
+    week_start: date
+    ai_status: Literal["ok", "unavailable", "invalid_output"] | None
+    excluded_private: int = Field(description="產生初稿當下送 AI 前排除的私人任務數（AC-48）")
+    draft: str | None = Field(description="validated=false 時為 null")
+    items: list[WeeklyItemOut] = Field(description="validated=true 為 AI 項目，否則為依歷程列出的事件清單")
+    validated: bool
+    manual_text: str | None
+    updated_at: datetime
+
+
 # ---------- 註記、統計、選項、健康檢查 ----------
 
 class AnnotationOut(Out):

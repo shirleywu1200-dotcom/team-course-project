@@ -6,7 +6,7 @@
 from fastapi import APIRouter, FastAPI
 
 from app.ai.client import AIClient, FakeAIClient
-from app.api import error_handlers, routes_events, routes_projects, routes_tasks
+from app.api import error_handlers, routes_events, routes_projects, routes_reports, routes_tasks
 from app.api.middleware import API_PREFIX, BearerTokenMiddleware, IdempotencyMiddleware, UnhandledErrorMiddleware
 from app.config import Settings, load_settings
 from app.db.database import Database
@@ -36,6 +36,7 @@ def create_app(settings: Settings | None = None, db: Database | None = None,
     api = APIRouter(prefix=API_PREFIX)
     for r in (routes_projects.router, routes_tasks.router, routes_events.router):
         api.include_router(r)
+    api.include_router(routes_reports.router)   # 週報（Phase 10）；另起一行，不併入上面的清單
     app.include_router(api)
     return app
 

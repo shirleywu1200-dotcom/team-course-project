@@ -241,10 +241,14 @@
 
 ### 3.14 FR-RPT 週報（P1，AI-05）
 
-- FR-RPT-01 週報只讀「工作」範圍、已確認的事件；**私人範圍在送進 AI 前就排除**，並顯示排除項數。
-- FR-RPT-02 內容段落：本週完成、延期事項（原訂 → 最新，附依據）、下週重點與風險（卡住，或期限在下週的任務）。
-- FR-RPT-03 R4 規則：初稿中每個完成與延期都要對應一筆歷程事件；對不上者不顯示初稿，改顯示事件清單。
-- FR-RPT-04 AI 初稿與人工版分開保存。人工版由你修改。
+- FR-RPT-01 週報只讀「工作」範圍、已確認的事件；**私人範圍在送進 AI 前就排除**，並顯示排除項數。範圍只看**任務**的 `scope`（私人專案底下的工作任務照常列入）；`excluded_private` 為本來會進任一段的私人任務數，同一任務只算一次（2026-11-16 產品負責人裁定，#18 A、B）。
+- FR-RPT-02 內容段落：本週完成、延期事項（原訂 → 最新，附依據）、下週重點與風險（卡住，或期限在下週的任務）。本週＝`week_start`（星期一）起 7 天，下週＝其後 7 天；事件日期以台北時區判斷。各段的選取規則（#18 C～F、G1～G3、G5、G6）：
+  - 本週完成（`done`）：`done_date` 在本週，且有 `status` 事件（`to_value='done'`）的任務；附該事件 id。找不到完成事件的不列入。
+  - 延期事項（`delay`）：本週內有 `delta_days > 0` 的 `due` 事件，**而且目前仍延期**（`latest_due > orig_due`）的任務；原訂與最新都取任務目前的值，所以基準更正後依新基準（AC-25）；附該週的延後事件 id。
+  - 下週重點與風險（`next`）：未完成，且符合下列任一：卡住；`latest_due` 在下週；已逾期（`latest_due` 早於下週一）。封存專案的任務不列入；本週的完成與延期照列。【待確認：#18 H1，「逾期」以下週一為基準】
+  - 「附依據」為事件 id，由前端依 id 到歷程查原句或操作來源，不經 AI。
+- FR-RPT-03 R4 規則：初稿中每個完成與延期都要對應一筆歷程事件；對不上者不顯示初稿，改顯示事件清單。R4 檢查 AI 回傳的**每一項**（含 `next`）都必須是本週資料裡存在的（段落、任務、事件）組合，避免 AI 帶入私人或不存在的任務（#18 G4）。R4 不要求完整，AI 漏報不算失敗，由畫面並列事件清單比對（G8）。R4 只能檢查結構化的 `items`，不檢查 `draft` 自由文字（已知限制）。
+- FR-RPT-04 AI 初稿與人工版分開保存。人工版由你修改。每週一列；重新產生只更新 AI 初稿，人工版不動（AC-51）。重新產生時 AI 失敗，保留上一次成功的初稿。【待確認：#18 H2】
 - FR-RPT-05 **P1 系統不代發週報**，只提供文字供你複製；送出功能為預留〔待決〕。
 
 ### 3.15 FR-GOV 資料控制（P1）
@@ -550,6 +554,7 @@ CREATE TABLE idempotency_keys (
 | 遷移 | 內容 | 依據 |
 | --- | --- | --- |
 | 0002 結構變更 | `ai_runs.node_id` 的 CHECK 移除 `AI-08`（AI-08 已取消）；`rubrics` 加不可修改觸發器，UPDATE、DELETE、TRUNCATE 皆擋，INSERT 不受影響。`settings` 不加，啟用精靈需要 UPDATE | PR #1 審查 A1、B5（2026-11-15 產品負責人裁定）；FR-RUB-01 |
+| 0004 週報存檔 | `reports` 加 `ai_items JSONB`（AI 回傳的結構化項目）與 `ai_status TEXT`（`ok`、`unavailable`、`invalid_output`，可為 NULL）；加部分唯一索引「每週一列」（`period_start`，`WHERE kind = 'weekly'`）。只新增欄位與索引 | 2026-11-16 產品負責人裁定（#18 第 1 點 (b)）；FR-RPT-03、04 |
 | 0003 系統種子 | 寫入 `settings`（id=1，三句精力定義，其餘欄位用 DDL 預設值）與 `rubrics`（version=0、`source='default'`、五句量表），冪等（`ON CONFLICT DO NOTHING`）；降級不刪除種子 | PR #1 審查 B2（種子文字經產品負責人確認，修改文字屬規格變更）；AC-59 |
 
 系統種子相關規則（2026-11-15 產品負責人裁定）：
@@ -957,18 +962,26 @@ CREATE TABLE idempotency_keys (
 | GET | `/reports/weekly/{id}` | 取得 |
 | PUT | `/reports/weekly/{id}/manual` | 儲存人工版 |
 
-`POST /reports/weekly/draft` 輸入：`{ "week_start": "2026-11-09" }`。輸出：
+`POST /reports/weekly/draft` 輸入：`{ "week_start": "2026-11-09" }`。`week_start` 必須是星期一，且不能晚於本週（只能產生本週或過去的週報），否則 `VALIDATION_ERROR`（#18 第 5 點、G7）。過去週的「下週重點」依現在的狀態計算，畫面上要註明。回 200（AI 失敗也是 200，附退路內容，spec 5.3）。三個端點的輸出相同：
 
 ```json
 {
-  "id": 4, "ai_status": "ok", "excluded_private": 1,
+  "id": 4, "week_start": "2026-11-09", "ai_status": "ok", "excluded_private": 1,
   "draft": "本週（11/09–11/15）工作進度\n【本週完成】…",
-  "items": [{ "section": "delay", "task_id": 2, "event_id": 41 }],
-  "validated": true
+  "items": [{ "section": "delay", "task_id": 2, "event_id": 41 },
+            { "section": "next", "task_id": 5, "event_id": null }],
+  "validated": true,
+  "manual_text": null,
+  "updated_at": "2026-11-16T10:00:00+08:00"
 }
 ```
 
-`validated=false`（R4 對不上）時 `draft=null`，回 `items` 事件清單供手動撰寫。
+- `items.section` 為 `done`、`delay`、`next`；`next` 的 `event_id` 為 null（#18 第 6 點）。
+- `validated=true` 時，`draft` 為 AI 初稿，`items` 為 AI 回傳的項目；`validated=false`（AI 失敗或 R4 對不上）時 `draft=null`，`items` 為依歷程列出的事件清單，供手動撰寫（第 4 點）。
+- 儲存（第 1 點 (b)）：`POST` 存 `ai_draft`、`ai_items`、`ai_status`，`manual_text` 不動。`GET` 回存下的 `ai_status`，並用存下的 `ai_items` 對**目前**的歷程重新對帳得出 `validated`，所以產生後任務改成私人範圍或做了基準更正，都會反映。
+- `excluded_private` 為產生初稿當下送 AI 前排除的私人任務數（AC-48）。
+- `PUT /reports/weekly/{id}/manual` 輸入：`{ "manual_text": "…" }`（上限 20,000 字）。不帶 `expected_version`，後寫的蓋掉先寫的（第 7 點）。
+- `GET`、`PUT` 的 id 不存在回 404 `NOT_FOUND`。
 
 ### 5.15 資料控制與維運
 
@@ -1189,6 +1202,17 @@ P1 完成 = AC-01 至 AC-42、AC-48 至 AC-53、AC-55 至 AC-57 全數通過，�
 - AC-59 Given 全新資料庫；When 跑完遷移；Then `settings` 恰 1 列、`rubrics` 恰 1 列（version=0、`levels` 剛好 5 句）；When 遷移降級再升級，或重跑種子；Then 兩表仍各 1 列。
 - AC-61 Given 建立任務時指定開始日；Then 任務的 `start_date` 為該日；Given 指定的開始日晚於期限；Then 422 `VALIDATION_ERROR`，`details.fields` 含 `start`，不建立任務也不寫事件。
 - AC-62 Given 未完成任務；When `POST /tasks/{id}/adjust-start` 帶新開始日；Then 只有 `start_date` 改變（`orig_due`、`latest_due` 不變）、`version` 加 1，並新增一筆 `task` 事件（`field='start_date'`，前值、後值，`delta_days` 與 `mark` 為 NULL），該事件不進時間管理統計；Given 新開始日晚於最新預計日；Then 200 且 `warnings` 含 `START_AFTER_DUE`；Given 已完成任務、等於目前值、或超出日期範圍；Then 分別回 `TASK_DONE`、`NO_CHANGE`、`DATE_OUT_OF_RANGE`。
+- AC-65（編號暫定，待產品負責人指定）週報彙整（FR-RPT-01、02；#18 裁定）：
+  - Given 本週有延後事件、之後基準更正使 `latest_due ≤ orig_due`；Then 該任務不列入延期。
+  - Given 已完成任務 `done_date` 在本週但沒有 `to_value='done'` 的 `status` 事件；Then 不列入本週完成。
+  - Given 未完成、未卡住、`latest_due` 早於下週一；Then 列入 `next`。Given 封存專案裡卡住的任務；Then 不列入 `next`。
+  - Given `week_start` 不是星期一，或晚於本週；Then 422 `VALIDATION_ERROR`，`details.fields` 含 `week_start`。
+- AC-66（編號暫定）週報存檔與對帳（FR-RPT-03、04）：
+  - Given 同一週產生兩次初稿；Then `reports` 只有一列，第二次只更新 AI 初稿。
+  - Given AI 回傳的 `next` 項目引用私人任務或不存在的任務；Then `validated=false`，`draft=null`，`items` 為事件清單。
+  - Given 已產生並通過對帳的初稿，之後項目裡的任務改為私人範圍；When `GET`；Then `validated=false`。
+  - Given 已有成功的初稿；When 重新產生時 AI 不可用；Then 該次回應為退路內容，`GET` 仍回上次成功的初稿。【待確認：#18 H2】
+- AC-67（編號暫定）人工版（FR-RPT-04）：Given 週報存在；When `PUT /manual`；Then `manual_text` 更新，其他欄位不變；Given id 不存在；Then 404 `NOT_FOUND`。
 
 ## 8. 技術棧／限制
 

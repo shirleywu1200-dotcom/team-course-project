@@ -2,9 +2,9 @@
 
 規則依 issue #18 的裁定：
 - 範圍只看任務的 scope；私人任務不進任何一段，只計數（同一任務算一次）。
-- 本週完成：done_date 在本週；延期：本週有 delta_days > 0 的 due 事件；
-  下週重點：未完成，且卡住或最新預計日在下週。
-- R4：AI 回的每個完成與延期項目，都要對到本週資料裡同一任務的事件。
+- 本週完成：done_date 在本週且有完成事件（G3）；延期：本週有 delta_days > 0 的 due 事件，
+  而且目前仍延期（G1）；下週重點：未完成、不在封存專案（G5），且卡住、下週到期或已逾期（G6、H1）。
+- R4：AI 回的每一項（含 next）都要是本週資料裡存在的（段落、任務、事件）組合（G4）。
 """
 
 from dataclasses import dataclass
@@ -16,7 +16,6 @@ from app.db.repo import weekly_repo
 from app.errors import DomainError
 
 SECTIONS = ("done", "delay", "next")
-CHECKED_SECTIONS = {"done", "delay"}   # FR-RPT-03 只規定完成與延期要對得上事件
 
 
 @dataclass(frozen=True)
@@ -57,11 +56,11 @@ def _next_item(r: dict) -> dict:
 def collect(conn: Connection, week_start: date) -> WeekData:
     _check_monday(week_start)
     week_end = week_start + timedelta(days=6)
-    next_start, next_end = week_start + timedelta(days=7), week_start + timedelta(days=13)
+    next_end = week_start + timedelta(days=13)
     sections = {
         "done": weekly_repo.done_in_range(conn, week_start, week_end),
         "delay": weekly_repo.delay_events_in_range(conn, week_start, week_end),
-        "next": weekly_repo.open_due_or_blocked(conn, next_start, next_end),
+        "next": weekly_repo.open_due_or_blocked(conn, next_end),
     }
     private = {r["task_id"] for rows in sections.values() for r in rows if r["scope"] == "private"}
     work = {name: [r for r in rows if r["scope"] == "work"] for name, rows in sections.items()}
@@ -83,9 +82,19 @@ def fallback_items(data: WeekData) -> list[dict]:
     return items
 
 
-def reconcile(ai_items: list[dict], data: WeekData) -> bool:
-    """R4（FR-RPT-03）：每個完成與延期項目，都必須是本週資料裡存在的（段落、任務、事件）。"""
-    allowed = {(i["section"], i["task_id"], i["event_id"])
-               for i in fallback_items(data) if i["section"] in CHECKED_SECTIONS}
-    return all((i["section"], i["task_id"], i["event_id"]) in allowed
-               for i in ai_items if i["section"] in CHECKED_SECTIONS)
+def reconcile(ai_items: list[dict], data: WeekData, next_allowed: set[int] | None = None) -> bool:
+    """R4（FR-RPT-03、#18 G4）：AI 回的每一項，都必須是本週資料裡存在的（段落、任務、事件）。
+
+    next_allowed 為 None（產生當下）時，next 項目也要在本週的下週重點裡。
+    GET 重新對帳時傳入「仍存在且為工作範圍」的任務 id：next 只要求在這個集合裡，
+    不要求仍在下週重點，避免事後完成或改期就讓初稿失效（#18 J1）；done、delay 仍嚴格比對。
+    """
+    allowed = {(i["section"], i["task_id"], i["event_id"]) for i in fallback_items(data)}
+    for i in ai_items:
+        key = (i["section"], i["task_id"], i["event_id"])
+        if i["section"] == "next" and next_allowed is not None:
+            if i["event_id"] is not None or i["task_id"] not in next_allowed:
+                return False
+        elif key not in allowed:
+            return False
+    return True
