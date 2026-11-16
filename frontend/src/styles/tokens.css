@@ -1,0 +1,60 @@
+/* 暫代 Dev-C todo 11.4：色彩與字型 token 只放這裡，提供亮色與暗色兩套（CLAUDE.md 前端規範 2）。
+   元件只引用變數名稱。Phase 11 完成後以 Dev-C 的主題檔取代。 */
+
+:root {
+  --font-sans: "Noto Sans TC", system-ui, sans-serif;
+  --font-size: 14px;
+  --radius: 6px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+
+  --color-bg: #f7f7f5;
+  --color-surface: #ffffff;
+  --color-text: #1f2328;
+  --color-muted: #59636e;
+  --color-border: #d1d9e0;
+  --color-accent: #0b62d6;
+  --color-accent-text: #ffffff;
+  --color-warn-bg: #fff4d6;
+  --color-warn-text: #6b4a00;
+  --color-error-bg: #ffe5e5;
+  --color-error-text: #8a1c1c;
+  --color-ok-bg: #e3f6e8;
+  --color-ok-text: #145c2c;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-bg: #15181c;
+    --color-surface: #1d2126;
+    --color-text: #e6e8eb;
+    --color-muted: #9aa4af;
+    --color-border: #343b44;
+    --color-accent: #5aa2ff;
+    --color-accent-text: #0b1320;
+    --color-warn-bg: #3a2f10;
+    --color-warn-text: #f3d38a;
+    --color-error-bg: #3d1a1a;
+    --color-error-text: #ffb3b3;
+    --color-ok-bg: #12321f;
+    --color-ok-text: #9be3b2;
+  }
+}
+
+:root[data-theme="dark"] {
+  --color-bg: #15181c;
+  --color-surface: #1d2126;
+  --color-text: #e6e8eb;
+  --color-muted: #9aa4af;
+  --color-border: #343b44;
+  --color-accent: #5aa2ff;
+  --color-accent-text: #0b1320;
+  --color-warn-bg: #3a2f10;
+  --color-warn-text: #f3d38a;
+  --color-error-bg: #3d1a1a;
+  --color-error-text: #ffb3b3;
+  --color-ok-bg: #12321f;
+  --color-ok-text: #9be3b2;
+}

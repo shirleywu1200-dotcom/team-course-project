@@ -1,0 +1,99 @@
+# CI（todo 0.9）：後端 pytest＋ruff；前端型別檢查與 Vitest；gitleaks 掃描祕密。
+name: ci
+on:
+  push:
+  pull_request:
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: g4
+          POSTGRES_PASSWORD: g4ci
+          POSTGRES_DB: g4
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U g4" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      G4_TEST_ADMIN_URL: postgresql+psycopg://g4:g4ci@127.0.0.1:5432/postgres
+      G4_DATABASE_URL: postgresql+psycopg://g4:g4ci@127.0.0.1:5432/g4
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync
+      - run: uv run ruff check .
+      - run: uv run pytest
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+
+  secrets:
+    runs-on: ubuntu-latest
+    # PR 模式下 gitleaks-action 要讀 PR 的提交清單；只給讀取權限
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # todo 6.2：既有遷移檔只能新增、不能修改或刪除；DDL 變更一律用新遷移。
+  migration-guard:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: 既有遷移檔未被修改
+        run: |
+          changed=$(git diff --name-status --diff-filter=MDR "origin/${{ github.base_ref }}...HEAD" -- backend/app/db/migrations/versions/)
+          if [ -n "$changed" ]; then
+            echo "既有遷移檔被修改或刪除，請改用新的遷移：" && echo "$changed" && exit 1
+          fi
+
+  # todo 6.2：受保護路徑只能由負責人修改（規則在 .github/path-owners.txt；docs/platform-settings.md 選項 C）
+  # 負責人在 PR 按「Approve」後，對這個工作按 Re-run 即會讀到最新的核可狀態。
+  path-owners:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: 受保護路徑由負責人修改或核可
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          # 每位審查者只看最後一次審查狀態，取目前為 APPROVED 的帳號
+          approved=$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/reviews" --paginate \
+            --jq '[.[] | select(.state != "COMMENTED")] | group_by(.user.login) | map(last) | map(select(.state == "APPROVED") | .user.login) | join(",")')
+          echo "目前已核可：${approved:-（無）}"
+          git diff --name-only "origin/${BASE_REF}...HEAD" | python3 scripts/check_path_owners.py "$PR_AUTHOR" --approved-by "$approved"

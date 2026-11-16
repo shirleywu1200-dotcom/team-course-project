@@ -7,7 +7,7 @@
 ### 0.1 低耦合規則（每個 Phase 都要遵守）
 
 1. **只依賴下層的公開契約，不依賴下層的實作。** 契約只有三種：資料庫 DDL、API 錯誤格式、領域函式簽名（寫在各 Phase 的「對外契約」）。
-2. **獨立測試用 SQL 種子資料，不用上游程式碼建資料。** 每個 Phase 的測試夾具（fixture）直接 INSERT 到 SQLite，所以上游壞了不會讓本 Phase 的測試失敗。
+2. **獨立測試用 SQL 種子資料，不用上游程式碼建資料。** 每個 Phase 的測試夾具（fixture）直接 INSERT 到 PostgreSQL 測試資料庫，所以上游壞了不會讓本 Phase 的測試失敗。
 3. **AI 一律用 `FakeAIClient`。** 測試不連真實供應商；真實供應商只在 Phase 13 驗證。
 4. **前端 Phase 只對 OpenAPI 契約測試**（以 MSW 模擬 API），不需要後端運行。
 5. **每個 Phase 結束時主幹可部署、既有測試全綠。** 不留「下個 Phase 才會通」的半成品。
@@ -17,6 +17,8 @@
 ### 0.2 狀態標記
 
 `[ ]` 未做　`[~]` 進行中　`[x]` 完成　`⛔` 被待決事項擋住（見第 3 節）
+
+Dev-A 註（2026-11-13）：Dev-A 範圍內標 `[~]` 的項目，表示已實作且 Dev 單元測試在 PostgreSQL 上通過，等 QC 驗收測試轉綠才改 `[x]`。進度與驗證方式見 `docs/dev-a-progress.md`。
 
 ---
 
@@ -64,15 +66,15 @@
 **對外契約**：統一錯誤格式 `{error:{code,message,details}}`；`FakeAIClient` 介面；測試用資料庫夾具。
 **獨立測試**：空專案跑得起來、能打到 `/meta/health`、錯誤格式測試通過。
 
-- [ ] 0.1 建立 repo 結構（`backend/`、`frontend/`，依 spec 8.3）
-- [ ] 0.2 後端：Python 3.12、FastAPI、Pydantic v2、SQLAlchemy 2、Alembic、pytest；`GET /meta/health`
-- [ ] 0.3 統一錯誤處理：領域例外 → HTTP 狀態與 `error.code`（對應 spec 5.2 全部錯誤碼）— M
-- [ ] 0.4 Bearer token 驗證（環境變數）、預設綁定 `127.0.0.1`
-- [ ] 0.5 `Idempotency-Key` 中介層（讀寫 `idempotency_keys`，24 小時）— M
-- [ ] 0.6 `AIClient` 抽象類別與 `FakeAIClient`（可腳本化回傳、逾時、不合格式）— M
-- [ ] 0.7 測試夾具：每個測試一個暫存 SQLite、`seed_sql()` 輔助函式、固定時鐘（可注入「今天」）— M
+- [~] 0.1 建立 repo 結構（`backend/`、`frontend/`，依 spec 8.3）
+- [~] 0.2 後端：Python 3.12、FastAPI、Pydantic v2、SQLAlchemy 2、Alembic、pytest；`GET /meta/health`
+- [~] 0.3 統一錯誤處理：領域例外 → HTTP 狀態與 `error.code`（對應 spec 5.2 全部錯誤碼）— M
+- [~] 0.4 Bearer token 驗證（環境變數）、預設綁定 `127.0.0.1`
+- [~] 0.5 `Idempotency-Key` 中介層（讀寫 `idempotency_keys`，24 小時）— M
+- [~] 0.6 `AIClient` 抽象類別與 `FakeAIClient`（可腳本化回傳、逾時、不合格式）— M
+- [~] 0.7 測試夾具：每個測試一個由範本複製的獨立 PostgreSQL 資料庫、`seed_sql()` 輔助函式、固定時鐘（可注入「今天」）— M
 - [ ] 0.8 前端：Vite + React 18 + TypeScript + Vitest；由 OpenAPI 產生型別的腳本
-- [ ] 0.9 CI：後端 pytest、前端 Vitest 與型別檢查、格式檢查
+- [~] 0.9 CI：後端 pytest、前端 Vitest 與型別檢查、格式檢查
 
 **完成定義**：全部指令一鍵可跑；故意拋出每種領域例外，回應格式都符合 spec 5.1。
 
@@ -86,12 +88,12 @@
 **對外契約**：spec 4.2 的 DDL 即契約；之後 Phase 只能新增遷移，不能改既有欄位語意。
 **獨立測試**：只用 SQL，不經任何 Python 領域程式。
 
-- [ ] 1.1 Alembic 初始遷移：全部資料表、索引、CHECK 約束（spec 4.2）— L
-- [ ] 1.2 `events` 的 UPDATE／DELETE 觸發器（遷移腳本管理）— S
-- [ ] 1.3 連線設定：`foreign_keys=ON`、WAL、`busy_timeout`；寫入單一連線序列化；`SQLITE_BUSY` 重試 3 次
-- [ ] 1.4 約束測試：每個 CHECK 各一個「合法可寫、非法被拒」測試（星數範圍、狀態、`bound` 需 `notified`、`levels` 剛好 5 句 …）— M
-- [ ] 1.5 遷移往返測試：升級到最新、降級一版、再升級，資料不壞
-- [ ] 1.6 備份工具：SQLite backup API，保留 14 份〔假設〕— S
+- [~] 1.1 Alembic 初始遷移：全部資料表、索引、CHECK 約束（spec 4.2）— L
+- [~] 1.2 `events` 的 UPDATE／DELETE 觸發器（遷移腳本管理）— S
+- [~] 1.3 連線設定：時區 Asia/Taipei、READ COMMITTED、`SELECT … FOR UPDATE`；死結與序列化失敗重試 3 次
+- [~] 1.4 約束測試：每個 CHECK 各一個「合法可寫、非法被拒」測試（星數範圍、狀態、`bound` 需 `notified`、`levels` 剛好 5 句 …）— M
+- [~] 1.5 遷移往返測試：升級到最新、降級一版、再升級，資料不壞
+- [~] 1.6 備份工具：`pg_dump` custom 格式，保留 14 份〔假設〕— S
 
 **完成定義**：AC-11 通過；所有約束測試通過；遷移可重複執行。
 
@@ -109,16 +111,16 @@
 
 **獨立測試**：以 SQL 種子建立專案與任務，只呼叫領域函式與 API。
 
-- [ ] 2.1 `write_event`：快照 `task_title`、`mine`；同一交易內與任務更新一起提交　`FR-HIS-01、07`
-- [ ] 2.2 樂觀鎖：`version` 比對與遞增　`FR-DUE-06`
-- [ ] 2.3 專案：建立、取得、列表、封存　`FR-PRJ-01、03`
-- [ ] 2.4 專案編輯：逐欄寫 `project` 事件，無變更不寫　`FR-PRJ-02`　`AC-26`
-- [ ] 2.5 任務建立（含單點任務）：`orig_due=latest_due`、`star_source` 判定、寫 `task` 事件　`FR-TSK-01–03`　`AC-05`
-- [ ] 2.6 任務狀態與卡住：`status` 事件；已完成任務拒絕標卡住　`FR-TSK-04、07`
-- [ ] 2.7 更改負責人：寫事件；舊事件 `mine`、`task_title` 不變　`FR-TSK-06`　`AC-29`
-- [ ] 2.8 任務完成：`done_date` 驗證（不可晚於今天）、回傳 `feedback_required`　`FR-TSK-04`
-- [ ] 2.9 API：`/projects`、`/tasks` 對應端點（spec 5.5、5.7 除 `adjust-due`、`suggest-stars`）— M
-- [ ] 2.10 原子性測試：任一步丟例外，事件與任務都不變　`AC-57`
+- [~] 2.1 `write_event`：快照 `task_title`、`mine`；同一交易內與任務更新一起提交　`FR-HIS-01、07`
+- [~] 2.2 樂觀鎖：`version` 比對與遞增　`FR-DUE-06`
+- [~] 2.3 專案：建立、取得、列表、封存　`FR-PRJ-01、03`
+- [~] 2.4 專案編輯：逐欄寫 `project` 事件，無變更不寫　`FR-PRJ-02`　`AC-26`
+- [~] 2.5 任務建立（含單點任務）：`orig_due=latest_due`、`star_source` 判定、寫 `task` 事件　`FR-TSK-01–03`　`AC-05`
+- [~] 2.6 任務狀態與卡住：`status` 事件；已完成任務拒絕標卡住　`FR-TSK-04、07`
+- [~] 2.7 更改負責人：寫事件；舊事件 `mine`、`task_title` 不變　`FR-TSK-06`　`AC-29`
+- [~] 2.8 任務完成：`done_date` 驗證（不可晚於今天）、回傳 `feedback_required`　`FR-TSK-04`
+- [~] 2.9 API：`/projects`、`/tasks` 對應端點（spec 5.5、5.7 除 `adjust-due`、`suggest-stars`）— M
+- [~] 2.10 原子性測試：任一步丟例外，事件與任務都不變　`AC-57`
 
 **完成定義**：AC-05、26、29、57（本 Phase 範圍）通過。
 
@@ -130,20 +132,20 @@
 
 **目標**：整個產品最核心的規則：改最新預計日、不動原訂日、我的任務必須處理註記。
 **對外契約**：
-- `adjust_due(session, task_id, new_due, expected_version, reason, note, mark, defer_mark, *, origin, batch_id=None) -> DueResult`：**整批順延（Phase 4）會直接呼叫它**，所以簽名在此凍結；
+- `adjust_due(session, task_id, new_due, expected_version, reason, note, mark, defer_mark, *, origin, batch_id=None, origin_ref=None, source_id=None) -> DueResult`：**整批順延（Phase 4）會直接呼叫它**，所以簽名在此凍結；`origin_ref`、`source_id` 為 2026-11-13 新增的選填參數（`docs/decisions.md` DA-03）【待複核：契約變更】；
 - `effective_mark(event_id)`、`time_mgmt_stats(from, to)`。
 
 **獨立測試**：SQL 種子任務（我的／別人的／已完成），只測這個領域模組與兩個端點。
 
-- [ ] 3.1 驗證：已完成、無變更、日期範圍、早於開始日警告　`FR-DUE-03`　`AC-06、07`
-- [ ] 3.2 原因選項表與方向檢查（提前／延後原因不可混用）；`GET /meta/reasons`（含 `external` 標記）— S　`FR-DUE-05`
-- [ ] 3.3 `adjust_due`：只改 `latest_due`、寫 `due` 事件、`delta_days`、`mine`　`FR-DUE-02、04`　`AC-01、03`
-- [ ] 3.4 註記規則：我的任務必須給註記或 `defer_mark`；別人的任務忽略註記並警告　`FR-MRK-01、02`　`AC-01、02、04`
-- [ ] 3.5 外部原因只提示、不預選、不代判；加入「不得因原因自動設定 `mark`」的測試　`FR-MRK-03、DUE-05a`　`AC-12`
-- [ ] 3.6 補註記／改註記：新增 `annotation` 事件、原事件不變　`FR-MRK-04`　`AC-08、09、10`
-- [ ] 3.7 有效註記計算與時間管理統計（含樣本不足 `judgement=null`、被標變差任務的精力分布）— M　`FR-MRK-05–07`　`AC-13`
-- [ ] 3.8 API：`POST /tasks/{id}/adjust-due`、`POST /events/{id}/annotations`、`GET /stats/time-management`
-- [ ] 3.9 並行測試：兩個請求同改一任務，後到者 `STALE_VERSION`
+- [~] 3.1 驗證：已完成、無變更、日期範圍、早於開始日警告　`FR-DUE-03`　`AC-06、07`
+- [~] 3.2 原因選項表與方向檢查（提前／延後原因不可混用）；`GET /meta/reasons`（含 `external` 標記）— S　`FR-DUE-05`
+- [~] 3.3 `adjust_due`：只改 `latest_due`、寫 `due` 事件、`delta_days`、`mine`　`FR-DUE-02、04`　`AC-01、03`
+- [~] 3.4 註記規則：我的任務必須給註記或 `defer_mark`；別人的任務忽略註記並警告　`FR-MRK-01、02`　`AC-01、02、04`
+- [~] 3.5 外部原因只提示、不預選、不代判；加入「不得因原因自動設定 `mark`」的測試　`FR-MRK-03、DUE-05a`　`AC-12`
+- [~] 3.6 補註記／改註記：新增 `annotation` 事件、原事件不變　`FR-MRK-04`　`AC-08、09、10`
+- [~] 3.7 有效註記計算與時間管理統計（含樣本不足 `judgement=null`、被標變差任務的精力分布）— M　`FR-MRK-05–07`　`AC-13`
+- [~] 3.8 API：`POST /tasks/{id}/adjust-due`、`POST /events/{id}/annotations`、`GET /stats/time-management`
+- [~] 3.9 並行測試：兩個請求同改一任務，後到者 `STALE_VERSION`
 
 **完成定義**：AC-01 至 AC-10、AC-12、AC-12a（此 Phase 只驗「API 不預填」）、AC-13 通過。
 
@@ -158,17 +160,17 @@
 **獨立測試**：SQL 種子 5 個任務的專案；Phase 3 的 `adjust_due` 可用其真實實作（簽名已凍結），或用替身驗證呼叫參數。
 
 整批順延：
-- [ ] 4.1 預覽：不寫入、列出新日期、警告、`mine_count`　`FR-BLK-01、05`　`AC-19`
-- [ ] 4.2 驗證：已完成、跨專案、空清單、天數 0 或超過 365　`FR-BLK-02、04`　`AC-16`
-- [ ] 4.3 commit：單一交易、`batches` 記錄、共用 `batch_id`、任一失敗全回滾　`FR-BLK-06–08`　`AC-14、15、17`
-- [ ] 4.4 冪等：重複提交回傳首次結果　`AC-18`
+- [~] 4.1 預覽：不寫入、列出新日期、警告、`mine_count`　`FR-BLK-01、05`　`AC-19`
+- [~] 4.2 驗證：已完成、跨專案、空清單、天數 0 或超過 365　`FR-BLK-02、04`　`AC-16`
+- [~] 4.3 commit：單一交易、`batches` 記錄、共用 `batch_id`、任一失敗全回滾　`FR-BLK-06–08`　`AC-14、15、17`
+- [~] 4.4 冪等：重複提交回傳首次結果　`AC-18`
 
 基準更正：
-- [ ] 4.5 preview：驗證、影響說明（差距、已延期數、過去事件數）、產生憑證　`FR-BAS-03、04`　`AC-20`
-- [ ] 4.6 憑證：綁定任務版本與內容、10 分鐘過期、單次使用　`FR-BAS-05`　`AC-23`
-- [ ] 4.7 commit：需 `ack`、覆蓋 `orig_due`、寫 `baseline` 事件、不重算過去事件　`FR-BAS-06、07`　`AC-21、22`
-- [ ] 4.8 拒絕情況：已完成、無變更、缺原因　`FR-BAS-08`　`AC-24`
-- [ ] 4.9 基準更正對已延期數的影響（查詢層）— S　`AC-25` 的後端部分
+- [~] 4.5 preview：驗證、影響說明（差距、已延期數、過去事件數）、產生憑證　`FR-BAS-03、04`　`AC-20`
+- [~] 4.6 憑證：綁定任務版本與內容、10 分鐘過期、單次使用　`FR-BAS-05`　`AC-23`
+- [~] 4.7 commit：需 `ack`、覆蓋 `orig_due`、寫 `baseline` 事件、不重算過去事件　`FR-BAS-06、07`　`AC-21、22`
+- [~] 4.8 拒絕情況：已完成、無變更、缺原因　`FR-BAS-08`　`AC-24`
+- [~] 4.9 基準更正對已延期數的影響（查詢層）— S　`AC-25` 的後端部分
 
 **完成定義**：AC-14 至 AC-24 通過；`STALE_VERSION` 時整批零變動。
 
@@ -330,10 +332,10 @@
 **獨立測試**：各頁各自的 Vitest 元件測試；關鍵流程用 Playwright 對 MSW。
 
 - [ ] 12.1 專案現況：任務表、行內改日期、狀態標示、甘特圖（自繪 SVG）— L　`US-05`
-- [ ] 12.2 預計完成日調整與註記流程：改日期 → 原因 → 註記／稍後；**原因與註記無預選**的測試　`US-12、13`
+- [~] 12.2 預計完成日調整與註記流程：改日期 → 原因 → 註記／稍後；**原因與註記無預選**的測試　`US-12、13`
 - [ ] 12.3 任務詳情與歷程：任務歷程、補註記、改註記　`US-19`
-- [ ] 12.4 整批順延：勾選、預覽、統一註記、確認　`US-06`
-- [ ] 12.5 基準更正：入口放小連結、兩段式、`ack` 聲明　`US-08`
+- [~] 12.4 整批順延：勾選、預覽、統一註記、確認　`US-06`
+- [~] 12.5 基準更正：入口放小連結、兩段式、`ack` 聲明　`US-08`
 - [ ] 12.6 專案歷程頁：篩選（專案／類型／任務／批次）— M　`US-19`
 - [ ] 12.7 匯入精靈：貼上、診斷預覽、AI 對應需由你確認　`US-04`
 - [ ] 12.8 收件匣與每日確認：候選逐項確認、待釐清區、待配對區、輪詢工作狀態　`US-09–11`
@@ -361,8 +363,8 @@
 - [ ] 13.4 真實 AI 供應商接入與逾時、重試調校　`FR-AI-05`
 - [ ] 13.5 例外演練：重啟時有 `running` 工作、服務中途崩潰、資料庫鎖定　`AC-57`
 - [ ] 13.6 備份還原演練
-- [ ] 13.7 部署文件：環境變數、token 輪替、TLS 啟用條件
-- [ ] 13.8 **埋點檢查**：是否能由 `events`、`ai_feedback`、`jobs` 算出 spec 1.3 的五個衡量值
+- [~] 13.7 部署文件：環境變數、token 輪替、TLS 啟用條件
+- [~] 13.8 **埋點檢查**：是否能由 `events`、`ai_feedback`、`jobs` 算出 spec 1.3 的五個衡量值
 - [ ] 13.9 兩週真實試用（用你自己的專案資料），量測確認率、註記完成率、完成回報填寫率、每日確認時間
 - [ ] 13.10 G2 校正：依試用結果修正 spec 9.3 所列全部〔假設〕數值，發布 spec v0.2
 
@@ -492,7 +494,7 @@ QC-2 要額外建一組**標註測試集**（約 30 則群組訊息與預期分�
 | 完整 DDL（spec 4.2）| Dev-A | 只新增遷移，不改既有欄位語意；各線不得自行改遷移 |
 | 錯誤格式與錯誤碼（spec 5.1、5.2）| Dev-A | 新增錯誤碼需你核可 |
 | `write_event(session, **fields)` | Dev-A | 簽名凍結 |
-| `adjust_due(session, task_id, new_due, expected_version, reason, note, mark, defer_mark, *, origin, batch_id=None)` | Dev-A | 簽名凍結；**Dev-B 的 Phase 7 與 Dev-A 的 Phase 4 都依賴它** |
+| `adjust_due(session, task_id, new_due, expected_version, reason, note, mark, defer_mark, *, origin, batch_id=None, origin_ref=None, source_id=None)` | Dev-A | 簽名凍結；**Dev-B 的 Phase 7 與 Dev-A 的 Phase 4 都依賴它**；後兩個參數為 DA-03 新增【待複核：契約變更】 |
 | `AIClient`／`FakeAIClient` 介面 | Dev-B | 簽名凍結 |
 | OpenAPI 草稿（spec 第 5 章）| 各線擁有自己端點 | 改動需通知 Dev-C 與 QC-2 |
 | 夾具庫（SQL 種子）| QC-1 | Dev 可使用、不可改；要新資料向 QC 提需求 |
