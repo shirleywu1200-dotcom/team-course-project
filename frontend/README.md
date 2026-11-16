@@ -93,6 +93,39 @@ code／message 必須是非空字串，details 必須是非陣列物件。
 `client.test.tsx` 對 spec 5.2 的 17 個錯誤碼逐一檢查錯誤解析、顯示與不自動重送。
 其中 `INTERNAL_ERROR`（DA-19）**待產品負責人複核**；這些測試不代表已取得正式核可。
 
+## TanStack Query 與快取失效（11.3）
+
+查詢鍵只定義在 `src/api/queryKeys.ts`，舊 `queries.ts` 匯出與鍵值保留；
+`makeQueryClient` 移至獨立檔案，保留禁重試、禁焦點重讀設定。
+目前 OpenAPI 22 個操作：7 個 GET（專案列表／詳情、任務列表／詳情、時間管理、原因、健康），15 個動作如下。
+
+| 動作 | 失效查詢資源 | 依據 |
+| --- | --- | --- |
+| `POST /projects` | projects | FR-PRJ-01 |
+| `PATCH /projects/{project_id}` | projects | FR-PRJ-02 |
+| `POST /projects/{project_id}/archive` | projects | FR-PRJ-03 |
+| `POST /projects/{project_id}/bulk-shift/preview` | 無 | FR-BLK-01，預覽不寫入 |
+| `POST /projects/{project_id}/bulk-shift/commit` | tasks、timeManagement | FR-BLK-06、07；FR-MRK-06 |
+| `POST /tasks` | tasks、projects | FR-TSK-01、02；ProjectDetailOut.task_count |
+| `PATCH /tasks/{task_id}/owner` | tasks | FR-TSK-06，舊事件 mine 不變 |
+| `POST /tasks/{task_id}/status` | tasks | FR-TSK-04、DA-08 |
+| `POST /tasks/{task_id}/block` | tasks | FR-TSK-04、07 |
+| `POST /tasks/{task_id}/adjust-start` | tasks | FR-TSK-09、AC-62，不進時間管理統計 |
+| `POST /tasks/{task_id}/complete` | tasks、timeManagement | FR-TSK-04；FR-MRK-07 完成時精力分布 |
+| `POST /tasks/{task_id}/adjust-due` | tasks、timeManagement | FR-DUE-02、04；FR-MRK-06 |
+| `POST /tasks/{task_id}/baseline-correction/preview` | 無 | FR-BAS-03；DA-21 僅確認憑證，非正式查詢資料 |
+| `POST /tasks/{task_id}/baseline-correction/commit` | tasks、projects | FR-BAS-06、07；ProjectDetailOut.baseline_saved_at |
+| `POST /events/{event_id}/annotations` | tasks、timeManagement | FR-MRK-04–06，任務詳情含 events |
+
+資源前綴涵蓋全部列表、詳情及篩選查詢。原因、健康不受上述寫入影響。
+`runMutationWithInvalidation` 只在成功後失效，等待使用中的查詢重讀，未使用的查詢留待下次讀取。
+失敗原樣交回呼叫者，不重送；STALE_VERSION 沿用既有頁面重讀流程。
+此共用包裝供後續頁面使用，未改動 Dev-A 功能頁既有的 onSuccess／onError 行為。
+`queryCache.test.ts` 對照 OpenAPI 與本表，逐動作驗證失效、重讀及失敗不重送。
+
+自行決定：以資源前綴失效，沿用既有 tasks 前綴慣例。
+後端目前完成操作尚未寫精力回報；complete 保留 FR-MRK-07 所需統計失效，避免後續讀到舊統計。
+
 ## MSW 共用資料集（11.7）
 
 測試仍從 `src/test/server.tsx` 匯入 `API`、`server`、`reasons`、`makeTask`、`apiError`、

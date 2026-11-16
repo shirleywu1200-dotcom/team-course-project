@@ -3,11 +3,7 @@
 import { api } from "./client";
 import type { Paged, ReasonsMeta, Task } from "./types";
 
-export const keys = {
-  reasons: ["meta", "reasons"] as const,
-  task: (id: number) => ["tasks", id] as const,
-  projectTasks: (projectId: number) => ["tasks", "project", projectId] as const,
-};
+export { keys } from "./queryKeys";
 
 export const fetchReasons = () => api<ReasonsMeta>("/meta/reasons");
 

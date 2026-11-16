@@ -1,15 +1,14 @@
 // 路由與共用版面由 11.1 管理；TokenGate 與 QueryClient 設定沿用既有實作。
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
 import { BrowserRouter } from "react-router-dom";
 
 import { getToken, setToken } from "./api/client";
 import { AppRoutes } from "./app/AppRoutes";
+import { makeQueryClient } from "./api/queryClient";
 
-export function makeQueryClient() {
-  return new QueryClient({ defaultOptions: { queries: { retry: false, refetchOnWindowFocus: false } } });
-}
+export { makeQueryClient } from "./api/queryClient";
 
 function TokenGate({ children }: { children: ReactNode }) {
   const [token, setLocal] = useState(getToken());
