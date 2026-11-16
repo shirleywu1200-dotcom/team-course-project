@@ -562,6 +562,7 @@ CREATE TABLE idempotency_keys (
 | 0002 結構變更 | `ai_runs.node_id` 的 CHECK 移除 `AI-08`（AI-08 已取消）；`rubrics` 加不可修改觸發器，UPDATE、DELETE、TRUNCATE 皆擋，INSERT 不受影響。`settings` 不加，啟用精靈需要 UPDATE | PR #1 審查 A1、B5（2026-11-15 產品負責人裁定）；FR-RUB-01 |
 | 0004 週報存檔 | `reports` 加 `ai_items JSONB`（AI 回傳的結構化項目）與 `ai_status TEXT`（`ok`、`unavailable`、`invalid_output`，可為 NULL）；加部分唯一索引「每週一列」（`period_start`，`WHERE kind = 'weekly'`）；加 CHECK「週報列一定要有 `period_start`」（NULL 不受唯一索引約束）【待確認：#18 J8】。只新增欄位、索引與 CHECK | 2026-11-16 產品負責人裁定（#18 第 1 點 (b)）；FR-RPT-03、04 |
 | 0003 系統種子 | 寫入 `settings`（id=1，三句精力定義，其餘欄位用 DDL 預設值）與 `rubrics`（version=0、`source='default'`、五句量表），冪等（`ON CONFLICT DO NOTHING`）；降級不刪除種子 | PR #1 審查 B2（種子文字經產品負責人確認，修改文字屬規格變更）；AC-59 |
+| 0004 候選記住收件專案 | `candidates` 加 `project_id BIGINT REFERENCES projects(id)`（可為 NULL，NULL 表示收件時沒有指定專案）與索引 `ix_candidates_project`。只新增欄位與索引 | PR #20 審查 B5（2026-11-16 產品負責人裁定）；FR-INB-14 |
 
 系統種子相關規則（2026-11-15 產品負責人裁定）：
 
@@ -1228,7 +1229,7 @@ P1 完成 = AC-01 至 AC-42、AC-48 至 AC-53、AC-55 至 AC-57 全數通過，�
 - AC-59 Given 全新資料庫；When 跑完遷移；Then `settings` 恰 1 列、`rubrics` 恰 1 列（version=0、`levels` 剛好 5 句）；When 遷移降級再升級，或重跑種子；Then 兩表仍各 1 列。
 - AC-61 Given 建立任務時指定開始日；Then 任務的 `start_date` 為該日；Given 指定的開始日晚於期限；Then 422 `VALIDATION_ERROR`，`details.fields` 含 `start`，不建立任務也不寫事件。
 - AC-62 Given 未完成任務；When `POST /tasks/{id}/adjust-start` 帶新開始日；Then 只有 `start_date` 改變（`orig_due`、`latest_due` 不變）、`version` 加 1，並新增一筆 `task` 事件（`field='start_date'`，前值、後值，`delta_days` 與 `mark` 為 NULL），該事件不進時間管理統計；Given 新開始日晚於最新預計日；Then 200 且 `warnings` 含 `START_AFTER_DUE`；Given 已完成任務、等於目前值、或超出日期範圍；Then 分別回 `TASK_DONE`、`NO_CHANGE`、`DATE_OUT_OF_RANGE`。
-- AC-64（編號暫定，待產品負責人指定）時間管理判讀（FR-MRK-07）。以下「變差」各在不同任務上：
+- AC-64 時間管理判讀（FR-MRK-07）。以下「變差」各在不同任務上：
   - Given 變好 1 次、變差 3 次（樣本 4）；Then `judgement=null`，`judgement_note`＝「樣本 4 筆，不到 5 筆，只顯示不下結論」。
   - Given 變好 4 次、變差 2 次；Then `judgement`＝「時間管理偏向變好」，`judgement_note`＝「變好 4 次、變差 2 次。」
   - Given 變好 2 次、變差 3 次，3 個任務中 2 個是低精力；Then `judgement`＝「偏向變差，建議檢視」，`judgement_note`＝「變好 2 次、變差 3 次。變差多集中在低精力任務。」

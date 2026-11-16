@@ -113,6 +113,8 @@ spec 5.2 沒有伺服器內部錯誤的錯誤碼。未預期的例外回 500 `IN
 
 `POST /projects`、`POST /tasks`、`POST /events/{id}/annotations` 回 201，其餘 POST 回 200。spec 只寫輸出內容，沒有指定狀態碼。
 
+2026-11-16 擴充（PR #20，Dev-B 提出，Dev-A 同意）：`POST /projects/import/commit`、`POST /candidates/{id}/create-task`、`POST /rubrics` 也會建立資源，一併回 201；spec 5.1 由 PR #20 更新。
+
 ## DA-21 基準更正 preview 會寫入 `confirmations` 【已複核：產品負責人 2026-11-16，#15】
 
 AC-20 寫「資料庫未變」。決定：解讀為 `tasks` 與 `events` 不變；確認憑證必須存在 `confirmations` 表才能在 commit 時比對，所以 preview 會新增一列憑證。
@@ -153,3 +155,14 @@ AC-20 寫「資料庫未變」。決定：解讀為 `tasks` 與 `events` 不變�
   - 唯一限制是測試裡不能 UPDATE 或 DELETE 量表；要不同內容就 INSERT 新版本。
 - **B2 對既有測試的影響**：範本資料庫已含種子，插入 `settings(id=1)` 或 `rubrics(version=0)` 的測試種子會撞號。Dev-A 的測試已修正；QC 與 Dev-B 的種子請照 spec 4.2.1 的規則。
 - **0003 降級不刪除種子**：量表受觸發器保護、也不該被刪；再升級時 `ON CONFLICT DO NOTHING`，仍各 1 列（AC-59）。
+
+## DA-27 QC 驗收過渡規則（三線通用） 【已裁定：產品負責人 2026-11-16，#28】
+
+QC-1、QC-2 的 GitHub 帳號設定完成前，暫行下列規則，補在 todo 5.8 的合併條件之上：
+
+1. 每條開發線自補所負責 Phase 的 AC 驗收測試（先紅後綠），與單元測試一併列入該 PR 的合併條件。
+2. 合併條件暫以「開發單元測試綠＋自補 AC 驗收綠＋另一位開發審查通過」成立；todo 5.8 的「QC 驗收測試綠」暫由自補取代。
+3. QC 帳號到位後，各線自補的驗收測試移交對應 QC 複核：QC-1 負責規則與歷程線，QC-2 負責資料進出、AI 與前端線。複核通過後才把 todo 的項目改成 `[x]`。
+4. 受保護測試不因這項過渡放寬：FR-AI-06 防回歸（3.5、7.9、9.4、12.2）、凍結簽名、錯誤碼清單。
+
+適用期間：到 QC 帳號到位為止。已套用於 PR #14、#20；Dev-A 的 Phase 10 驗收（`tests/acceptance/test_weekly_report.py`）依此自補。
