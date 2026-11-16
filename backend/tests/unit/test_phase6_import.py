@@ -228,6 +228,16 @@ def test_d3_changed_mapping_records_changed(client, seed, ai, query):
     assert fb["outcome"] == "changed" and fb["detail"]["ai"] == AI_MAP and fb["detail"]["final"] == final
 
 
+def test_d3_raw_output_purged_between_preview_and_commit_imports_without_feedback(client, seed, ai, query):
+    """PR #20 B2：preview 之後、commit 之前清除了原文（raw_output 設為 NULL），照「未帶 ai_run_id」處理。"""
+    seed(BASE)
+    body = ai_preview(client, ai)
+    assert client.post("/api/v1/sources/purge", json={"confirm": True}).status_code == 200
+    r = commit_with(client, body, ai_run_id=body["column_map"]["ai_run_id"], column_map=AI_MAP)
+    assert r.status_code == 201
+    assert feedback(query) == []
+
+
 def test_d3_without_ai_run_id_writes_no_feedback(client, seed, ai, query):
     seed(BASE)
     r = commit_with(client, ai_preview(client, ai))

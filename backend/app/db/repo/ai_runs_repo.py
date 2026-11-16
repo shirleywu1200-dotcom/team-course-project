@@ -18,6 +18,17 @@ def get_run(conn: Connection, run_id: int) -> dict | None:
     return dict(row) if row else None
 
 
+def clear_raw_output_before(conn: Connection, before) -> int:
+    """建立時間早於 before 的輸出設為 NULL，不分節點（PR #20 B2）。"""
+    return conn.execute(text(
+        "UPDATE ai_runs SET raw_output = NULL WHERE created_at <= :b AND raw_output IS NOT NULL"),
+        {"b": before}).rowcount
+
+
+def clear_all_raw_output(conn: Connection) -> int:
+    return conn.execute(text("UPDATE ai_runs SET raw_output = NULL WHERE raw_output IS NOT NULL")).rowcount
+
+
 def insert_feedback(conn: Connection, fields: dict) -> dict:
     return insert_row(conn, "ai_feedback", FEEDBACK_COLUMNS, fields)
 

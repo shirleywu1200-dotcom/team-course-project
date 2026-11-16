@@ -119,6 +119,8 @@ def _ai_suggestion(conn: Connection, ai_run_id: int | None, column_map: dict | N
     run = ai_runs_repo.get_run(conn, ai_run_id)
     if not run or run["node_id"] != NODE or run["status"] != "ok":
         raise DomainError("VALIDATION_ERROR", "ai_run_id 不是可用的 AI-07 紀錄", {"fields": ["ai_run_id"]})
+    if run["raw_output"] is None:   # preview 之後原文被清除（PR #20 B2）：照未帶 ai_run_id 處理
+        return None
     # status='ok' 代表 preview 時已通過 valid_map；這裡只取四個欄位，AI 夾帶的文字不會進 detail（D-3b）
     output = json.loads(run["raw_output"])
     return {f: output.get(f) for f in table.FIELDS}

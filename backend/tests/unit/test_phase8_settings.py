@@ -33,6 +33,19 @@ INSERT INTO idempotency_keys (key, endpoint, response, created_at) VALUES
 """
 
 
+# PR #20 B2：保存 30 天、現在 11/11。1 已過期（AI-01 失敗輸出，連不回來源）、2 已過期（AI-07）、3 未過期
+AI_RUNS = """
+INSERT INTO ai_runs (id, node_id, status, raw_output, created_at) VALUES
+  (1, 'AI-01', 'invalid_output', '{"bad":"畫面規格"}', '2026-10-01T10:00+08:00'),
+  (2, 'AI-07', 'ok', '{"title":0}', '2026-10-10T10:00+08:00'),
+  (3, 'AI-01', 'ok', '{"items":[]}', '2026-11-01T10:00+08:00');
+"""
+
+
+def raw_outputs(query):
+    return {r["id"]: r["raw_output"] for r in query("SELECT id, raw_output FROM ai_runs")}
+
+
 def count(query, table):
     return query(f"SELECT count(*) AS n FROM {table}")[0]["n"]  # noqa: S608 測試固定表名
 
@@ -196,6 +209,13 @@ def test_ac52_scheduled_purge_clears_only_expired_excerpts(db, seed, query, cloc
     assert scheduler.run_once(db) == 0                    # 冪等
 
 
+def test_scheduled_purge_clears_expired_raw_output_of_every_node(db, seed, query):
+    seed(BASE + AI_RUNS)
+    scheduler.run_once(db)
+    assert raw_outputs(query) == {1: None, 2: None, 3: '{"items":[]}'}
+    assert count(query, "ai_runs") == 3
+
+
 def test_purge_without_expired_sources_only_drops_stale_cache(db, seed, query):
     seed(BASE + SOURCES.replace("'2026-10-31T10:00+08:00', NULL", "'2026-12-31T10:00+08:00', NULL"))
     assert scheduler.run_once(db) == 0
@@ -216,9 +236,11 @@ def test_ac53_purge_all_requires_confirm_true(client, seed, query):
 
 
 def test_ac53_purge_all_clears_every_excerpt_and_idempotency_cache(client, seed, query, clock):
-    seed(BASE + SOURCES)
+    seed(BASE + SOURCES + AI_RUNS)
     r = client.post(f"{API}/sources/purge", json={"confirm": True})
     assert r.status_code == 200 and r.json() == {"purged": 2}
+    assert raw_outputs(query) == {1: None, 2: None, 3: None}
+    assert all(run["raw_output"] is None for run in json.loads(client.post(f"{API}/export").content)["tables"]["ai_runs"])
     got = excerpts(query)
     assert all(e is None for e, _ in got.values())
     assert got[1][1] == clock.now() and got[3][1] == datetime(2026, 10, 1, 11, 0, tzinfo=TZ)
