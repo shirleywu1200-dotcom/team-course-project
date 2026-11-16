@@ -266,7 +266,7 @@
 - FR-AI-03 每個 AI 節點必須有不依賴 AI 的退路（第 6.6 節）。AI 不可用時，主流程仍可完成。
 - FR-AI-04 AI 的結果被接受、修改、忽略、改選，都記入 `ai_feedback`，供評估。匯入表頭對應（AI-07）：一次匯入寫一筆，錨定該次匯入的 `baseline` 事件，`detail` 只放欄位索引（第 5.6 節）。
 - FR-AI-06 **AI 不得參與對使用者自己的評價**：延期原因、時間管理註記、自評精力、實際達成星數皆由使用者判斷，不設預填或建議。AI-02（預設星數）因屬事前預設而非事後評價，是否採用另見 D-01。
-- FR-AI-05 AI 供應商以介面隔離（`AIClient`），可替換；單次呼叫逾時預設 20 秒〔假設〕。
+- FR-AI-05 AI 供應商以介面隔離（`AIClient`），可替換；單次呼叫逾時預設 20 秒〔假設〕。各節點的 payload 與輸出格式見 5.3a。
 
 ---
 
@@ -636,6 +636,36 @@ CREATE TABLE idempotency_keys (
 
 凡會呼叫 AI 的端點，回應都帶 `ai_status`：`ok`、`unavailable`、`invalid_output`。`unavailable` 與 `invalid_output` 時，端點仍回 200 並提供退路內容（例如不含建議的表單、統計表），不回錯誤。
 
+`ai_status` 的判定：AI 回傳且通過結構驗證為 `ok`；最後一次嘗試的輸出不合格式為 `invalid_output`；逾時、供應商不可用、其他錯誤，以及依規則刻意不呼叫（私人範圍）為 `unavailable`。`ai_runs.status` 另記細分值（`timeout`、`invalid_output`、`error`）。
+
+### 5.3a AI 節點輸入輸出契約（`AIClient`）
+
+`AIClient.call(node_id, payload) -> dict` 是唯一對外呼叫 AI 的介面（資安規則 2），契約擁有者為 Dev-B。以下為各節點送出的 payload 與接受的輸出；輸出不合結構時丟 `AIInvalidOutput`。測試以 `FakeAIClient.script(node_id, 輸出或例外…)` 排定回傳值。
+
+**AI-01 收件解析（FR-INB-06、07）**
+
+- payload 只含以下三個鍵：
+  ```json
+  {
+    "today": "2026-11-11",
+    "messages": [{ "ref": 101, "speaker": "阿德", "spoken_at": "10:12", "text": "畫面規格 v1 確定延到 11/18" }],
+    "tasks": [{ "id": 2, "title": "畫面規格 v1", "owner": "阿德", "latest_due": "2026-11-13" }]
+  }
+  ```
+  - `messages`：本次新收（非重複）且原文未清除的訊息；`ref` 為 `sources.id`。重複訊息與已清除的原文不送（FR-INB-04、6.7）。
+  - `tasks`：未完成、`scope='work'` 的任務；收件有指定專案時只含該專案的任務。私人範圍任務（不論是否在工作專案內）一律不送。只含上列四個欄位。
+- 輸出：`{ "items": [{ "ref": 101, "kind": "delay", "task_id": 2, "new_due": "11/18", "certainty": "sure" }] }`
+  - `items` 必須是陣列，否則整體算不合格式（重試）。個別項目 `ref` 不在本次 `messages`、`kind` 不在 `delay`／`done`／`stuck`／`none` 的，該項丟棄。
+  - `kind="none"` 表示該則不產生候選。`task_id` 不在本次 `tasks` 裡時轉為 `unmatched`，不猜（AC-37）。`new_due` 接受 `YYYY-MM-DD` 或 `M/D`。`certainty` 選填，預設 `sure`；不是 `sure` 時降級為 `unclear`。
+  - 其他欄位（例如原因推測）一律不讀（FR-DUE-05a、AC-12a）。
+- 重試：同一批訊息總共最多嘗試 3 次（1 次加續跑 2 次，FR-INB-08）；供應商不可用時不續跑。每次嘗試寫一列 `ai_runs`。
+
+**AI-07 匯入表頭對應（FR-IMP-02）**
+
+- payload：`{ "headers": ["任務", "負責人", "開始", "結束"], "samples": [["API 定義", "我", "11/3", "11/12"]] }`。`samples` 最多前 2 列資料，只供判斷欄位意義。
+- 輸出：`{ "title": 0, "owner": 1, "start": 2, "end": 3 }`。`title`、`end` 必須是欄位範圍內的整數索引；`owner`、`start` 可為 null；非 null 的索引不可重複。不合規則算 `invalid_output`。
+- 只呼叫 1 次，不重試：失敗時直接走手動指定對應的退路（6.6）。寫一列 `ai_runs`。
+
 ### 5.4 設定與量表
 
 | Method | Path | 說明 |
@@ -796,7 +826,7 @@ CREATE TABLE idempotency_keys (
 
 `POST /events/{id}/annotations` 輸入：`{ "mark": "worse", "reason": "underestimated", "note": "…" }`。`mark` 必填且為三值之一。`reason` 選填，有給時依原日期事件的方向檢查選項（DA-13）。輸出：新增的 `annotation` 事件，與更新後的有效註記。錯誤：`NOT_FOUND`、`ANNOTATION_NOT_ALLOWED`、`VALIDATION_ERROR`。
 
-`GET /events` 參數：`project_id`（或 `none`）、`kind`、`task_id`、`batch_id`、`from`、`to`、`limit`（預設 100，最大 500）、`offset`。輸出：
+`GET /events` 參數：`project_id`（或 `none`）、`kind`、`task_id`、`batch_id`、`from`、`to`、`limit`（預設 100，最大 500）、`offset`。`from`、`to` 為日期，兩端皆包含（以事件時間戳的台北日期判斷）。輸出：
 
 ```json
 {
