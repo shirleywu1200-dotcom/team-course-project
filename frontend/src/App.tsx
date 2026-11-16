@@ -7,6 +7,7 @@ import { BrowserRouter } from "react-router-dom";
 import { getToken, setToken } from "./api/client";
 import { AppRoutes } from "./app/AppRoutes";
 import { makeQueryClient } from "./api/queryClient";
+import { ThemeProvider } from "./theme/Theme";
 
 export { makeQueryClient } from "./api/queryClient";
 
@@ -39,12 +40,12 @@ function TokenGate({ children }: { children: ReactNode }) {
 export function App() {
   const [client] = useState(makeQueryClient);
   return (
-    <QueryClientProvider client={client}>
+    <ThemeProvider><QueryClientProvider client={client}>
       <TokenGate>
         <BrowserRouter>
           <AppRoutes />
         </BrowserRouter>
       </TokenGate>
-    </QueryClientProvider>
+    </QueryClientProvider></ThemeProvider>
   );
 }

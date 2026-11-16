@@ -2,6 +2,7 @@ import { useSyncExternalStore } from "react";
 import { Link, NavLink, Outlet } from "react-router-dom";
 
 import { navigationRoutes } from "./routeDefinitions";
+import { ThemeControl } from "../theme/Theme";
 import "./layout.css";
 
 const compactQuery = "(max-width: 767px)";
@@ -29,6 +30,7 @@ export function AppLayout() {
       <header className="app-header">
         <Link className="app-brand" to="/">個人大總管</Link>
         <span className="muted">AI 只提議，你決定</span>
+        <ThemeControl />
       </header>
       <nav className="app-navigation" aria-label="主要導覽">
         {links.map(({ path, title, compactTitle }) => (
