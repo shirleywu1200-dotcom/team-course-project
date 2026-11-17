@@ -122,6 +122,42 @@ test("今天線只取 props.today，系統時鐘改變也不影響；新 props �
   }
 });
 
+test.each([
+  ["範圍前", "2026-11-05", "2026-11-05", "2026-11-22"],
+  ["範圍後", "2026-11-25", "2026-11-09", "2026-11-25"],
+])("今天在資料%s時，今天線、軸與日期標籤共用擴後範圍", (_case, today, from, to) => {
+  render(<GanttChart gantt={{ ...ganttFixture, today }} {...appearance} />);
+  const line = screen.getByLabelText(`今天 ${today}`);
+  const x = Number(line.getAttribute("x1"));
+  expect(x).toBeGreaterThanOrEqual(appearance.leftLabelWidth);
+  expect(x).toBeLessThanOrEqual(appearance.width - 24);
+  expect(screen.getByLabelText(`時間軸 ${from} 至 ${to}`)).toBeInTheDocument();
+  expect(screen.getByText(from)).toBeInTheDocument();
+  expect(screen.getByText(to)).toBeInTheDocument();
+});
+
+test("長任務標題以省略號截斷於標籤欄，完整文字保留在 title 與 aria-label", () => {
+  const title = "這是一個超過二十個中文字而且需要保留完整內容的範例任務標題";
+  const fixture = { ...ganttFixture, rows: [{ ...ganttFixture.rows[0], title }] };
+  render(<GanttChart gantt={fixture} {...appearance} />);
+  const group = row(title);
+  const label = within(group).getByText(/…$/, { selector: "text" });
+  expect(label.textContent).not.toBe(title);
+  expect(label).toHaveAttribute("clip-path");
+  expect(group).toHaveAccessibleName(new RegExp(title));
+  expect(group.querySelector("title")?.textContent).toContain(title);
+  const clipId = label.getAttribute("clip-path")?.match(/^url\(#(.+)\)$/)?.[1];
+  expect(clipId).toBeTruthy();
+  expect(document.getElementById(clipId!)?.querySelector("rect"))
+    .toHaveAttribute("width", String(appearance.leftLabelWidth - 4));
+});
+
+test("今天線使用既有強調色 token，不以錯誤色表達今天", () => {
+  render(<GanttChart gantt={ganttFixture} {...appearance} />);
+  expect(screen.getByLabelText("今天 2026-11-16"))
+    .toHaveAttribute("stroke", "var(--color-accent)");
+});
+
 test("提前文字使用傳入 delta_days，即使與日期差不一致也不重算", () => {
   const fixture = structuredClone(ganttFixture);
   fixture.rows[1].delta_days = -9;

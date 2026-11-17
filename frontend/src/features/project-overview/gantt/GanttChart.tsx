@@ -1,3 +1,4 @@
+import { useId } from "react";
 import type { components } from "../../../api/types.generated";
 
 type GanttOut = components["schemas"]["GanttOut"];
@@ -26,10 +27,27 @@ function differenceText(deltaDays: number) {
   return "與原訂同日";
 }
 
+function shortenTitle(title: string, availableWidth: number) {
+  const characters = Array.from(title);
+  const maxWidth = Math.max(0, availableWidth - 16);
+  const charWidth = (character: string) => /^[\x00-\x7F]$/.test(character) ? 8 : 14;
+  if (characters.reduce((width, character) => width + charWidth(character), 0) <= maxWidth) return title;
+  let visible = "";
+  let width = 14; // 省略號
+  for (const character of characters) {
+    const nextWidth = width + charWidth(character);
+    if (nextWidth > maxWidth) break;
+    visible += character;
+    width = nextWidth;
+  }
+  return `${visible}…`;
+}
+
 /** 純 SVG 展示；不讀 API、快取、系統日期，也不接收操作回呼。 */
 export function GanttChart({
   gantt, width, rowHeight = 64, leftLabelWidth = 280, dayWidth = 28,
 }: GanttChartProps) {
+  const titleClipId = useId();
   const svgStyle = { fontFamily: "var(--font-sans)", fontSize: "var(--font-size)" };
   if (gantt.range === null || gantt.rows.length === 0) {
     return (
@@ -39,7 +57,8 @@ export function GanttChart({
     );
   }
 
-  const { from, to } = gantt.range;
+  const from = gantt.today < gantt.range.from ? gantt.today : gantt.range.from;
+  const to = gantt.today > gantt.range.to ? gantt.today : gantt.range.to;
   const firstDay = dayCoordinate(from);
   const days = Math.max(1, dayCoordinate(to) - firstDay);
   const chartWidth = width ?? leftLabelWidth + days * dayWidth + rightPadding;
@@ -51,6 +70,7 @@ export function GanttChart({
   return (
     <svg role="img" aria-label="專案甘特圖" width={chartWidth} height={chartHeight}
       viewBox={`0 0 ${chartWidth} ${chartHeight}`} style={svgStyle}>
+      <defs><clipPath id={titleClipId}><rect x={0} y={0} width={Math.max(0, leftLabelWidth - 4)} height={chartHeight} /></clipPath></defs>
       <desc>實心條為進行區間，虛線框為原訂基準，延後段附天數，圓點為完成日；直線為今天。</desc>
       <text x={leftLabelWidth} y={22} fill="var(--color-text)">{from}</text>
       <text x={chartWidth - rightPadding} y={22} textAnchor="end" fill="var(--color-text)">{to}</text>
@@ -68,7 +88,9 @@ export function GanttChart({
         return (
           <g key={task.task_id} role="group" aria-label={`${task.title}，${task.owner}，${detail}`}>
             <title>{task.title}，{task.owner}，{detail}</title>
-            <text x={8} y={center - 6} fill="var(--color-text)">{task.title}</text>
+            <text x={8} y={center - 6} fill="var(--color-text)" clipPath={`url(#${titleClipId})`}>
+              {shortenTitle(task.title, leftLabelWidth)}
+            </text>
             <text x={8} y={center + 14} fill="var(--color-text)">{detail}</text>
             <rect aria-label={`進行區間 ${task.start} 至 ${end}`}
               x={Math.min(startX, endX)} y={center - 4} width={Math.max(1, Math.abs(endX - startX))}
@@ -92,7 +114,7 @@ export function GanttChart({
         );
       })}
       <line aria-label={`今天 ${gantt.today}`} x1={x(gantt.today)} x2={x(gantt.today)}
-        y1={30} y2={bottom} stroke="var(--color-error-text)" strokeWidth={2} strokeDasharray="6 3" />
+        y1={30} y2={bottom} stroke="var(--color-accent)" strokeWidth={2} strokeDasharray="6 3" />
       <text x={8} y={chartHeight - 6} fill="var(--color-text)">實心：進行　虛線框／刻線：原訂　圓點：完成　直線：今天</text>
     </svg>
   );
