@@ -14,7 +14,8 @@ export const ONBOARDING_PATH = "/onboarding";
 export function OnboardingGate({ children }: { children: ReactNode }) {
   const settings = useQuery({ queryKey: keys.settings, queryFn: fetchSettings });
   const { pathname } = useLocation();
-  if (settings.isPending) return <main><p className="muted">載入中…</p></main>;
+  // 只在第一次讀取時攔。失敗過後頁面自己重讀會讓狀態回到 pending，若再攔就會卸載頁面、重讀、再失敗，無限迴圈
+  if (settings.isPending && settings.errorUpdateCount === 0) return <main><p className="muted">載入中…</p></main>;
   const onboarded = settings.data ? settings.data.onboarded_at !== null : null;
   if (onboarded === false && pathname !== ONBOARDING_PATH) return <Navigate to={ONBOARDING_PATH} replace />;
   if (onboarded === true && pathname === ONBOARDING_PATH) return <Navigate to="/" replace />;

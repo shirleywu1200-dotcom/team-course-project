@@ -1,10 +1,12 @@
 // 12.11 啟用精靈與守門的 Dev 元件測試（Vitest＋MSW；SDD D-1、D-2、D-5(a)）。
 
+import { useQuery } from "@tanstack/react-query";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 
+import { fetchSettings, keys } from "../../api/queries";
 import { API, apiError, capture, type Captured, makeSettings, renderWithClient, server } from "../../test/server";
 import { OnboardingGate } from "./OnboardingGate";
 import { LEAVE_DRAFT, OnboardingPage } from "./OnboardingPage";
@@ -86,6 +88,26 @@ test("讀設定失敗時不攔，交給頁面自己處理", async () => {
   server.use(http.get(`${API}/settings`, () => apiError(401, "UNAUTHORIZED")));
   renderApp("/inbox");
   expect(await screen.findByText("收件匣頁")).toBeInTheDocument();
+});
+
+test("讀設定失敗後，頁面自己重讀設定也不會被守門收回（不無限重送）", async () => {
+  let calls = 0;
+  server.use(http.get(`${API}/settings`, () => { calls++; return apiError(401, "UNAUTHORIZED"); }));
+  function PageReadingSettings() {
+    const s = useQuery({ queryKey: keys.settings, queryFn: fetchSettings });
+    return <p>{s.isError ? "頁面顯示錯誤" : "頁面讀取中"}</p>;
+  }
+  renderWithClient(
+    <MemoryRouter initialEntries={["/inbox"]}>
+      <OnboardingGate>
+        <Routes><Route path="/inbox" element={<PageReadingSettings />} /></Routes>
+      </OnboardingGate>
+    </MemoryRouter>,
+  );
+  expect(await screen.findByText("頁面顯示錯誤")).toBeInTheDocument();
+  await new Promise((r) => setTimeout(r, 200));
+  expect(screen.getByText("頁面顯示錯誤")).toBeInTheDocument();
+  expect(calls).toBeLessThanOrEqual(2);
 });
 
 // ---------- 精靈 ----------
