@@ -31,6 +31,9 @@ class Settings:
     api_token: str
     bind_host: str
     port: int
+    ai_provider: str = "off"           # off 或 anthropic（13.4 SDD D-4）
+    ai_model: str = "claude-sonnet-5-5"
+    anthropic_api_key: str = ""
 
 
 def load_settings() -> Settings:
@@ -40,4 +43,7 @@ def load_settings() -> Settings:
         api_token=os.environ.get("G4_API_TOKEN", ""),
         bind_host=os.environ.get("G4_BIND_HOST", "127.0.0.1"),
         port=int(os.environ.get("G4_PORT", "8000")),
+        ai_provider=os.environ.get("AI_PROVIDER", "off"),
+        ai_model=os.environ.get("AI_MODEL", "claude-sonnet-5-5"),
+        anthropic_api_key=os.environ.get("ANTHROPIC_API_KEY", ""),
     )
