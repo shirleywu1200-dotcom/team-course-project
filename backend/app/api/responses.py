@@ -169,6 +169,43 @@ class BaselinePreviewOut(Out):
     impact: BaselineImpactOut
 
 
+# ---------- 週報（Phase 10，Dev-A；spec 5.14）----------
+
+class WeeklyEventOut(Out):
+    """事件證據：只有時間與前值、後值、天數；不含原因、備註、註記與原句（spec 5.14）。"""
+    id: int
+    ts: datetime
+    from_value: str | None
+    to_value: str | None
+    delta_days: int | None
+
+
+class WeeklyItemOut(Out):
+    """不屬於該段的欄位為 null（spec 5.14 表）；可讀內容是讀取時的任務現值。"""
+    section: Literal["done", "delay", "next"]
+    task_id: int
+    event_id: int | None = Field(description="next 項目為 null")
+    title: str | None
+    owner: str | None
+    done_date: date | None = Field(description="只有 done")
+    orig_due: date | None = Field(description="只有 delay")
+    latest_due: date | None = Field(description="delay、next")
+    blocked: bool | None = Field(description="只有 next")
+    event: WeeklyEventOut | None = Field(description="done 為完成事件、delay 為延後事件；next 為 null")
+
+
+class WeeklyReportOut(Out):
+    id: int
+    week_start: date
+    ai_status: Literal["ok", "unavailable", "invalid_output"] | None
+    excluded_private: int = Field(description="產生初稿當下送 AI 前排除的私人任務數（AC-48）")
+    draft: str | None = Field(description="validated=false 時為 null")
+    items: list[WeeklyItemOut] = Field(description="validated=true 為 AI 項目，否則為依歷程列出的事件清單")
+    validated: bool
+    manual_text: str | None
+    updated_at: datetime
+
+
 # ---------- 註記、統計、選項、健康檢查 ----------
 
 class AnnotationOut(Out):

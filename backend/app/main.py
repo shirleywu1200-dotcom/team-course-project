@@ -16,6 +16,7 @@ from app.api import (
     routes_import,
     routes_inbox,
     routes_projects,
+    routes_reports,
     routes_settings,
     routes_tasks,
 )
@@ -50,6 +51,7 @@ def create_app(settings: Settings | None = None, db: Database | None = None,
     for r in (routes_import.router, routes_projects.router, routes_tasks.router, routes_events.router,
               routes_history.router, routes_inbox.router, routes_settings.router, routes_governance.router):
         api.include_router(r)
+    api.include_router(routes_reports.router)   # 週報（Phase 10）；另起一行，不併入上面的清單
     app.include_router(api)
     return app
 

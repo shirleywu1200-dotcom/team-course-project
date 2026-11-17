@@ -97,7 +97,7 @@ code／message 必須是非空字串，details 必須是非陣列物件。
 
 查詢鍵只定義在 `src/api/queryKeys.ts`，舊 `queries.ts` 匯出與鍵值保留；
 `makeQueryClient` 移至獨立檔案，保留禁重試、禁焦點重讀設定。
-11.3 時 OpenAPI 有 22 個操作：7 個 GET（專案列表／詳情、任務列表／詳情、時間管理、原因、健康），15 個動作如下；其後 Dev-B（#20）新增的 13 個動作接在表尾。
+11.3 時 OpenAPI 有 22 個操作：7 個 GET（專案列表／詳情、任務列表／詳情、時間管理、原因、健康），15 個動作如下；其後 Dev-B（#20）新增的 13 個動作、Dev-A（#23）新增的 2 個週報動作接在表尾。
 
 | 動作 | 失效查詢資源 | 依據 |
 | --- | --- | --- |
@@ -129,6 +129,8 @@ code／message 必須是非空字串，details 必須是非陣列物件。
 | `POST /rubrics` | rubrics | FR-RUB-03，確認後成立新版本 |
 | `POST /sources/purge` | candidates、tasks | FR-GOV-03；候選與任務歷程的原句由 `sources.excerpt` 帶出，清除後變空 |
 | `POST /export` | 無 | FR-GOV-02，只讀 |
+| `POST /reports/weekly/draft` | 無 | FR-RPT-02、03；前端尚無週報查詢，12.9 建立後改寫（Dev-A 登記，待 Dev-C 確認） |
+| `PUT /reports/weekly/{report_id}/manual` | 無 | FR-RPT-04；同上 |
 
 資源前綴涵蓋全部列表、詳情及篩選查詢。原因、健康不受上述寫入影響。
 `runMutationWithInvalidation` 只在成功後失效，等待使用中的查詢重讀，未使用的查詢留待下次讀取。

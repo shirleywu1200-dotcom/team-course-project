@@ -103,3 +103,11 @@ class BaselinePreview(Versioned):
 class BaselineCommit(Strict):
     confirmation_token: str
     ack: bool = False
+
+
+class WeeklyDraft(Strict):
+    week_start: date
+
+
+class ManualText(Strict):
+    manual_text: str | None
