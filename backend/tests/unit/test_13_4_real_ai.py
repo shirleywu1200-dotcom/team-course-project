@@ -82,6 +82,11 @@ def test_sdk_retries_disabled():
     assert AnthropicAIClient(api_key="k", model="m").sdk.max_retries == 0
 
 
+def test_sdk_open_telemetry_disabled_even_if_env_asks_for_content(monkeypatch):
+    monkeypatch.setenv("ANTHROPIC_OPEN_TELEMETRY_TRACES_CONTENT_MODE", "content")
+    assert AnthropicAIClient(api_key="k", model="m").sdk.open_telemetry["traces"]["enabled"] is False
+
+
 @pytest.mark.parametrize("error", [
     anthropic.APITimeoutError(request=REQ),
     anthropic.APIConnectionError(request=REQ),

@@ -26,7 +26,9 @@ class AnthropicAIClient(AIClient):
     def __init__(self, api_key: str, model: str, sdk=None):
         self.api_key = api_key
         self.model = model
-        self.sdk = sdk or (anthropic.Anthropic(api_key=api_key, max_retries=0) if api_key else None)
+        # 重試只在呼叫端（D-3）；關掉 SDK 內建 OpenTelemetry，避免提示與回應經 exporter 外流（D-6）
+        self.sdk = sdk or (
+            anthropic.Anthropic(api_key=api_key, max_retries=0, open_telemetry=False) if api_key else None)
         self.last_usage = (0, 0)   # 最近一次成功回應的（輸入, 輸出）token 數
 
     def call(self, node_id: str, payload: dict, *, timeout_s: float = DEFAULT_TIMEOUT_S) -> dict:
