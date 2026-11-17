@@ -259,7 +259,7 @@ def test_ac53_purge_all_clears_every_excerpt_and_idempotency_cache(client, seed,
     r = client.post(f"{API}/sources/purge", json={"confirm": True})
     assert r.status_code == 200 and r.json() == {"purged": 2}
     assert raw_outputs(query) == {1: None, 2: None, 3: None}
-    assert all(run["raw_output"] is None for run in json.loads(client.post(f"{API}/export").content)["tables"]["ai_runs"])
+    assert all("raw_output" not in run for run in json.loads(client.post(f"{API}/export").content)["tables"]["ai_runs"])   # #40：匯出整欄不帶（原為 null）
     got = excerpts(query)
     assert all(e is None for e, _ in got.values())
     assert got[1][1] == clock.now() and got[3][1] == datetime(2026, 10, 1, 11, 0, tzinfo=TZ)
