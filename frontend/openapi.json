@@ -2174,6 +2174,145 @@
           }
         }
       }
+    },
+    "/api/v1/reports/weekly/draft": {
+      "post": {
+        "tags": [
+          "reports"
+        ],
+        "summary": "Draft",
+        "operationId": "draft_api_v1_reports_weekly_draft_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WeeklyDraft"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WeeklyReportOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/reports/weekly/{report_id}": {
+      "get": {
+        "tags": [
+          "reports"
+        ],
+        "summary": "Get Report",
+        "operationId": "get_report_api_v1_reports_weekly__report_id__get",
+        "parameters": [
+          {
+            "name": "report_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "maximum": 9223372036854776000,
+              "minimum": 1,
+              "title": "Report Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WeeklyReportOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/reports/weekly/{report_id}/manual": {
+      "put": {
+        "tags": [
+          "reports"
+        ],
+        "summary": "Save Manual",
+        "operationId": "save_manual_api_v1_reports_weekly__report_id__manual_put",
+        "parameters": [
+          {
+            "name": "report_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "maximum": 9223372036854776000,
+              "minimum": 1,
+              "title": "Report Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManualText"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WeeklyReportOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -4676,6 +4815,26 @@
         ],
         "title": "InterviewRecord"
       },
+      "ManualText": {
+        "properties": {
+          "manual_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manual Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "manual_text"
+        ],
+        "title": "ManualText"
+      },
       "OnboardingIn": {
         "properties": {
           "skipped": {
@@ -6039,6 +6198,143 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "WeeklyDraft": {
+        "properties": {
+          "week_start": {
+            "type": "string",
+            "format": "date",
+            "title": "Week Start"
+          }
+        },
+        "type": "object",
+        "required": [
+          "week_start"
+        ],
+        "title": "WeeklyDraft"
+      },
+      "WeeklyItemOut": {
+        "properties": {
+          "section": {
+            "type": "string",
+            "enum": [
+              "done",
+              "delay",
+              "next"
+            ],
+            "title": "Section"
+          },
+          "task_id": {
+            "type": "integer",
+            "title": "Task Id"
+          },
+          "event_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event Id",
+            "description": "next 項目為 null"
+          }
+        },
+        "type": "object",
+        "required": [
+          "section",
+          "task_id",
+          "event_id"
+        ],
+        "title": "WeeklyItemOut"
+      },
+      "WeeklyReportOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "week_start": {
+            "type": "string",
+            "format": "date",
+            "title": "Week Start"
+          },
+          "ai_status": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "ok",
+                  "unavailable",
+                  "invalid_output"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ai Status"
+          },
+          "excluded_private": {
+            "type": "integer",
+            "title": "Excluded Private",
+            "description": "產生初稿當下送 AI 前排除的私人任務數（AC-48）"
+          },
+          "draft": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Draft",
+            "description": "validated=false 時為 null"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/WeeklyItemOut"
+            },
+            "type": "array",
+            "title": "Items",
+            "description": "validated=true 為 AI 項目，否則為依歷程列出的事件清單"
+          },
+          "validated": {
+            "type": "boolean",
+            "title": "Validated"
+          },
+          "manual_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manual Text"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "week_start",
+          "ai_status",
+          "excluded_private",
+          "draft",
+          "items",
+          "validated",
+          "manual_text",
+          "updated_at"
+        ],
+        "title": "WeeklyReportOut"
       }
     }
   }

@@ -32,6 +32,9 @@ export const mutationInvalidations = {
   "POST /rubrics": ["rubrics"],
   "POST /sources/purge": ["candidates", "tasks"],
   "POST /export": [],
+  // Dev-A（Phase 10 週報後端）：前端尚無讀週報的查詢，先登記為無；12.9 建立週報查詢鍵時由 Dev-C 改寫
+  "POST /reports/weekly/draft": [],
+  "PUT /reports/weekly/{report_id}/manual": [],
 } as const satisfies Record<string, readonly (keyof typeof queryRoots)[]>;
 
 export type MutationAction = keyof typeof mutationInvalidations;
