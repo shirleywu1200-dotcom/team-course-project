@@ -95,7 +95,7 @@ def clarify(candidate_id: int, body: ConfirmIn, db: Database = Depends(get_db)):
 @router.post("/candidates/{candidate_id}/create-task", status_code=201, response_model=DecideOut,
              response_model_exclude_unset=True)
 def create_task(candidate_id: int, body: CreateTaskIn, db: Database = Depends(get_db)):
-    return _decided(db, db.run(lambda c: cand.create_task_from(c, candidate_id, **body.model_dump())))
+    return _decided(db, db.run(lambda c: cand.create_task_from(c, candidate_id, **body.model_dump(exclude_unset=True))))
 
 
 @router.post("/candidates/{candidate_id}/ignore", response_model=DecideOut, response_model_exclude_unset=True)

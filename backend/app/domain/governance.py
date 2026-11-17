@@ -1,7 +1,7 @@
 """資料控制：原文到期清除、全部清除、匯出（todo 8.5～8.7、FR-GOV-01～03；Phase 8 SDD 第 4～6 節）。
 
 只清 `sources.excerpt`、可能快取原句的 `idempotency_keys`，以及可能含原文的 `ai_runs.raw_output`（PR #20 B2）；
-events、candidates、tasks 保留（spec 6.7）。
+events、candidates、tasks 保留（spec 6.7）。匯出不帶 `ai_runs.raw_output`（#40）。
 """
 
 from datetime import date, datetime, timedelta
@@ -44,10 +44,20 @@ def _jsonable(value):
     return value.isoformat() if isinstance(value, (date, datetime)) else value
 
 
+# 匯出不帶的欄位（spec 6.7）：raw_output 可能含收件原句，清除與匯出同一立場（#40，2026-11-17 裁定）
+EXPORT_EXCLUDED_COLUMNS = {"ai_runs": {"raw_output"}}
+
+
 def export(conn: Connection) -> dict:
-    """全部資料表的一致快照（AC-54）。呼叫端須讓這是交易內第一個操作。"""
+    """全部資料表的一致快照（AC-54），不帶 EXPORT_EXCLUDED_COLUMNS（spec 6.7、#40）。
+
+    呼叫端須讓這是交易內第一個操作。
+    """
     governance_repo.begin_snapshot(conn)
-    tables = {t: [{k: _jsonable(v) for k, v in row.items()} for row in governance_repo.dump_table(conn, t)]
-              for t in governance_repo.table_names(conn)}
+    tables = {}
+    for t in governance_repo.table_names(conn):
+        excluded = EXPORT_EXCLUDED_COLUMNS.get(t, set())
+        tables[t] = [{k: _jsonable(v) for k, v in row.items() if k not in excluded}
+                     for row in governance_repo.dump_table(conn, t)]
     return {"exported_at": get_clock().now().isoformat(), "schema_version": governance_repo.schema_version(conn),
             "counts": {t: len(rows) for t, rows in tables.items()}, "tables": tables}

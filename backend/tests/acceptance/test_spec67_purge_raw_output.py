@@ -62,12 +62,12 @@ def test_spec67_schedule_follows_retention_setting(seed, db, query):
     assert all(v is not None for v in _raw(query).values())
 
 
-def test_spec67_export_after_purge_has_null_raw_output(client, seed):
+def test_spec67_export_after_purge_has_no_raw_output(client, seed):
     seed(SEED_BASE + SEED_RUNS)
     assert client.post(f"{API}/sources/purge", json={"confirm": True}).status_code == 200
     r = client.post(f"{API}/export")
     assert r.status_code == 200, r.text
-    assert all(run["raw_output"] is None for run in r.json()["tables"]["ai_runs"])
+    assert all("raw_output" not in run for run in r.json()["tables"]["ai_runs"])   # #40：匯出整欄不帶（原為 null）
     assert MARK not in r.text
 
 

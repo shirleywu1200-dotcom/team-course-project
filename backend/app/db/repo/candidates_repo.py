@@ -6,7 +6,7 @@ from app.db.repo.rows import insert_row, update_row
 from app.errors import DomainError
 
 COLUMNS = {"source_id", "kind", "certainty", "task_id", "proposed", "suggest", "note", "state",
-           "decision", "decided_at", "ai_run_id", "created_at"}
+           "decision", "decided_at", "ai_run_id", "created_at", "project_id"}
 
 # 候選連同原句與對應任務，供 API 輸出
 _DETAIL = """

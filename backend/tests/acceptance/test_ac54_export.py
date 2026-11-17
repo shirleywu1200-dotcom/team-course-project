@@ -80,6 +80,8 @@ def test_sec1_export_and_purge_require_token(app, seed, query):
     assert query("SELECT count(*) AS n FROM sources WHERE excerpt IS NOT NULL")[0]["n"] == 8
 
 
-def test_ac54_export_includes_unpurged_raw_output(export):
+def test_ac54_export_excludes_raw_output(export):
+    # 2026-11-17 #40 裁定：匯出不帶 ai_runs.raw_output（取代 PR #20 Q1 的「尚未清除的照帶」；spec 6.7）
     runs = export.json()["tables"]["ai_runs"]
-    assert f"{MARK}RAW" in (runs[0]["raw_output"] or "")
+    assert runs and all("raw_output" not in r for r in runs)
+    assert f"{MARK}RAW" not in export.text
