@@ -1,10 +1,12 @@
 """spec 1.3 衡量值的查詢（todo 13.8 埋點檢查，資料面）。
 
 只讀。每個函式回傳 {"numerator", "denominator", "rate"}；分母為 0 時 rate 為 None。
-衡量值 1（週報對得上歷程）與 2（每日確認時間）目前資料不足，見 docs/metrics.md。
+衡量值 1（週報對得上歷程）的定義、2（每日確認時間）是否接受近似值待產品負責人裁定，見 docs/metrics.md。
 """
 
 from sqlalchemy import Connection, text
+
+from app.db.repo import events_repo
 
 
 def _rate(num: int, den: int) -> dict:
@@ -21,16 +23,12 @@ def candidate_confirm_rate(conn: Connection) -> dict:
 
 
 def mark_completion_rate(conn: Connection) -> dict:
-    """衡量值 4：我的日期調整註記完成率＝有效註記非空 ÷ 全部（mine、delta≠0 的 due 事件）。"""
-    row = conn.execute(text("""
-        SELECT count(*) FILTER (WHERE COALESCE(
-                 (SELECT a.mark FROM events a WHERE a.kind = 'annotation' AND a.ref_event_id = e.id
-                   ORDER BY a.id DESC LIMIT 1), e.mark) IS NOT NULL) AS marked,
-               count(*) AS total
-          FROM events e
-         WHERE e.kind = 'due' AND e.mine AND e.delta_days <> 0
-    """)).mappings().one()
-    return _rate(row["marked"], row["total"])
+    """衡量值 4：我的日期調整註記完成率＝有效註記非空 ÷ 全部。
+
+    母體與有效註記沿用時間管理統計的查詢（mine、delta≠0 的 due 事件；FR-MRK-05、06），兩處口徑只有一份。
+    """
+    rows = events_repo.mine_due_events_with_effective_mark(conn)
+    return _rate(sum(1 for r in rows if r["effective_mark"] is not None), len(rows))
 
 
 def feedback_fill_rate(conn: Connection) -> dict:
