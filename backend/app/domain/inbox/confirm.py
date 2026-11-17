@@ -75,11 +75,19 @@ def clarify(conn: Connection, candidate_id: int, new_due: date | None, expected_
     return _resolve(conn, cand, suggest.get("kind"), suggest.get("new_due"), new_due, expected_version, "clarify")
 
 
-def create_task_from(conn: Connection, candidate_id: int, *, title: str, owner: str | None, due: date,
-                     project_id: int | None) -> dict:
-    """unmatched 候選：建立新任務，負責人預設為發言者（FR-INB-14）。建立事件記錄候選依據（R-01）。"""
+_FROM_CANDIDATE = object()
+
+
+def create_task_from(conn: Connection, candidate_id: int, *, title: str, due: date, owner: str | None = None,
+                     project_id: int | None | object = _FROM_CANDIDATE) -> dict:
+    """unmatched 候選：建立新任務，負責人預設為發言者（FR-INB-14）。建立事件記錄候選依據（R-01）。
+
+    project_id 沒送時沿用候選收件時的專案；有送（含 null）以送來的為準（PR #20 B5）。
+    """
     cand = _load_open(conn, candidate_id, {"unmatched"})
     owner = owner or sources_repo.get_many(conn, [cand["source_id"]])[0]["speaker"]
+    if project_id is _FROM_CANDIDATE:
+        project_id = cand["project_id"]
     task = tasks.create_task(conn, title=title, owner=owner, due=due, project_id=project_id, origin="candidate",
                              origin_ref=cand["id"], source_id=cand["source_id"])
     return {"candidate": _close(conn, cand, "confirmed", "create_task", "changed", {"task_id": task["id"]}),
