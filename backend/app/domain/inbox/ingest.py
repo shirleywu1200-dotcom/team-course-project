@@ -135,7 +135,7 @@ def process_sources(db: Database, ai: AIClient, source_ids: list[int], project_i
                "error": None if error is None else type(error).__name__,
                "raw_output": None if output is None else json.dumps(output, ensure_ascii=False, default=str)}
         if error is None:
-            ids = db.run(lambda c, r=run, d=drafts: _save_candidates(c, r, d))
+            ids = db.run(lambda c, r=run, d=drafts: _save_candidates(c, r, d, project_id))
             return Outcome("ok", attempt, ids, skipped=len(source_ids) - len(ids))
         db.run(lambda c, r=run: ai_runs_repo.insert_run(c, r))
         log.info("AI-01 失敗 job=%s attempt=%s status=%s", job_id, attempt, run["status"])
@@ -145,10 +145,12 @@ def process_sources(db: Database, ai: AIClient, source_ids: list[int], project_i
     return Outcome(ai_status, attempt, skipped=len(source_ids))
 
 
-def _save_candidates(conn: Connection, run: dict, drafts: list[r2.Draft]) -> list[int]:
+def _save_candidates(conn: Connection, run: dict, drafts: list[r2.Draft], project_id: int | None) -> list[int]:
+    """候選記住收件時的專案，建任務時由伺服器帶入（PR #20 B5）。"""
     run_id = ai_runs_repo.insert_run(conn, run)["id"]
     now = get_clock().now()
     return [candidates_repo.insert(conn, {
         "source_id": d.source_id, "kind": d.kind, "certainty": d.certainty, "task_id": d.task_id,
         "proposed": d.proposed, "suggest": d.suggest, "state": "open", "ai_run_id": run_id, "created_at": now,
+        "project_id": project_id,
     })["id"] for d in drafts]

@@ -388,3 +388,40 @@ def test_clarify_without_usable_suggestion_is_rejected(client, seed, query):
     r = post(client, 28, "clarify", expected_version=4)
     assert r.status_code == 422
     assert query("SELECT blocked FROM tasks WHERE id = 3")[0]["blocked"] is False
+
+
+# ---------- B5：候選沿用收件時的專案（PR #20 審查 B5、FR-INB-14） ----------
+
+def test_b5_sync_ingest_saves_project_on_candidate(client, seed, ai, query):
+    seed(BASE)
+    ai.script(NODE, {"items": [{"ref": 1, "kind": "done", "task_id": 7}]},
+              {"items": [{"ref": 2, "kind": "done", "task_id": 3}]})   # ref 是 sources.id
+    ingest(client, "[10:12] 阿德：做完了", project_id=2)
+    ingest(client, "[10:13] 小薇：好了")
+    assert [r["project_id"] for r in query("SELECT project_id FROM candidates ORDER BY id")] == [2, None]
+
+
+def test_b5_async_job_saves_project_on_candidate(client, seed, ai, db, query):
+    seed(BASE)
+    ingest(client, long_text(), project_id=2)
+    ai.script(NODE, {"items": [{"ref": 1, "kind": "done", "task_id": 7}]})
+    worker.run_once(db, ai)
+    assert [r["project_id"] for r in query("SELECT project_id FROM candidates")] == [2]
+
+
+def test_b5_create_task_without_project_uses_candidate_project(client, seed, query):
+    seed(BASE + CANDIDATES + "UPDATE candidates SET project_id = 2 WHERE id = 26;")
+    body = post(client, 26, "create-task", title="報表處理", due="2026-12-20").json()
+    assert query("SELECT project_id FROM tasks WHERE id = :t", t=body["task"]["id"])[0]["project_id"] == 2
+
+
+def test_b5_create_task_sent_project_overrides_candidate(client, seed, query):
+    seed(BASE + CANDIDATES + "UPDATE candidates SET project_id = 2 WHERE id = 26;")
+    body = post(client, 26, "create-task", title="報表處理", due="2026-12-20", project_id=1).json()
+    assert query("SELECT project_id FROM tasks WHERE id = :t", t=body["task"]["id"])[0]["project_id"] == 1
+
+
+def test_b5_create_task_sent_null_project_means_no_project(client, seed, query):
+    seed(BASE + CANDIDATES + "UPDATE candidates SET project_id = 2 WHERE id = 26;")
+    body = post(client, 26, "create-task", title="報表處理", due="2026-12-20", project_id=None).json()
+    assert query("SELECT project_id FROM tasks WHERE id = :t", t=body["task"]["id"])[0]["project_id"] is None
