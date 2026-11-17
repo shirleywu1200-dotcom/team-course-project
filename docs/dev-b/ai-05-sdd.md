@@ -103,3 +103,19 @@ spec 只說「提供文字供你複製」（FR-RPT-05），沒寫讀者與格式
 2. 評估（或冒煙）：5 個案例格式通過率 100%、R4 通過率 100%；大型週延遲低於 15 秒。
 3. 端對端（API）：週報前端 12.13 尚未完成（Dev-C），改以 API 驗證。本機 `AI_PROVIDER=anthropic`，`scripts/e2e_server.py` 載入 `weekly.sql`，呼叫週報產生端點一次，回應為 `ai_status=ok`、`validated=true`、`draft` 非空，且 `excluded_private=1`、`draft` 不含私人任務標題；走查完 `--drop`。
 4. PR 由 Dev-A 審（配對 A→B），請他核對 prompt 對 R4 與各段定義的理解。
+
+## 7. 驗收結果（2026-11-17，claude-sonnet-5-5、effort low）
+
+之後改 prompt 或換模型時，以這裡的數字當基準線重跑 `scripts/eval_ai05.py` 比對。
+
+| 項目 | 結果 |
+| --- | --- |
+| 1. 測試 | T1～T3 綠；後端全套（`AI_PROVIDER=off`）、ruff、gitleaks 通過 |
+| 2. 評估第 1 輪 | 格式、R4、齊全皆 5/5；最慢 5.5 秒（大型週 20 項）；發現段落空行不一致、日期補零 |
+| 2. 評估第 2 輪（加「段落間空一行」「日期不補零」） | 格式、R4、齊全皆 5/5；最慢 5.6 秒；5 案皆空行分段、無補零 |
+| T4 冒煙（樣本 2） | 通過 |
+| 3. API 端對端（`weekly.sql`） | `ai_status=ok`、`validated=true`、`excluded_private=1`，`draft` 不含私人任務標題；GET 重讀仍 `validated=true` |
+| 費用 | 評估 2 輪＋冒煙＋端對端約 $0.10 |
+
+- 「齊全」＝items 的（段落、任務）等於 payload 的全部組合。R4 只擋多出來的項目，空的 items 也會通過，所以另外算。
+- Q4 不必處理：大型週最慢 5.6 秒，遠低於 15 秒。
