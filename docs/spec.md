@@ -125,8 +125,8 @@
 
 ### 3.4 FR-IMP 專案匯入（P1，AI-07）
 
-- FR-IMP-01 匯入入口為貼上表格（逗號或 Tab 分隔，首列表頭）。檔案上傳列為後續。單次最多 500 列、50,000 字元。
-- FR-IMP-02 表頭先由規則比對（任務／名稱、負責人、開始、結束／期限／完成）；規則辨認不出時才呼叫 AI-07 建議對應，並顯示對應預覽由你確認。
+- FR-IMP-01 匯入入口為貼上表格（逗號或 Tab 分隔，首列表頭）。檔案上傳列為後續。單次最多 500 列、50,000 字元；超過任一上限回 413 `PAYLOAD_TOO_LARGE`（2026-11-16 裁定，PR #20 Q5）。
+- FR-IMP-02 表頭先由規則比對（任務／名稱、負責人、開始、結束／期限／完成）；規則辨認不出時才呼叫 AI-07 建議對應，並顯示對應預覽由你確認。匯入目標為私人範圍的既有專案時不呼叫 AI-07、不寫 `ai_runs`，回 `ai_status="unavailable"`、`mapped_by=null`，可帶 `column_map` 手動對應；`target="new"` 視為工作範圍（Phase 6 SDD Q4；PR #20 B1 比照；資安規則 2）。
 - FR-IMP-03 日期格式接受 `YYYY-MM-DD`、`M/D`（無年份時依專案期間推年）。無法解析視為缺日期。
 - FR-IMP-04 診斷規則：
   - 錯誤（該列不匯入，除非補正或略過）：缺任務名稱；缺結束日期；結束日期早於開始日期。
@@ -208,13 +208,14 @@
 - FR-INB-01 入口：貼上文字（預設）；LINE webhook（P1b，需已綁定且已告知成員的群組）。
 - FR-INB-02 R1 規則：LINE 群組未綁定或未確認告知成員者一律丟棄，不存原文。
 - FR-INB-03 只存必要摘錄（`sources.excerpt`），不存整段對話；依保存期限到期清除。
-- FR-INB-04 重複訊息以「時間＋發言者＋內容」雜湊判斷，**只回報重複數，不自動合併**。
+- FR-INB-04 重複訊息以「時間＋發言者＋內容」雜湊判斷，**只回報重複數，不自動合併**。貼上內容有日期標頭（例如 `2026/11/11（三）`）時，標頭之後的訊息以「日期＋時間＋發言者＋內容」判斷；沒有日期標頭時維持原規則（2026-11-16 裁定，PR #20 B3）。原文清除後再貼同一段文字仍算重複，原文維持清除、不回存（2026-11-16 裁定，PR #20 Q3）。
 - FR-INB-05 解析規模：不超過 30 行同步處理；超過則建立背景工作，回傳工作編號，前端輪詢（每 3 秒，最多 60 秒）。〔假設〕
 - FR-INB-06 AI-01 輸出候選：種類（`delay`、`done`、`stuck`）、對應任務、新值、原句、確定度。AI 原始輸出先保存為中間產物。
 - FR-INB-07 R2 規則（程式，不由 AI 決定）：驗證輸出格式；日期轉值；問句、含「可能、大概、應該、也許」者降級為 `unclear`（待釐清）；認不出任務的承接語句為 `unmatched`（待配對），**不猜**；無關訊息略過並計數。
 - FR-INB-08 AI 逾時或輸出不合格式：從 AI-01 續跑最多重試 2 次；仍失敗則工作標為 `failed`，保留摘錄，提示可手動建立任務。
+- FR-INB-08a 收件指定的專案為私人範圍（`scope='private'`）時，不呼叫 AI-01、不寫 `ai_runs`，回 `ai_status="unavailable"`（背景工作標為 `failed`），摘錄照存、可手動建立任務（2026-11-16 裁定，PR #20 B1；資安規則 2）。背景工作以**執行當下**的專案範圍判斷：排隊期間專案改為私人，執行時同樣不呼叫 AI-01（2026-11-16 裁定，PR #20 Q2）。
 - FR-INB-09 候選狀態：`open`、`confirmed`、`ignored`。`open` 候選**不進任何正式統計、甘特圖或週報**。
-- FR-INB-10 確認 `delay` 候選：可先改日期；寫 `due` 事件（依據為該候選與原句）；更新 `latest_due`；若任務負責人是我，回傳 `needs_mark=true` 與事件 id，前端接著開註記面板（FR-MRK）。
+- FR-INB-10 確認 `delay` 候選：可先改日期；寫 `due` 事件（依據為該候選與原句）；更新 `latest_due`；若任務負責人是我，回傳 `needs_mark=true` 與事件 id，前端接著開註記面板（FR-MRK）。新日期等於目前 `latest_due` 時回 422 `NO_CHANGE`，候選維持 `open`、不寫事件（同 AC-07）（2026-11-16 裁定，PR #20 Q4）。
 - FR-INB-11 確認 `done` 候選：任務標為完成、記完成日，並開啟完成回報（FR-FBK）。
 - FR-INB-12 確認 `stuck` 候選：任務 `blocked=1`，寫 `status` 事件。
 - FR-INB-13 `unclear` 候選：提供「我確認」（依建議值，事件依據註記為「待釐清，你確認」）與「忽略」。
@@ -252,7 +253,7 @@
 
 ### 3.15 FR-GOV 資料控制（P1）
 
-- FR-GOV-01 來源原文依保存期限自動清除（每日排程）。
+- FR-GOV-01 來源原文依保存期限自動清除（每小時排程，見 6.7）。
 - FR-GOV-02 匯出：產生包含所有表的 JSON 檔供下載。
 - FR-GOV-03 刪除所有來源原文：二次確認；刪除後任務、事件仍保留，原句顯示為已刪除。`idempotency_keys` 存的回應本文可能含原句，一併刪除（屬於暫存，不是歷程，DA-23）。
 - FR-GOV-04 LINE 群組解除綁定即停止處理該群組，不追溯刪除已確認的紀錄。
@@ -263,9 +264,9 @@
 - FR-AI-01 所有 AI 節點為 L1：輸出只成為候選或草稿，**不直接寫入正式紀錄**。
 - FR-AI-02 每個 AI 呼叫記錄於 `ai_runs`：節點、狀態、嘗試次數、延遲、錯誤。
 - FR-AI-03 每個 AI 節點必須有不依賴 AI 的退路（第 6.6 節）。AI 不可用時，主流程仍可完成。
-- FR-AI-04 AI 的結果被接受、修改、忽略、改選，都記入 `ai_feedback`，供評估。
+- FR-AI-04 AI 的結果被接受、修改、忽略、改選，都記入 `ai_feedback`，供評估。匯入表頭對應（AI-07）：一次匯入寫一筆，錨定該次匯入的 `baseline` 事件，`detail` 只放欄位索引（第 5.6 節）。
 - FR-AI-06 **AI 不得參與對使用者自己的評價**：延期原因、時間管理註記、自評精力、實際達成星數皆由使用者判斷，不設預填或建議。AI-02（預設星數）因屬事前預設而非事後評價，是否採用另見 D-01。
-- FR-AI-05 AI 供應商以介面隔離（`AIClient`），可替換；單次呼叫逾時預設 20 秒〔假設〕。
+- FR-AI-05 AI 供應商以介面隔離（`AIClient`），可替換；單次呼叫逾時預設 20 秒〔假設〕。各節點的 payload 與輸出格式見 5.3a。
 
 ---
 
@@ -601,7 +602,7 @@ CREATE TABLE idempotency_keys (
   - 兩個相同鍵的請求同時到達時，不保證只執行一次；整批順延另有 `expected_version` 擋第二次寫入。
   - 每次寫入時清除超過 24 小時的列（DA-23）。回應本文可能含原句，所以「刪除所有來源原文」（FR-GOV）的清除範圍也包含這張表。
 - 樂觀鎖：修改任務的請求帶 `expected_version`；不符回 409 `STALE_VERSION`。
-- 成功回應：直接回資源或 `{ "data": … }`；列表回 `{ "items": […], "total": n }`。建立類端點（`POST /projects`、`POST /tasks`、`POST /events/{id}/annotations`）回 201，其餘 POST 回 200（DA-20）。
+- 成功回應：直接回資源或 `{ "data": … }`；列表回 `{ "items": […], "total": n }`。建立類端點（`POST /projects`、`POST /tasks`、`POST /events/{id}/annotations`、`POST /projects/import/commit`、`POST /candidates/{id}/create-task`、`POST /rubrics`）回 201，其餘 POST 回 200（DA-20；後三個為 2026-11-16 擴充）。
 - OpenAPI 文件放在 `/api/v1/openapi.json`，與其他 API 一樣需要 token；`/docs`、`/redoc` 關閉。不啟動伺服器也能匯出：在 `backend/` 下執行 `uv run python -m app.export_openapi`（DA-24）。
 - 未預期的例外：回 500 `INTERNAL_ERROR`，訊息固定；log 只記例外類型名稱，不寫錯誤訊息與 traceback；資料庫引擎設 `hide_parameters=True`，例外訊息不帶 SQL 參數值（DA-25）。
 - 錯誤回應格式：
@@ -620,7 +621,7 @@ CREATE TABLE idempotency_keys (
 | 409 | `STALE_VERSION` | `expected_version` 與目前不符 |
 | 409 | `CONFIRMATION_INVALID` | 基準更正憑證過期、已使用或任務已變動 |
 | 409 | `CANDIDATE_NOT_OPEN` | 候選已處理 |
-| 413 | `PAYLOAD_TOO_LARGE` | 貼上文字超過 20,000 字，或匯入超過 500 列 |
+| 413 | `PAYLOAD_TOO_LARGE` | 貼上文字超過 20,000 字，或匯入超過 500 列或 50,000 字元 |
 | 422 | `VALIDATION_ERROR` | 欄位缺漏或格式錯誤（`details` 列出欄位） |
 | 422 | `NO_CHANGE` | 新值等於目前值 |
 | 422 | `DATE_OUT_OF_RANGE` | 日期超出允許範圍 |
@@ -635,6 +636,57 @@ CREATE TABLE idempotency_keys (
 ### 5.3 AI 降級約定
 
 凡會呼叫 AI 的端點，回應都帶 `ai_status`：`ok`、`unavailable`、`invalid_output`。`unavailable` 與 `invalid_output` 時，端點仍回 200 並提供退路內容（例如不含建議的表單、統計表），不回錯誤。
+
+`ai_status` 的判定：AI 回傳且通過結構驗證為 `ok`；最後一次嘗試的輸出不合格式為 `invalid_output`；逾時、供應商不可用、其他錯誤，以及依規則刻意不呼叫（私人範圍）為 `unavailable`。`ai_runs.status` 另記細分值（`timeout`、`invalid_output`、`error`）。
+
+### 5.3a AI 節點輸入輸出契約（`AIClient`）
+
+`AIClient.call(node_id, payload) -> dict` 是唯一對外呼叫 AI 的介面（資安規則 2），契約擁有者為 Dev-B。以下為各節點送出的 payload 與接受的輸出；輸出不合結構時丟 `AIInvalidOutput`。測試以 `FakeAIClient.script(node_id, 輸出或例外…)` 排定回傳值。
+
+**AI-01 收件解析（FR-INB-06、07）**
+
+- payload 只含以下三個鍵：
+  ```json
+  {
+    "today": "2026-11-11",
+    "messages": [{ "ref": 101, "speaker": "阿德", "spoken_at": "10:12", "text": "畫面規格 v1 確定延到 11/18" }],
+    "tasks": [{ "id": 2, "title": "畫面規格 v1", "owner": "阿德", "latest_due": "2026-11-13" }]
+  }
+  ```
+  - `messages`：本次新收（非重複）且原文未清除的訊息；`ref` 為 `sources.id`。重複訊息與已清除的原文不送（FR-INB-04、6.7）。
+  - `tasks`：未完成、`scope='work'` 的任務；收件有指定專案時只含該專案的任務。私人範圍任務（不論是否在工作專案內）一律不送。只含上列四個欄位。
+- 輸出：`{ "items": [{ "ref": 101, "kind": "delay", "task_id": 2, "new_due": "11/18", "certainty": "sure" }] }`
+  - `items` 必須是陣列，否則整體算不合格式（重試）。個別項目 `ref` 不在本次 `messages`、`kind` 不在 `delay`／`done`／`stuck`／`none` 的，該項丟棄。
+  - `kind="none"` 表示該則不產生候選。`task_id` 不在本次 `tasks` 裡時轉為 `unmatched`，不猜（AC-37）。`new_due` 接受 `YYYY-MM-DD` 或 `M/D`。`certainty` 選填，預設 `sure`；不是 `sure` 時降級為 `unclear`。
+  - 其他欄位（例如原因推測）一律不讀（FR-DUE-05a、AC-12a）。
+- 重試：同一批訊息總共最多嘗試 3 次（1 次加續跑 2 次，FR-INB-08）；供應商不可用時不續跑。每次嘗試寫一列 `ai_runs`。
+
+**AI-07 匯入表頭對應（FR-IMP-02）**
+
+- payload：`{ "headers": ["任務", "負責人", "開始", "結束"], "samples": [["API 定義", "我", "11/3", "11/12"]] }`。`samples` 最多前 2 列資料，只供判斷欄位意義。
+- 輸出：`{ "title": 0, "owner": 1, "start": 2, "end": 3 }`。`title`、`end` 必須是欄位範圍內的整數索引；`owner`、`start` 可為 null；非 null 的索引不可重複。不合規則算 `invalid_output`。
+- 只呼叫 1 次，不重試：失敗時直接走手動指定對應的退路（6.6）。寫一列 `ai_runs`。
+
+**AI-05 週報初稿（FR-RPT，Phase 10；2026-11-16 #22 定案）**
+
+- 呼叫端（Dev-A，Phase 10）組 payload、驗證輸出、R4 對帳；prompt 與真實供應商的節點設定由契約擁有者（Dev-B，13.4）負責。雙方只依本節格式開發，Phase 10 用 `FakeAIClient` 排回傳值。
+- payload 只含以下鍵；每一項只放列出的欄位，其餘一律不送：
+  ```json
+  {
+    "week":  { "start": "2026-11-09", "end": "2026-11-15" },
+    "done":  [{ "task_id": 3, "title": "API 介面定義", "owner": "我", "done_date": "2026-11-12", "event_id": 41 }],
+    "delay": [{ "task_id": 2, "title": "畫面規格", "owner": "小薇", "orig_due": "2026-11-12", "latest_due": "2026-11-18", "event_ids": [52] }],
+    "next":  [{ "task_id": 5, "title": "驗收會議", "owner": "我", "latest_due": "2026-11-19", "blocked": false }]
+  }
+  ```
+  - 只送工作範圍（`scope='work'`）的任務；私人任務在組 payload 前排除，只計數。
+  - 明確不送：事件的 `note`、`reason`、`extra`、註記（`mark`）、完成回報的星數與精力（FR-AI-06）、`done_when`、原句、專案名稱。
+  - `title` 用任務現值；`owner` 照 AI-01 送名字，D-03（姓名遮蔽）裁定後兩節點一起改。
+- 輸出：`{ "draft": "本週（11/09–11/15）工作進度…", "items": [{ "section": "done", "task_id": 3, "event_id": 41 }, { "section": "next", "task_id": 5, "event_id": null }] }`
+  - `draft` 為字串、`items` 為陣列；`section` 為 `done`、`delay`、`next`。`done`、`delay` 的 `event_id` 必填，`next` 必須為 null。
+  - 缺欄位、型別不對、`section` 不在值域內，算 `invalid_output`。
+- 重試與紀錄（同 AI-01）：任何例外都算一次失敗、繼續重試，總共最多 3 次；只有 `AIUnavailable` 立刻停。每次嘗試寫一列 `ai_runs`（`latency_ms` 失敗也記；`error` 只放例外類別名稱，R4 失敗記 `R4_MISMATCH`）。**AI-05 不存 `raw_output`**。
+  - R4 對帳（項目引用的 `task_id`、`event_id` 是否在 payload 裡）不算格式錯誤、不重試：對不上就 `validated=false`。
 
 ### 5.4 設定與量表
 
@@ -714,6 +766,13 @@ CREATE TABLE idempotency_keys (
 
 `commit` 輸入：`{ "target": …, "new_name": "…", "rows": [{ "index": 0, "title": "…", "owner": "…", "start": "…", "end": "…", "skip": false }] }`。伺服器**重新驗證**每列，有 `blocking` 且未略過者拒絕（`VALIDATION_ERROR`，列出列號）。輸出：`{ "project_id", "created": n, "skipped": m, "event_id" }`。
 
+**AI-07 對應回饋（FR-AI-04；2026-11-16 產品負責人核可，#8）**：
+
+- `preview` 輸出的 `column_map` 在 `mapped_by="ai"` 時多一個 `ai_run_id`（該次 AI-07 的 `ai_runs.id`），其他情況不出現。
+- `commit` 輸入可選帶 `ai_run_id` 與使用者最終的 `column_map`（`{title, owner, start, end}` 欄位索引），兩者須一起出現，否則 `VALIDATION_ERROR`。`ai_run_id` 須指向 `status='ok'` 的 AI-07 紀錄，否則 `VALIDATION_ERROR`。不帶時行為不變，也不寫回饋。
+- 伺服器從 `ai_runs` 取 AI 建議（不信前端自報），與最終對應比較：相同寫 `accepted`、不同寫 `changed`；`target_type='import_map'`、`target_id` 為本次 `baseline` 事件 id；`detail = { "ai_run_id", "ai": {四欄索引}, "final": {四欄索引} }`，只含整數或 null，不含任何貼上內容。該筆 `ai_runs.raw_output` 已因清除原文設為 NULL 時，照未帶 `ai_run_id` 處理：匯入照常成功，不寫回饋（PR #20 B2）。
+- 同一 `ai_run_id` 已寫過回饋時，匯入照常完成，不再寫第二筆。回饋與匯入在同一交易，失敗一起回滾。
+
 ### 5.7 任務
 
 | Method | Path | 說明 |
@@ -789,7 +848,7 @@ CREATE TABLE idempotency_keys (
 
 `POST /events/{id}/annotations` 輸入：`{ "mark": "worse", "reason": "underestimated", "note": "…" }`。`mark` 必填且為三值之一。`reason` 選填，有給時依原日期事件的方向檢查選項（DA-13）。輸出：新增的 `annotation` 事件，與更新後的有效註記。錯誤：`NOT_FOUND`、`ANNOTATION_NOT_ALLOWED`、`VALIDATION_ERROR`。
 
-`GET /events` 參數：`project_id`（或 `none`）、`kind`、`task_id`、`batch_id`、`from`、`to`、`limit`（預設 100，最大 500）、`offset`。輸出：
+`GET /events` 參數：`project_id`（或 `none`）、`kind`、`task_id`、`batch_id`、`from`、`to`、`limit`（預設 100，最大 500；超過回 422 `VALIDATION_ERROR`（2026-11-16 裁定，PR #20 Q6））、`offset`。`from`、`to` 為日期，兩端皆包含（以事件時間戳的台北日期判斷）。輸出：
 
 ```json
 {
@@ -887,7 +946,7 @@ CREATE TABLE idempotency_keys (
 | POST | `/candidates/{id}/ignore` | 忽略 |
 | POST | `/candidates/{id}/create-task` | 待配對：建立新任務 |
 
-`POST /ingest` 輸入：`{ "text": "[10:12] 阿德：畫面規格 v1 確定延到 11/18", "project_id": 1 }`。
+`POST /ingest` 輸入：`{ "text": "[10:12] 阿德：畫面規格 v1 確定延到 11/18", "project_id": 1 }`。`text` 為空字串時回 200、`created=0`，不建立來源（2026-11-16 裁定，PR #20 Q6）。
 
 輸出（同步完成）：
 
@@ -1081,9 +1140,10 @@ CREATE TABLE idempotency_keys (
 
 ### 6.7 資料保存與清除
 
-- 每日排程（預設凌晨 03:00）：將 `expires_at` 已過的 `sources.excerpt` 設為 NULL，寫 `purged_at`。`events`、`candidates` 不動。
-- 「刪除所有來源原文」清除 `sources.excerpt`，並刪除 `idempotency_keys` 全部列（回應本文可能含原句；這張表是 24 小時的重送暫存，不是歷程，DA-23）。`events`、`candidates`、`tasks` 不動，事件的原句顯示改為已刪除。
-- 匯出檔包含全部表；`sources.excerpt` 已清除者匯出為 `null`。
+- 清除排程（服務啟動時一次，之後每小時一次；冪等）：將 `expires_at` 已過的 `sources.excerpt` 設為 NULL，寫 `purged_at`。有原文被清除時，一併刪除 `idempotency_keys`（DA-23）。`created_at` 加保存天數已過的 `ai_runs.raw_output` 設為 NULL，不分節點（失敗的 AI-01 輸出連不回來源；AI-06、AI-07 的輸出也可能含原文；PR #20 B2）；另外，經背景工作的 `source_ids` 或候選的 `ai_run_id` 連得回已清除來源的輸出，也一併設為 NULL（背景工作可能晚於收件才呼叫 AI）。`events`、`candidates` 不動。（2026-11-15 裁定：原為每日 03:00，本機服務該時段常未開機會漏跑，改為每小時。）
+- 修改保存期限時，尚未清除的來源一併重算 `expires_at = received_at + 新天數`（2026-11-15 裁定）。
+- 「刪除所有來源原文」清除 `sources.excerpt`，刪除 `idempotency_keys` 全部列（回應本文可能含原句；這張表是 24 小時的重送暫存，不是歷程，DA-23），並將 `ai_runs.raw_output` 全部設為 NULL（PR #20 B2）。`events`、`candidates`、`tasks` 不動，事件的原句顯示改為已刪除。
+- 匯出檔包含全部表；`sources.excerpt` 已清除者匯出為 `null`。尚未清除的 `ai_runs.raw_output` 照帶，已清除者為 `null`（2026-11-16 裁定，PR #20 Q1）。
 
 ### 6.8 並行與一致性
 
@@ -1175,7 +1235,7 @@ CREATE TABLE idempotency_keys (
 
 ### 7.9 資料控制與非功能
 
-- AC-52 Given 保存期限 30 天；When 每日排程執行；Then 超過期限的 `excerpt` 為 NULL，事件與候選仍在。
+- AC-52 Given 保存期限 30 天；When 清除排程執行；Then 超過期限的 `excerpt` 為 NULL，事件與候選仍在。
 - AC-53 Given 「刪除所有來源原文」；When 未帶 `confirm=true`；Then 拒絕；帶了則所有 `excerpt` 為 NULL。
 - AC-54 Given 匯出；Then 檔案為合法 JSON，含所有表，且表的筆數與資料庫一致。
 - AC-55 Given 500 列匯入；Then preview 在 2 秒內完成（不含 AI-07）〔假設〕。
@@ -1202,6 +1262,7 @@ P1 完成 = AC-01 至 AC-42、AC-48 至 AC-53、AC-55 至 AC-57 全數通過，�
   - Given 變好 2 次、變差 3 次，3 個任務中 2 個是低精力；Then `judgement`＝「偏向變差，建議檢視」，`judgement_note`＝「變好 2 次、變差 3 次。變差多集中在低精力任務。」
   - Given 變好 1 次、變差 4 次，4 個任務為低 2、中 2；Then `judgement`＝「偏向變差，建議檢視」，`judgement_note`＝「變好 1 次、變差 4 次。」（剛好一半，不加集中提示）
   - Given 變好 3 次、變差 3 次；Then `judgement`＝「持平」。
+- AC-63〔編號暫定，待產品負責人指定〕 Given 匯入的表頭由 AI-07 對應（`mapped_by="ai"`）；When commit 帶回 `ai_run_id` 與最終 `column_map`；Then 新增恰 1 筆 `ai_feedback`（`node_id='AI-07'`、`target_type='import_map'`、`target_id` 為回應的 `event_id`），最終對應與 AI 建議相同為 `accepted`、不同為 `changed`，`detail` 只含欄位索引；Given 同一 `ai_run_id` 再 commit 一次；Then 匯入成功、回饋仍為 1 筆；Given 只帶其中一項，或 `ai_run_id` 不是 `ok` 的 AI-07 紀錄；Then 422 `VALIDATION_ERROR`，不建立任務也不寫回饋。
 
 ## 8. 技術棧／限制
 

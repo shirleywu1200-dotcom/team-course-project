@@ -33,3 +33,25 @@ export type Direction = DueReason["direction"];
 export type FromTo<T> = { [K in keyof Schema["FromToDate"]]: T };
 export type Paged<T> = { [K in keyof Schema["TaskListOut"]]: K extends "items" ? T[] : Schema["TaskListOut"][K] };
 export type AdjustStart = Schema["AdjustStart"];
+
+// Dev-B 12.7 匯入、12.8 收件匣、12.11 設定與量表（由 OpenAPI 產物取型別，原暫代手寫型別於 rebase #14 時移除）
+export type Candidate = Schema["CandidateOut"];
+export type CandidateTask = Schema["CandidateTaskOut"];
+export type CandidateKind = Candidate["kind"];
+export type Suggest = Schema["SuggestOut"];
+export type IngestSummary = Schema["IngestSummary"];
+export type IngestResult = Schema["IngestSyncOut"] | Schema["IngestAsyncOut"];
+export type AiStatus = Schema["IngestSyncOut"]["ai_status"];
+export type IngestJob = Schema["IngestJobOut"];
+export type DecideResult = Schema["DecideOut"];
+export type AppSettings = Schema["SettingsOut"];
+export type GoalType = AppSettings["goal_types_enabled"][number];
+export type SettingsKey = Exclude<keyof AppSettings, "onboarded_at">;
+export type InterviewAnswers = Schema["InterviewAnswers"];
+export type Rubric = Schema["RubricOut"];
+export type Project = Schema["ProjectOut"];
+export type ImportIssue = Schema["ImportIssueOut"];
+export type ImportRow = Schema["ImportRowOut"];
+export type ColumnIndexes = Pick<Schema["ColumnMapOut"], "title" | "owner" | "start" | "end">;
+export type ImportPreview = Schema["ImportPreviewOut"];
+export type ImportCommitResult = Schema["ImportCommitOut"];

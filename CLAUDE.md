@@ -10,6 +10,11 @@
 
 接一張票時，先讀 spec 中該票標註的 FR 與 AC，以及 todo 中該 Phase 的「對外契約」。各人的負責範圍寫在自己的 `CLAUDE.local.md`。
 
+## 跨角色轉達
+
+- 每次 session 開始先執行 `gh issue list --assignee @me --state open`，有指派給自己的 issue 先處理或回覆。
+- 需要別人動手或知悉的事項，開 GitHub issue 指派給對方（分支上的文件在合併前別人讀不到）。內文寫明檔案、改法、原因、完成條件，讓對方不必回頭讀你的文件就能做；處理完由對方關閉。
+
 ## 不可破原則（spec 1.2、FR-AI-06）
 
 1. **確認前不入統計**：`open` 候選與 AI 草稿只存在候選與草稿表，正式紀錄、統計、甘特圖、週報只讀已確認的資料。
@@ -61,7 +66,7 @@
 
 1. **認證集中**：所有 API 經同一個 Bearer token 相依項驗證，token 來自環境變數；預設只綁 `127.0.0.1`。系統只有單一使用者，沒有角色或成員權限。
 2. **對外只經 `AIClient`**：LLM 呼叫只寫在 `AIClient` 的實作裡。送出內容只含必要摘錄與任務清單，私人範圍在送出前排除（FR-RPT-01、FR-GOV-05）。不新增其他對外管道（第三方 API、遙測、錯誤回報服務）。
-3. **日誌只記識別資訊**：log、例外訊息、錯誤回應的 `details`、`ai_runs.error`、`jobs.error` 只放 ID、錯誤碼、計數，不放摘錄原文、對話內容或 token。`ai_runs.raw_output` 依 spec 保存，屬於資料，不是日誌。
+3. **日誌只記識別資訊**：log、例外訊息、錯誤回應的 `details`、`ai_runs.error`、`jobs.error` 只放 ID、錯誤碼、計數，不放摘錄原文、對話內容或 token。`ai_runs.raw_output` 依 spec 保存，屬於資料，不是日誌；清除原文時一併設為 NULL（spec 6.7，PR #20 B2）。
 4. **祕密放 `env/local.env`**：API key、token、資料庫密碼都放這裡（已列入 `.gitignore`）；`env/` 下其他檔案只放外流也無妨的本機開發值。
 5. **原文能清除，歷程保留**：資料控制只清 `sources.excerpt`，`events`、`candidates`、`tasks` 保留（FR-GOV-01、03，spec 6.7）。新增存放對話原文的欄位時，在同一張票把它納入清除與匯出範圍，並補測試。
 6. **SQL 只用 SQLAlchemy 參數化查詢**，不拼字串。

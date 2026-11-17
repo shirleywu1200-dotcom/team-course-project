@@ -18,6 +18,20 @@ export const mutationInvalidations = {
   "POST /tasks/{task_id}/baseline-correction/preview": [],
   "POST /tasks/{task_id}/baseline-correction/commit": ["tasks", "projects"],
   "POST /events/{event_id}/annotations": ["tasks", "timeManagement"],
+  // Dev-B（12.7、12.8、12.11、Phase 8）：照各頁面現行的失效做法登記
+  "POST /projects/import/preview": [],
+  "POST /projects/import/commit": ["projects", "tasks"],
+  "POST /ingest": ["candidates"],
+  "POST /candidates/{candidate_id}/confirm": ["candidates", "tasks", "timeManagement", "projects"],
+  "POST /candidates/{candidate_id}/clarify": ["candidates", "tasks", "timeManagement", "projects"],
+  "POST /candidates/{candidate_id}/create-task": ["candidates", "tasks", "timeManagement", "projects"],
+  "POST /candidates/{candidate_id}/ignore": ["candidates", "tasks", "timeManagement", "projects"],
+  "PUT /settings": ["settings"],
+  "POST /settings/onboarding/complete": ["settings"],
+  "POST /rubrics/interview": [],
+  "POST /rubrics": ["rubrics"],
+  "POST /sources/purge": ["candidates", "tasks"],
+  "POST /export": [],
 } as const satisfies Record<string, readonly (keyof typeof queryRoots)[]>;
 
 export type MutationAction = keyof typeof mutationInvalidations;
