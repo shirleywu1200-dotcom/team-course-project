@@ -10,6 +10,7 @@ dependencies = [
   "sqlalchemy>=2.0,<2.1",
   "alembic>=1.13",
   "psycopg[binary]>=3.2,<4",
+  "anthropic>=1,<2",
 ]
 
 [dependency-groups]
@@ -25,6 +26,7 @@ package = false
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
+markers = ["real_ai: 呼叫真實 AI 供應商，會產生費用；需 AI_PROVIDER=anthropic 與 ANTHROPIC_API_KEY"]
 
 [tool.ruff]
 line-length = 120

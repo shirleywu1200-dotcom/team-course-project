@@ -1,7 +1,7 @@
 """spec 1.3 衡量值的查詢（todo 13.8 埋點檢查，資料面）。
 
 只讀。每個函式回傳 {"numerator", "denominator", "rate"}；分母為 0 時 rate 為 None。
-衡量值 1（週報對得上歷程）的定義、2（每日確認時間）是否接受近似值待產品負責人裁定，見 docs/metrics.md。
+定義依 #34 裁定（2026-11-17），見 docs/metrics.md。衡量值 1 的查詢待 PR #23 合併後補。
 """
 
 from sqlalchemy import Connection, text
@@ -14,12 +14,16 @@ def _rate(num: int, den: int) -> dict:
 
 
 def candidate_confirm_rate(conn: Connection) -> dict:
-    """衡量值 3：候選確認率（含修改後確認）＝ confirmed ÷（confirmed＋ignored）。open 不計。"""
+    """衡量值 3：AI 建議採用率＝（accepted＋edited）÷ 已處理的候選（#34 裁定 3(b)）。
+
+    讀 AI-01 對候選的回饋：每個候選處理時寫一筆（inbox/confirm.py 的 _close）；open 沒有回饋，不計。
+    改建新任務（changed）不算採用、仍在分母；含修改後確認（edited）。
+    """
     row = conn.execute(text(
-        "SELECT count(*) FILTER (WHERE state = 'confirmed') AS c, "
-        "       count(*) FILTER (WHERE state IN ('confirmed','ignored')) AS d FROM candidates"
+        "SELECT count(*) FILTER (WHERE outcome IN ('accepted','edited')) AS a, count(*) AS d "
+        "  FROM ai_feedback WHERE node_id = 'AI-01' AND target_type = 'candidate'"
     )).mappings().one()
-    return _rate(row["c"], row["d"])
+    return _rate(row["a"], row["d"])
 
 
 def mark_completion_rate(conn: Connection) -> dict:
