@@ -64,6 +64,13 @@ def _ask_ai(db: Database, ai: AIClient, data: weekly_report.WeekData) -> tuple[s
     return ("invalid_output" if status == "invalid_output" else "unavailable"), None, None
 
 
+def _readable(conn: Connection, items: list[dict]) -> list[dict]:
+    """items 加上任務現值與事件證據（spec 5.14，#23）；只在讀取時算，不存。"""
+    tasks = weekly_repo.item_tasks(conn, [i["task_id"] for i in items])
+    events = weekly_repo.item_events(conn, [i["event_id"] for i in items if i["event_id"] is not None])
+    return weekly_report.readable_items(items, tasks, events)
+
+
 def _view(conn: Connection, row: dict, failed: tuple[str, weekly_report.WeekData] | None = None) -> dict:
     """依目前的歷程組出回應：validated 由存下的 ai_items 重新對帳。
 
@@ -74,7 +81,7 @@ def _view(conn: Connection, row: dict, failed: tuple[str, weekly_report.WeekData
         status, data = failed
         return {"id": row["id"], "week_start": row["period_start"], "ai_status": status,
                 "excluded_private": data.excluded_private, "draft": None,
-                "items": weekly_report.fallback_items(data), "validated": False,
+                "items": _readable(conn, weekly_report.fallback_items(data)), "validated": False,
                 "manual_text": row["manual_text"], "updated_at": row["updated_at"]}
     data = weekly_report.collect(conn, row["period_start"])
     valid = False
@@ -86,7 +93,7 @@ def _view(conn: Connection, row: dict, failed: tuple[str, weekly_report.WeekData
         "id": row["id"], "week_start": row["period_start"], "ai_status": row["ai_status"],
         "excluded_private": row["excluded_private"],
         "draft": row["ai_draft"] if valid else None,
-        "items": row["ai_items"] if valid else weekly_report.fallback_items(data),
+        "items": _readable(conn, row["ai_items"] if valid else weekly_report.fallback_items(data)),
         "validated": valid, "manual_text": row["manual_text"], "updated_at": row["updated_at"],
     }
 
@@ -109,6 +116,12 @@ def generate(db: Database, ai: AIClient, week_start: date) -> dict:
 
 def get(db: Database, report_id: int) -> dict:
     return db.run(lambda c: _view(c, reports_repo.get_weekly(c, report_id)))
+
+
+def get_by_week(db: Database, week_start: date) -> dict:
+    """依週次讀取既有週報，不呼叫 AI、不寫入（spec 5.14，#23）。"""
+    weekly_report.check_monday(week_start)
+    return db.run(lambda c: _view(c, reports_repo.get_weekly_by_week(c, week_start)))
 
 
 def save_manual(db: Database, report_id: int, manual_text: str | None) -> dict:

@@ -20,6 +20,15 @@ def get_weekly(conn: Connection, report_id: int) -> dict:
     return dict(row)
 
 
+def get_weekly_by_week(conn: Connection, week_start: date) -> dict:
+    """依週次取週報列；沒有就是「尚未產生」，回 NOT_FOUND，details 只放週次（spec 5.14，#23）。"""
+    row = conn.execute(text("SELECT * FROM reports WHERE kind = 'weekly' AND period_start = :w"),
+                       {"w": week_start}).mappings().first()
+    if row is None:
+        raise DomainError("NOT_FOUND", details={"week_start": week_start.isoformat()})
+    return dict(row)
+
+
 def save_success(conn: Connection, week_start: date, draft: str, items: list[dict], excluded_private: int,
                  now: datetime) -> int:
     """AI 初稿通過對帳：存 ai_draft、ai_items、ai_status='ok'。"""

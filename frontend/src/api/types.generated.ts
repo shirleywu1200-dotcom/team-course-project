@@ -654,6 +654,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/reports/weekly": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get By Week */
+        get: operations["get_by_week_api_v1_reports_weekly_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/reports/weekly/{report_id}": {
         parameters: {
             query?: never;
@@ -2005,7 +2022,29 @@ export interface components {
              */
             week_start: string;
         };
-        /** WeeklyItemOut */
+        /**
+         * WeeklyEventOut
+         * @description 事件證據：只有時間與前值、後值、天數；不含原因、備註、註記與原句（spec 5.14）。
+         */
+        WeeklyEventOut: {
+            /** Id */
+            id: number;
+            /**
+             * Ts
+             * Format: date-time
+             */
+            ts: string;
+            /** From Value */
+            from_value: string | null;
+            /** To Value */
+            to_value: string | null;
+            /** Delta Days */
+            delta_days: number | null;
+        };
+        /**
+         * WeeklyItemOut
+         * @description 不屬於該段的欄位為 null（spec 5.14 表）；可讀內容是讀取時的任務現值。
+         */
         WeeklyItemOut: {
             /**
              * Section
@@ -2019,6 +2058,32 @@ export interface components {
              * @description next 項目為 null
              */
             event_id: number | null;
+            /** Title */
+            title: string | null;
+            /** Owner */
+            owner: string | null;
+            /**
+             * Done Date
+             * @description 只有 done
+             */
+            done_date: string | null;
+            /**
+             * Orig Due
+             * @description 只有 delay
+             */
+            orig_due: string | null;
+            /**
+             * Latest Due
+             * @description delay、next
+             */
+            latest_due: string | null;
+            /**
+             * Blocked
+             * @description 只有 next
+             */
+            blocked: boolean | null;
+            /** @description done 為完成事件、delay 為延後事件；next 為 null */
+            event: components["schemas"]["WeeklyEventOut"] | null;
         };
         /** WeeklyReportOut */
         WeeklyReportOut: {
@@ -3444,6 +3509,44 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["WeeklyReportOut"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_by_week_api_v1_reports_weekly_get: {
+        parameters: {
+            query: {
+                week_start: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WeeklyReportOut"];
+                };
+            };
+            /** @description 該週尚未產生（正常狀態，不是錯誤；spec 5.14） */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

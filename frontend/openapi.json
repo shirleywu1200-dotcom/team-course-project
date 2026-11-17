@@ -2216,6 +2216,52 @@
         }
       }
     },
+    "/api/v1/reports/weekly": {
+      "get": {
+        "tags": [
+          "reports"
+        ],
+        "summary": "Get By Week",
+        "operationId": "get_by_week_api_v1_reports_weekly_get",
+        "parameters": [
+          {
+            "name": "week_start",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "title": "Week Start"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WeeklyReportOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "該週尚未產生（正常狀態，不是錯誤；spec 5.14）"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/reports/weekly/{report_id}": {
       "get": {
         "tags": [
@@ -6213,6 +6259,62 @@
         ],
         "title": "WeeklyDraft"
       },
+      "WeeklyEventOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "ts": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Ts"
+          },
+          "from_value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "From Value"
+          },
+          "to_value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "To Value"
+          },
+          "delta_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delta Days"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "ts",
+          "from_value",
+          "to_value",
+          "delta_days"
+        ],
+        "title": "WeeklyEventOut",
+        "description": "事件證據：只有時間與前值、後值、天數；不含原因、備註、註記與原句（spec 5.14）。"
+      },
       "WeeklyItemOut": {
         "properties": {
           "section": {
@@ -6239,15 +6341,107 @@
             ],
             "title": "Event Id",
             "description": "next 項目為 null"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "owner": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Owner"
+          },
+          "done_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Done Date",
+            "description": "只有 done"
+          },
+          "orig_due": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Orig Due",
+            "description": "只有 delay"
+          },
+          "latest_due": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Due",
+            "description": "delay、next"
+          },
+          "blocked": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blocked",
+            "description": "只有 next"
+          },
+          "event": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WeeklyEventOut"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "done 為完成事件、delay 為延後事件；next 為 null"
           }
         },
         "type": "object",
         "required": [
           "section",
           "task_id",
-          "event_id"
+          "event_id",
+          "title",
+          "owner",
+          "done_date",
+          "orig_due",
+          "latest_due",
+          "blocked",
+          "event"
         ],
-        "title": "WeeklyItemOut"
+        "title": "WeeklyItemOut",
+        "description": "不屬於該段的欄位為 null（spec 5.14 表）；可讀內容是讀取時的任務現值。"
       },
       "WeeklyReportOut": {
         "properties": {

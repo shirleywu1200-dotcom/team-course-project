@@ -69,3 +69,23 @@ def work_task_ids(conn: Connection, task_ids: list[int]) -> set[int]:
     rows = conn.execute(text("SELECT id FROM tasks WHERE id = ANY(:ids) AND scope = 'work'"),
                         {"ids": list(task_ids)}).scalars()
     return set(rows)
+
+
+def item_tasks(conn: Connection, task_ids: list[int]) -> dict[int, dict]:
+    """週報 items 可讀內容用的任務現值（spec 5.14）。只取工作範圍，只取列出的欄位。"""
+    if not task_ids:
+        return {}
+    rows = conn.execute(text(
+        "SELECT id, title, owner_name, done_date, orig_due, latest_due, blocked FROM tasks "
+        "WHERE id = ANY(:ids) AND scope = 'work'"), {"ids": list(task_ids)}).mappings()
+    return {r["id"]: dict(r) for r in rows}
+
+
+def item_events(conn: Connection, event_ids: list[int]) -> dict[int, dict]:
+    """週報 items 的事件證據（spec 5.14）：只取 id、時間與前值、後值、天數，不讀原因、備註、註記與原句。"""
+    if not event_ids:
+        return {}
+    rows = conn.execute(text(
+        "SELECT id, ts, from_value, to_value, delta_days FROM events WHERE id = ANY(:ids)"),
+        {"ids": list(event_ids)}).mappings()
+    return {r["id"]: dict(r) for r in rows}
