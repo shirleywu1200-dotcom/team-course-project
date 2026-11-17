@@ -11,7 +11,7 @@ from datetime import date, timedelta
 
 from sqlalchemy import Connection
 
-from app.ai.client import DEFAULT_TIMEOUT_S, AIClient, AIInvalidOutput, AITimeout, AIUnavailable
+from app.ai.client import DEFAULT_TIMEOUT_S, AIClient, AIUnavailable
 from app.clock import get_clock
 from app.db.database import Database
 from app.db.repo import ai_runs_repo, reports_repo, weekly_repo
@@ -23,7 +23,6 @@ log = logging.getLogger("g4")
 
 MANUAL_MAX_CHARS = ai05.TEXT_MAX_CHARS
 MAX_ATTEMPTS = 3   # 任何失敗都算一次、最多 3 次；只有 AI 不可用與 R4 失敗立刻停（#22，與 process_sources 一致）
-STOP_ERRORS = {"AIUnavailable", "R4_MISMATCH"}
 
 
 def check_week_start(week_start: date, today: date) -> None:
@@ -34,21 +33,18 @@ def check_week_start(week_start: date, today: date) -> None:
     check_date_range(week_start, today)
 
 
-def _attempt(ai: AIClient, payload: dict, data: weekly_report.WeekData) -> tuple[str, str | None, tuple | None]:
-    """呼叫一次 AI-05。回傳 (ai_runs.status, error, (draft, items) 或 None)。"""
+def _attempt(ai: AIClient, payload: dict, data: weekly_report.WeekData) -> tuple[str, str | None, tuple | None, bool]:
+    """呼叫一次 AI-05。回傳 (ai_runs.status, error, (draft, items) 或 None, 是否立刻停)。
+
+    狀態與停不停都依例外的類別階層判斷，子類別跟著父類別走（ai_runs_repo.status_for，與 process_sources 一致）。
+    """
     try:
         draft, items = ai05.parse_output(ai.call(ai05.NODE, payload, timeout_s=DEFAULT_TIMEOUT_S))
-    except AITimeout as exc:
-        return "timeout", type(exc).__name__, None
-    except AIInvalidOutput as exc:
-        return "invalid_output", type(exc).__name__, None
-    except AIUnavailable as exc:
-        return "error", type(exc).__name__, None
     except Exception as exc:   # noqa: BLE001 供應商可能丟出任何例外；AI 失敗一律走退路（spec 5.3）
-        return "error", type(exc).__name__, None
+        return ai_runs_repo.status_for(exc), type(exc).__name__, None, isinstance(exc, AIUnavailable)
     if not weekly_report.reconcile(items, data):   # R4 對不上：記成格式不合，不重試（#18 J2、K2）
-        return "invalid_output", "R4_MISMATCH", None
-    return "ok", None, (draft, items)
+        return "invalid_output", "R4_MISMATCH", None, True
+    return "ok", None, (draft, items), False
 
 
 def _ask_ai(db: Database, ai: AIClient, data: weekly_report.WeekData) -> tuple[str, str | None, list[dict] | None]:
@@ -56,13 +52,13 @@ def _ask_ai(db: Database, ai: AIClient, data: weekly_report.WeekData) -> tuple[s
     payload = ai05.build_payload(data)
     for attempt in range(1, MAX_ATTEMPTS + 1):
         started = time.monotonic()
-        status, error, result = _attempt(ai, payload, data)
+        status, error, result, stop = _attempt(ai, payload, data)
         run = {"node_id": ai05.NODE, "status": status, "attempt": attempt, "error": error,
                "latency_ms": int((time.monotonic() - started) * 1000), "created_at": get_clock().now()}
         db.run(lambda c, r=run: ai_runs_repo.insert_run(c, r))   # raw_output 不存（#18 K1）
         if result is not None:
             return "ok", *result
-        if error in STOP_ERRORS:
+        if stop:
             break
     log.warning("AI-05 失敗：%s", error)
     return ("invalid_output" if status == "invalid_output" else "unavailable"), None, None

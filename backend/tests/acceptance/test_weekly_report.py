@@ -379,6 +379,22 @@ def test_retry_sequences(client, data, ai, query, script, expected, final):
         assert r.json()["draft"] is None and r.json()["validated"] is False
 
 
+class ProviderDown(AIUnavailable):
+    """真實供應商可能丟出的子類別（Phase 13）。"""
+
+
+class ProviderSlow(AITimeout):
+    pass
+
+
+def test_exception_subclasses_follow_their_base_class(client, data, ai, query):
+    """停不停、記什麼狀態依例外的類別階層判斷，不依名稱（與 process_sources 的 status_for 一致）。"""
+    ai.script("AI-05", ProviderSlow, ProviderDown, AI_OK)
+    assert draft(client).json()["ai_status"] == "unavailable"
+    assert [(r["status"], r["error"]) for r in runs(query)] == [("timeout", "ProviderSlow"), ("error", "ProviderDown")]
+    assert len(ai.calls) == 2
+
+
 def test_unavailable_writes_one_error_run(client, data, ai, query):
     draft(client)   # 沒排輸出 → AIUnavailable
     assert [(r["status"], r["error"]) for r in runs(query)] == [("error", "AIUnavailable")]
