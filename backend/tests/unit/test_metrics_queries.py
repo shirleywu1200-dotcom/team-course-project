@@ -29,10 +29,25 @@ UPDATE tasks SET status = 'done', done_date = '2026-11-11' WHERE id = 7;
 """
 
 
-def test_metric3_candidate_confirm_rate(db, seed):
-    seed(DATA)
+FEEDBACK = """
+INSERT INTO ai_feedback (node_id, target_type, target_id, outcome, created_at) VALUES
+  ('AI-01', 'candidate', 1, 'accepted', now()),
+  ('AI-01', 'candidate', 2, 'edited',   now()),
+  ('AI-01', 'candidate', 3, 'changed',  now()),
+  ('AI-01', 'candidate', 4, 'ignored',  now()),
+  ('AI-07', 'import_map', 9, 'accepted', now()),
+  ('AI-06', 'rubric',     9, 'accepted', now());
+"""
+
+
+def test_metric3_ai_suggestion_accept_rate(db, seed):
+    """衡量值 3（#34 裁定 3(b)）：AI 建議採用率＝（accepted＋edited）÷ 已處理候選。
+
+    改建新任務（changed）不進分子、仍在分母；其他節點的回饋不計。
+    """
+    seed(FEEDBACK)
     r = db.run(metrics_repo.candidate_confirm_rate)
-    assert (r["numerator"], r["denominator"]) == (2, 3)
+    assert (r["numerator"], r["denominator"]) == (2, 4)
 
 
 def test_metric4_mark_completion_rate_uses_effective_mark(db, seed):

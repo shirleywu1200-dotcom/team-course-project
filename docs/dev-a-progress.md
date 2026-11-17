@@ -34,7 +34,7 @@
 | Phase 4 整批順延與基準更正（4.1–4.9） | 單元測試綠 | `test_phase4_bulk_baseline.py`：AC-14–24、AC-25 後端部分 |
 | 12.2、12.4、12.5 前端頁 | 元件測試綠，建立在暫代骨架上 | Vitest＋MSW 18 個測試；`tsc`；`vite build`；Vite 代理連到後端；以前端測試的請求本文打真實 API，8 項回應欄位比對通過。**未在真實瀏覽器操作過**；Playwright 流程屬 QC-2 |
 | 13.7 部署文件 | 完成 | `docs/deploy.md`；備份與還原指令實際跑過一次 |
-| 13.8 埋點檢查（資料面） | 2026-11-17 依 main（含 Phase 5–8）重新檢查；3 項待產品負責人裁定 | `docs/metrics.md`；`test_metrics_queries.py` |
+| 13.8 埋點檢查（資料面） | 2026-11-17 依 main（含 Phase 5–8）重新檢查；三項定義已裁定（#34），衡量值 1 查詢待 #23 合併後補 | `docs/metrics.md`；`test_metrics_queries.py` |
 | 13.5、13.6 支援 QC-1 | 等 QC-1 排演練 | — |
 
 ## 測試數字
