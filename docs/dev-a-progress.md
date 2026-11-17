@@ -33,9 +33,9 @@
 | Phase 3 日期調整與註記（3.1–3.9） | 單元測試綠 | `test_phase3_due.py`：AC-01–10、12、12a、13，並行測試 |
 | Phase 4 整批順延與基準更正（4.1–4.9） | 單元測試綠 | `test_phase4_bulk_baseline.py`：AC-14–24、AC-25 後端部分 |
 | 12.2、12.4、12.5 前端頁 | 元件測試綠，建立在暫代骨架上 | Vitest＋MSW 18 個測試；`tsc`；`vite build`；Vite 代理連到後端；以前端測試的請求本文打真實 API，8 項回應欄位比對通過。**未在真實瀏覽器操作過**；Playwright 流程屬 QC-2 |
-| Phase 10 週報後端（10.1–10.5；10.6 依 D-04 不做） | 單元測試綠（PR #23，等 Dev-C 審） | `test_phase10_weekly.py`、`test_phase10_storage.py`；驗收測試 `tests/acceptance/test_weekly_report.py`（Dev-A 依 DA-27 暫代，QC 帳號建立後移交）：AC-48–51、65–67，含按週讀取與 items 可讀內容；測試清單經獨立子代理審查（`.scratch/phase10/`）|
+| Phase 10 週報後端（10.1–10.5；10.6 依 D-04 不做） | 單元測試綠（PR #23 已合併，`f845949`） | `test_phase10_weekly.py`、`test_phase10_storage.py`；驗收測試 `tests/acceptance/test_weekly_report.py`（Dev-A 依 DA-27 暫代，QC 帳號建立後移交）：AC-48–51、65–67，含按週讀取與 items 可讀內容；測試清單經獨立子代理審查（`.scratch/phase10/`）|
 | 13.7 部署文件 | 完成 | `docs/deploy.md`；備份與還原指令實際跑過一次 |
-| 13.8 埋點檢查（資料面） | 2026-11-17 依 main（含 Phase 5–8）重新檢查；三項定義已裁定（#34），衡量值 1 查詢待 #23 合併後補 | `docs/metrics.md`；`test_metrics_queries.py` |
+| 13.8 埋點檢查（資料面） | 2026-11-17 依 main（含 Phase 5–8）重新檢查；三項定義已裁定（#34）；五個衡量值的查詢都已補齊，等 QC-2 以試用資料驗算 | `docs/metrics.md`；`test_metrics_queries.py` |
 | 13.5、13.6 支援 QC-1 | 等 QC-1 排演練 | — |
 
 ## 測試數字

@@ -1,7 +1,7 @@
 """spec 1.3 衡量值的查詢（todo 13.8 埋點檢查，資料面）。
 
 只讀。每個函式回傳 {"numerator", "denominator", "rate"}；分母為 0 時 rate 為 None。
-定義依 #34 裁定（2026-11-17），見 docs/metrics.md。衡量值 1 的查詢待 PR #23 合併後補。
+定義依 #34 裁定（2026-11-17），見 docs/metrics.md。
 """
 
 from sqlalchemy import Connection, text
@@ -11,6 +11,20 @@ from app.db.repo import events_repo
 
 def _rate(num: int, den: int) -> dict:
     return {"numerator": num, "denominator": den, "rate": (num / den) if den else None}
+
+
+def report_reconcile_rate(conn: Connection) -> dict:
+    """衡量值 1：週報 AI 初稿的 R4 對帳通過率（#34 裁定 1：A）。
+
+    只看 AI-05 回傳格式正確的嘗試：通過記 status='ok'，對不上記 error='R4_MISMATCH'（weekly_service._attempt）。
+    格式錯誤、逾時、不可用的嘗試不進分母；人工版不經對帳，不納入。
+    """
+    row = conn.execute(text(
+        "SELECT count(*) FILTER (WHERE status = 'ok') AS ok, "
+        "       count(*) FILTER (WHERE status = 'ok' OR error = 'R4_MISMATCH') AS d "
+        "  FROM ai_runs WHERE node_id = 'AI-05'"
+    )).mappings().one()
+    return _rate(row["ok"], row["d"])
 
 
 def candidate_confirm_rate(conn: Connection) -> dict:
