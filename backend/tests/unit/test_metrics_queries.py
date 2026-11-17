@@ -82,3 +82,31 @@ def test_empty_database_gives_null_rates(db):
     for fn in (metrics_repo.candidate_confirm_rate, metrics_repo.mark_completion_rate,
                metrics_repo.feedback_fill_rate):
         assert db.run(fn)["rate"] is None
+
+
+RUNS = """
+INSERT INTO ai_runs (node_id, status, attempt, error, created_at) VALUES
+  ('AI-05', 'ok',             1, NULL,              now()),
+  ('AI-05', 'ok',             1, NULL,              now()),
+  ('AI-05', 'invalid_output', 1, 'R4_MISMATCH',     now()),
+  ('AI-05', 'invalid_output', 1, 'AIInvalidOutput', now()),
+  ('AI-05', 'timeout',        2, 'AITimeout',       now()),
+  ('AI-05', 'error',          1, 'AIUnavailable',   now()),
+  ('AI-01', 'ok',             1, NULL,              now()),
+  ('AI-01', 'invalid_output', 1, 'R4_MISMATCH',     now());
+"""
+
+
+def test_metric1_report_reconcile_pass_rate(db, seed):
+    """衡量值 1（#34 裁定 1：A）：AI-05 回傳格式正確的嘗試中 R4 通過的比例。
+
+    分子＝ok；分母＝ok＋R4_MISMATCH。格式錯誤、逾時、不可用不算格式正確，不進分母；其他節點不計。
+    人工版不經對帳，不納入（reports 不讀）。
+    """
+    seed(RUNS)
+    r = db.run(metrics_repo.report_reconcile_rate)
+    assert (r["numerator"], r["denominator"]) == (2, 3)
+
+
+def test_metric1_empty_is_null(db):
+    assert db.run(metrics_repo.report_reconcile_rate)["rate"] is None
