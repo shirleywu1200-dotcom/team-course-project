@@ -41,6 +41,16 @@ def test_metric4_mark_completion_rate_uses_effective_mark(db, seed):
     assert (r["numerator"], r["denominator"]) == (2, 3)
 
 
+def test_metric4_matches_time_management_stats(db, seed):
+    """衡量值 4 與時間管理統計用同一個母體與有效註記（FR-MRK-05、06）：分母相同，分子＝分母－未註記。"""
+    from app.domain import marks
+    seed(DATA)
+    r = db.run(metrics_repo.mark_completion_rate)
+    s = db.run(marks.time_mgmt_stats)
+    total = s["better"]["count"] + s["worse"]["count"] + s["none"] + s["unmarked"]
+    assert (r["numerator"], r["denominator"]) == (total - s["unmarked"], total)
+
+
 def test_metric5_feedback_fill_rate(db, seed):
     seed(DATA)
     r = db.run(metrics_repo.feedback_fill_rate)
