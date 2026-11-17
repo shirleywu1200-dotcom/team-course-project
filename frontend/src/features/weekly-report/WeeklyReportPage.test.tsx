@@ -243,7 +243,9 @@ test.each([404, 401])("L1 真實 App 守門：週報 GET %s 不使頁面反覆�
   try {
     render(<App />);
     if (status === 404) expect(await screen.findByText("本週尚未產生週報")).toBeInTheDocument();
-    else expect(await screen.findByRole("alert")).toBeInTheDocument();
+    else expect(await screen.findByRole("alert")).toHaveTextContent("存取 token 錯誤或未設定。");
+    expect(screen.getByRole("heading", { name: "週報" })).toBeInTheDocument();
+    expect(window.location.pathname).toBe("/reports");
     await waitFor(() => expect(gets).toBeGreaterThan(0));
     expect(gets).toBeLessThanOrEqual(2);
   } finally {
