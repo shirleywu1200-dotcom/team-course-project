@@ -8,6 +8,7 @@ export const queryRoots = {
   tasks: ["tasks"], projects: ["projects"], timeManagement: ["stats", "time-management"],
   reasons: ["meta", "reasons"], health: ["meta", "health"],
   candidates: ["candidates"], settings: ["settings"], rubrics: ["rubrics"],
+  weeklyReports: ["reports", "weekly"],
 } as const;
 
 const projectTasks = (id: number) => [...queryRoots.tasks, "project", id] as const;
@@ -30,4 +31,6 @@ export const keys = {
   ingestJob: (id: number) => ["ingest", "jobs", id] as const,
   settings: queryRoots.settings,
   activeRubric: [...queryRoots.rubrics, "active"] as const,
+  weeklyReport: (id: number) => [...queryRoots.weeklyReports, id] as const,
+  weeklyReportByWeek: (weekStart: string) => [...queryRoots.weeklyReports, "week", weekStart] as const,
 };
