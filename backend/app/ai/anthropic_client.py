@@ -2,8 +2,8 @@
 
 - 只呼叫節點登記表（app.ai.nodes）裡有的節點；其他節點丟 AIUnavailable。
 - SDK 不自動重試（max_retries=0），重試由呼叫端負責，每次實際呼叫才都有一筆 ai_runs。
-- 錯誤對應：逾時、429、5xx、連線中斷 → AITimeout（呼叫端續跑）；其他 HTTP 錯誤或沒有 key → AIUnavailable；
-  輸出不合 schema、被截斷或拒答 → AIInvalidOutput。
+- 錯誤對應：逾時、429、5xx、連線中斷 → AITimeout（呼叫端續跑）；其他 HTTP 錯誤、沒有 key 或拒答 → AIUnavailable；
+  輸出不合 schema 或被截斷 → AIInvalidOutput。
 - log 只記節點、HTTP 狀態碼與 token 數，不記送出或收到的內容（資安規則 3）。
 """
 
@@ -51,7 +51,9 @@ class AnthropicAIClient(AIClient):
             raise AIUnavailable(node_id) from exc
         self.last_usage = (resp.usage.input_tokens, resp.usage.output_tokens)   # 評估腳本計費用
         log.info("AI %s stop=%s in=%s out=%s", node_id, resp.stop_reason, *self.last_usage)
-        if resp.stop_reason != "end_turn":   # max_tokens 截斷、refusal 拒答
+        if resp.stop_reason == "refusal":   # 重試通常仍拒答，直接走退路
+            raise AIUnavailable(node_id)
+        if resp.stop_reason != "end_turn":   # max_tokens 截斷
             raise AIInvalidOutput(node_id)
         text = next((b.text for b in resp.content if b.type == "text"), None)
         try:

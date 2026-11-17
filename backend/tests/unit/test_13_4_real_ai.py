@@ -114,11 +114,15 @@ def test_permanent_errors_map_to_unavailable(error):
     _reply("不是 JSON"),
     _reply({"items": [{"ref": 1, "kind": "maybe", "task_id": 2, "new_due": None, "certainty": "sure"}]}),
     _reply(AI01_OUT, stop_reason="max_tokens"),
-    _reply(AI01_OUT, stop_reason="refusal"),
 ])
 def test_bad_output_maps_to_invalid_output(reply):
     with pytest.raises(AIInvalidOutput):
         _client(FakeSDK(result=reply)).call("AI-01", AI01_PAYLOAD)
+
+
+def test_refusal_maps_to_unavailable():   # 重試通常仍拒答，直接走退路（SDD 第 2 節第 10 題）
+    with pytest.raises(AIUnavailable):
+        _client(FakeSDK(result=_reply(AI01_OUT, stop_reason="refusal"))).call("AI-01", AI01_PAYLOAD)
 
 
 def test_unregistered_node_is_unavailable_without_calling():
