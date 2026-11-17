@@ -14,10 +14,10 @@ def _rate(num: int, den: int) -> dict:
 
 
 def candidate_confirm_rate(conn: Connection) -> dict:
-    """衡量值 3：AI 建議被原樣接受率＝（accepted＋edited）÷ 已處理的候選（#34 裁定 3(b)）。
+    """衡量值 3：AI 建議採用率＝（accepted＋edited）÷ 已處理的候選（#34 裁定 3(b)）。
 
     讀 AI-01 對候選的回饋：每個候選處理時寫一筆（inbox/confirm.py 的 _close）；open 沒有回饋，不計。
-    改建新任務（changed）不算接受、仍在分母；含修改後確認（edited）。
+    改建新任務（changed）不算採用、仍在分母；含修改後確認（edited）。
     """
     row = conn.execute(text(
         "SELECT count(*) FILTER (WHERE outcome IN ('accepted','edited')) AS a, count(*) AS d "

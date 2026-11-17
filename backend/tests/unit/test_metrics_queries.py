@@ -41,7 +41,7 @@ INSERT INTO ai_feedback (node_id, target_type, target_id, outcome, created_at) V
 
 
 def test_metric3_ai_suggestion_accept_rate(db, seed):
-    """衡量值 3（#34 裁定 3(b)）：AI 建議被原樣接受率＝（accepted＋edited）÷ 已處理候選。
+    """衡量值 3（#34 裁定 3(b)）：AI 建議採用率＝（accepted＋edited）÷ 已處理候選。
 
     改建新任務（changed）不進分子、仍在分母；其他節點的回饋不計。
     """
