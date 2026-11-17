@@ -413,6 +413,34 @@ def test_b5_create_task_without_project_uses_candidate_project(client, seed, que
     seed(BASE + CANDIDATES + "UPDATE candidates SET project_id = 2 WHERE id = 26;")
     body = post(client, 26, "create-task", title="報表處理", due="2026-12-20").json()
     assert query("SELECT project_id FROM tasks WHERE id = :t", t=body["task"]["id"])[0]["project_id"] == 2
+    assert body["warnings"] == []
+
+
+ARCHIVE_P2 = "UPDATE candidates SET project_id = 2 WHERE id = 26;" \
+             "UPDATE projects SET archived_at = '2026-11-12T09:00+08:00' WHERE id = 2;"
+
+
+def test_57_auto_project_archived_creates_without_project_and_warns(client, seed, query):
+    seed(BASE + CANDIDATES + ARCHIVE_P2)
+    r = post(client, 26, "create-task", title="報表處理", due="2026-12-20")
+    assert r.status_code == 201
+    body = r.json()
+    assert query("SELECT project_id FROM tasks WHERE id = :t", t=body["task"]["id"])[0]["project_id"] is None
+    assert body["warnings"] == ["PROJECT_ARCHIVED"]
+
+
+def test_57_sent_archived_project_kept_without_warning(client, seed, query):
+    seed(BASE + CANDIDATES + ARCHIVE_P2)
+    body = post(client, 26, "create-task", title="報表處理", due="2026-12-20", project_id=2).json()
+    assert query("SELECT project_id FROM tasks WHERE id = :t", t=body["task"]["id"])[0]["project_id"] == 2
+    assert body["warnings"] == []
+
+
+def test_57_candidate_without_project_no_warning(client, seed, query):
+    seed(BASE + CANDIDATES)
+    body = post(client, 26, "create-task", title="報表處理", due="2026-12-20").json()
+    assert query("SELECT project_id FROM tasks WHERE id = :t", t=body["task"]["id"])[0]["project_id"] is None
+    assert body["warnings"] == []
 
 
 def test_b5_create_task_sent_project_overrides_candidate(client, seed, query):

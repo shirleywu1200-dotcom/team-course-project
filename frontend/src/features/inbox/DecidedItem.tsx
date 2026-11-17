@@ -74,6 +74,7 @@ export function DecidedItem({ result: r }: { result: DecideResult }) {
       </div>
       {c.quote && <p className="muted">「{c.quote}」</p>}
       {r.feedback_required && <p className="hint">完成回報可到今日頁補填</p>}
+      {r.warnings?.includes("PROJECT_ARCHIVED") && <p className="hint">原專案已封存，任務已建為無專案</p>}
       {r.needs_mark && r.event && <MarkForm eventId={r.event.id} delta={r.event.delta_days ?? 0} />}
     </div>
   );

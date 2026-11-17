@@ -434,7 +434,9 @@ class DecideOut(Out):
     task: TaskOut | None = Field(None, description="忽略時不出現")
     event: EventOut | None = Field(None, description="忽略、建任務時不出現")
     needs_mark: bool | None = Field(None, description="確認延期時才出現")
-    warnings: list[str] | None = Field(None, description="確認延期時才出現；可含 BEFORE_START（新日期早於開始日）")
+    warnings: list[str] | None = Field(None, description=(
+        "確認延期、建任務時出現；確認延期可含 BEFORE_START（新日期早於開始日）；"
+        "建任務可含 PROJECT_ARCHIVED（沿用的候選專案已封存，任務已建為無專案）"))
     feedback_required: bool | None = Field(None, description="確認完成時才出現")
 
 
