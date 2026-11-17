@@ -100,6 +100,13 @@ def test_ai05_section_values_match_weekly_report_sections():
     assert set(item["enum"]) == set(SECTIONS)
 
 
+def test_ai05_schema_forbids_extra_keys():
+    # 送給供應商的 schema 要帶 additionalProperties: false；拿掉 extra="forbid" 時只有這則會紅（#53 Dev-A 審查）
+    schema = NODES["AI-05"].output.model_json_schema()
+    assert schema["additionalProperties"] is False
+    assert schema["$defs"]["Item"]["additionalProperties"] is False
+
+
 @pytest.mark.parametrize("bad", [
     {"draft": "x", "items": [{"section": "other", "task_id": 3, "event_id": 41}]},
     {"draft": "x", "items": [{"section": "done", "task_id": "abc", "event_id": 41}]},   # "3" 會被寬鬆轉型成 3，與其他節點一致
