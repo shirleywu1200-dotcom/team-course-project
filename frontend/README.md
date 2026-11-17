@@ -57,19 +57,27 @@ A4 已補齊全部成功回應模型。`src/api/types.ts` 的既有名稱改為�
 | `/tasks` | 任務入口，預留 |
 | `/projects/:projectId/bulk-shift` | 保留 Dev-A 12.4 |
 | `/history`、`/projects/:projectId/history` | 12.6 預留 |
-| `/import` | 12.7 預留 |
-| `/inbox`、`/confirmations` | 12.8 預留 |
+| `/import` | 12.7 匯入精靈 |
+| `/inbox` | 12.8 收件匣與每日確認；首頁每日確認連結指向此處 |
 | `/today`、`/tasks/:taskId/feedback` | 12.9 預留；此處未實作完成回報 |
 | `/time-management` | 12.10 預留 |
-| `/setup`、`/settings` | 12.11 預留 |
+| `/setup` | 12.11 首次啟用精靈；已啟用者由守門導回首頁 |
+| `/settings` | 12.11 設定與量表 |
 | `/goals` | 12.12 預留 |
 | `/reports` | 12.13 預留 |
 | `/data-control` | 12.14 預留 |
 | `/tasks/new` | 12.15 預留；靜態路由優先於任務編號 |
 | 其他網址 | 找不到頁面，可返回工作總覽 |
 
-預留頁面只顯示「此功能尚未開放」，不讀寫 API，也不代表該 todo 已實作。
+預留頁面本身只顯示「此功能尚未開放」，不讀寫 API，也不代表該 todo 已實作。
+App 根節點的 OnboardingGate 在 Router／QueryClient 內讀取共用 settings：未啟用導向 `/setup`，完成或略過後回首頁。
+舊 `/confirmations` 預留頁已移除；每日確認就在 `/inbox`。
 TokenGate 與 token 儲存、傳送邏輯沿用原有程式。
+
+11.8 的 AI-07 回饋沿用生成的 commit 請求型別：首次 AI 預覽的 `ai_run_id` 保留至本輪保存，
+使用者手動改對應、重新預覽後，commit 成對送原 id 與最終四欄索引 `column_map`。
+改原文或目標、保存成功時清除 id；晚回的舊預覽不污染新一輪。沒有 AI id 時兩個回饋鍵均省略。
+預覽的 `column_map` 只送四個索引，不含 `ai_run_id`／`mapped_by`；accepted／changed 由後端判斷。
 
 ## API client（11.2）
 

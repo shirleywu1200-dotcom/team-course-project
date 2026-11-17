@@ -48,25 +48,37 @@ test.each([
   ["/projects/1/history", "專案歷程"],
   ["/import", "匯入專案"],
   ["/inbox", "收件匣"],
-  ["/confirmations", "每日確認"],
   ["/today", "今日"],
   ["/tasks/4/feedback", "完成回報"],
   ["/time-management", "時間管理統計"],
-  ["/setup", "啟用設定"],
+  ["/setup", "開始設定"],
   ["/settings", "設定"],
   ["/goals", "目標與精力"],
   ["/reports", "週報"],
   ["/data-control", "資料控制"],
-])("預留路由 %s 可直接開啟且不呼叫 API", async (path, title) => {
+])("路由 %s 可直接開啟；Dev-B 實作頁讀取資料，其餘仍預留", async (path, title) => {
   const fetchSpy = vi.spyOn(globalThis, "fetch");
   try {
     open(path);
-    expect(screen.getByRole("heading", { name: title, level: 1 })).toBeInTheDocument();
-    expect(screen.getByText("此功能尚未開放。")).toBeInTheDocument();
-    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(await screen.findByRole("heading", { name: title, level: 1 })).toBeInTheDocument();
+    if (["/import", "/inbox", "/setup", "/settings"].includes(path)) {
+      expect(screen.queryByText("此功能尚未開放。")).not.toBeInTheDocument();
+      expect(fetchSpy).toHaveBeenCalled();
+    } else {
+      expect(screen.getByText("此功能尚未開放。")).toBeInTheDocument();
+      expect(fetchSpy).not.toHaveBeenCalled();
+    }
   } finally {
     fetchSpy.mockRestore();
   }
+});
+
+test("M1：每日確認連結留在收件匣；移除的 /confirmations 不再是預留頁", () => {
+  const view = open("/");
+  expect(screen.getByRole("link", { name: "每日確認" })).toHaveAttribute("href", "/inbox");
+  view.unmount();
+  open("/confirmations");
+  expect(screen.getByRole("heading", { name: "找不到頁面" })).toBeInTheDocument();
 });
 
 test("首頁可透過導覽開啟頁面並標示目前位置", async () => {

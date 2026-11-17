@@ -31,7 +31,7 @@ function renderApp(path: string) {
         <Routes>
           <Route path="/" element={<p>首頁</p>} />
           <Route path="/inbox" element={<p>收件匣頁</p>} />
-          <Route path="/onboarding" element={<OnboardingPage />} />
+          <Route path="/setup" element={<OnboardingPage />} />
         </Routes>
       </OnboardingGate>
     </MemoryRouter>,
@@ -67,7 +67,7 @@ test("已啟用時不攔", async () => {
 
 test("已啟用時開精靈導回首頁", async () => {
   record(true);
-  renderApp("/onboarding");
+  renderApp("/setup");
   expect(await screen.findByText("首頁")).toBeInTheDocument();
 });
 
@@ -115,7 +115,7 @@ test("讀設定失敗後，頁面自己重讀設定也不會被守門收回（�
 test("6 步依序前進與後退", async () => {
   const user = userEvent.setup();
   record(false);
-  renderApp("/onboarding");
+  renderApp("/setup");
   await screen.findByRole("heading", { name: "開始設定" });
   expect(screen.getByRole("button", { name: "上一步" })).toBeDisabled();
   const seen = [stepName()];
@@ -129,7 +129,7 @@ test("6 步依序前進與後退", async () => {
 test("完成時才寫入：先 PUT 有改的欄位，再 complete，之後回首頁", async () => {
   const user = userEvent.setup();
   const log = record(false);
-  renderApp("/onboarding");
+  renderApp("/setup");
   await screen.findByRole("heading", { name: "開始設定" });
   await next(user);
   await user.click(screen.getByLabelText("兩者都有"));
@@ -148,7 +148,7 @@ test("完成時才寫入：先 PUT 有改的欄位，再 complete，之後回首
 test("沒改任何欄位就完成時，不送 PUT", async () => {
   const user = userEvent.setup();
   const log = record(false);
-  renderApp("/onboarding");
+  renderApp("/setup");
   await screen.findByRole("heading", { name: "開始設定" });
   for (let i = 0; i < 5; i++) await next(user);
   await user.click(screen.getByRole("button", { name: "完成設定" }));
@@ -159,7 +159,7 @@ test("沒改任何欄位就完成時，不送 PUT", async () => {
 test("略過時丟掉已填，只送 complete {skipped:true}", async () => {
   const user = userEvent.setup();
   const log = record(false);
-  renderApp("/onboarding");
+  renderApp("/setup");
   await screen.findByRole("heading", { name: "開始設定" });
   await next(user);
   await user.click(screen.getByLabelText("兩者都有"));
@@ -172,7 +172,7 @@ test("略過時丟掉已填，只送 complete {skipped:true}", async () => {
 test("量表確認當下入庫；之後「略過」改稱「略過其餘設定」並註明不會撤回", async () => {
   const user = userEvent.setup();
   const log = record(false);
-  renderApp("/onboarding");
+  renderApp("/setup");
   await screen.findByRole("heading", { name: "開始設定" });
   await toRubricDraft(user);
   await user.click(screen.getByRole("button", { name: "確認成為 v1" }));
@@ -186,7 +186,7 @@ test("量表草稿未確認就按下一步會先詢問：取消就留在這一�
   const user = userEvent.setup();
   const ask = vi.spyOn(window, "confirm").mockReturnValueOnce(false).mockReturnValueOnce(true);
   const log = record(false);
-  renderApp("/onboarding");
+  renderApp("/setup");
   await screen.findByRole("heading", { name: "開始設定" });
   await toRubricDraft(user);
 
@@ -205,7 +205,7 @@ test("沒有草稿時換步不詢問", async () => {
   const user = userEvent.setup();
   const ask = vi.spyOn(window, "confirm");
   record(false);
-  renderApp("/onboarding");
+  renderApp("/setup");
   await screen.findByRole("heading", { name: "開始設定" });
   for (let i = 0; i < 5; i++) await next(user);
   expect(ask).not.toHaveBeenCalled();
@@ -215,7 +215,7 @@ test("沒有草稿時換步不詢問", async () => {
 test("精力定義清空時不能完成", async () => {
   const user = userEvent.setup();
   record(false);
-  renderApp("/onboarding");
+  renderApp("/setup");
   await screen.findByRole("heading", { name: "開始設定" });
   for (let i = 0; i < 4; i++) await next(user);
   await user.clear(screen.getByLabelText("「精力高」指的是"));

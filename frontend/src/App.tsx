@@ -8,6 +8,7 @@ import { getToken, setToken } from "./api/client";
 import { AppRoutes } from "./app/AppRoutes";
 import { makeQueryClient } from "./api/queryClient";
 import { ThemeProvider } from "./theme/Theme";
+import { OnboardingGate } from "./features/settings/OnboardingGate";
 
 export { makeQueryClient } from "./api/queryClient";
 
@@ -43,7 +44,7 @@ export function App() {
     <ThemeProvider><QueryClientProvider client={client}>
       <TokenGate>
         <BrowserRouter>
-          <AppRoutes />
+          <OnboardingGate><AppRoutes /></OnboardingGate>
         </BrowserRouter>
       </TokenGate>
     </QueryClientProvider></ThemeProvider>

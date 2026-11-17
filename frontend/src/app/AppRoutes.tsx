@@ -1,9 +1,22 @@
 import { Link, Route, Routes } from "react-router-dom";
+import type { ComponentType } from "react";
 
 import { BulkShiftPage } from "../features/bulk-shift/BulkShiftPage";
 import { TaskDuePage } from "../features/due-adjust/TaskDuePage";
+import { ImportPage } from "../features/import/ImportPage";
+import { InboxPage } from "../features/inbox/InboxPage";
+import { OnboardingPage } from "../features/settings/OnboardingPage";
+import { SettingsPage } from "../features/settings/SettingsPage";
+import { ONBOARDING_PATH } from "../features/settings/OnboardingGate";
 import { AppLayout } from "./AppLayout";
 import { navigationRoutes, pageRoutes } from "./routeDefinitions";
+
+const featurePages: Record<string, ComponentType> = {
+  "/import": ImportPage,
+  "/inbox": InboxPage,
+  [ONBOARDING_PATH]: OnboardingPage,
+  "/settings": SettingsPage,
+};
 
 function Home() {
   return (
@@ -17,7 +30,7 @@ function Home() {
       </div>
       <div className="actions">
         <Link to="/tasks/new">新增任務</Link>
-        <Link to="/confirmations">每日確認</Link>
+        <Link to="/inbox">每日確認</Link>
         <Link to="/setup">啟用設定</Link>
       </div>
     </main>
@@ -49,9 +62,10 @@ export function AppRoutes() {
     <Routes>
       <Route element={<AppLayout />}>
         <Route index element={<Home />} />
-        {pageRoutes.map(({ path, title }) => (
-          <Route key={path} path={path} element={<ReservedPage title={title} />} />
-        ))}
+        {pageRoutes.map(({ path, title }) => {
+          const Page = featurePages[path];
+          return <Route key={path} path={path} element={Page ? <Page /> : <ReservedPage title={title} />} />;
+        })}
         {/* 12.2、12.5 保留原入口；12.3 後續整合正式任務詳情。 */}
         <Route path="/tasks/:taskId" element={<TaskDuePage />} />
         <Route path="/projects/:projectId/bulk-shift" element={<BulkShiftPage />} />

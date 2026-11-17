@@ -8,7 +8,7 @@ import { useEffect, useState } from "react";
 import { ApiError } from "../../api/client";
 import { fetchActiveRubric, keys } from "../../api/queries";
 import type { InterviewAnswers } from "../../api/types";
-import { ErrorBanner } from "../../components/standin/ErrorBanner";
+import { ErrorBanner } from "../../components/ErrorBanner";
 import { LEVEL_MAX, QUESTIONS } from "./options";
 import { confirmRubric, interviewRubric } from "./requests";
 

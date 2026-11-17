@@ -8,7 +8,7 @@ import { useState } from "react";
 import { api, ApiError, newIdempotencyKey } from "../../api/client";
 import { queryRoots } from "../../api/queryKeys";
 import type { Candidate, DecideResult } from "../../api/types";
-import { ErrorBanner } from "../../components/standin/ErrorBanner";
+import { ErrorBanner } from "../../components/ErrorBanner";
 
 const KIND_LABEL: Record<Candidate["kind"], string> = {
   delay: "延期", done: "完成", stuck: "卡住", unclear: "待釐清", unmatched: "待配對",
@@ -32,7 +32,7 @@ export function CandidateCard({ candidate: c, onDecided }: Props) {
     mutationFn: ({ action, body }: { action: string; body?: unknown }) =>
       api<DecideResult>(`/candidates/${c.id}/${action}`, { body: body ?? {}, idempotencyKey: newIdempotencyKey() }),
     onSuccess: (r) => {
-      qc.invalidateQueries({ queryKey: ["candidates"] });
+      qc.invalidateQueries({ queryKey: queryRoots.candidates });
       // 確認會改任務、時間管理統計（未註記數）與專案摘要（open_candidates）
       for (const root of [queryRoots.tasks, queryRoots.timeManagement, queryRoots.projects]) {
         qc.invalidateQueries({ queryKey: root });
@@ -40,7 +40,7 @@ export function CandidateCard({ candidate: c, onDecided }: Props) {
       onDecided(r);
     },
     onError: (err) => {
-      if (err instanceof ApiError && RELOAD_CODES.has(err.code)) qc.invalidateQueries({ queryKey: ["candidates"] });
+      if (err instanceof ApiError && RELOAD_CODES.has(err.code)) qc.invalidateQueries({ queryKey: queryRoots.candidates });
     },
   });
   const busy = mutation.isPending;

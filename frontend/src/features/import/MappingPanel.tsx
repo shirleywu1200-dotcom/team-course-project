@@ -23,7 +23,9 @@ interface Props {
 }
 
 export function MappingPanel({ preview, confirmed, busy, onConfirm, onApply }: Props) {
-  const { mapped_by, ...current } = preview.column_map;
+  const { mapped_by, title, owner, start, end } = preview.column_map;
+  // 只保留四欄索引，ai_run_id 是 commit metadata，不能混入 Strict ColumnMap。
+  const current = { title, owner, start, end };
   const [draft, setDraft] = useState<ColumnIndexes>(current);
   const changed = FIELDS.some((f) => draft[f.key] !== current[f.key]);
   const complete = draft.title !== null && draft.end !== null;

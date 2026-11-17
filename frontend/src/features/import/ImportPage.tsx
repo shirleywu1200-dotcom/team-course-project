@@ -3,12 +3,12 @@
 // 列與診斷只來自最近一次 preview 回應；本頁自管的只有 skip、confirmed 兩個狀態，輸入一改就清掉。
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import { ApiError, api, newIdempotencyKey } from "../../api/client";
 import { queryRoots } from "../../api/queryKeys";
 import type { ColumnIndexes, ImportCommitResult, ImportPreview } from "../../api/types";
-import { ErrorBanner } from "../../components/standin/ErrorBanner";
+import { ErrorBanner } from "../../components/ErrorBanner";
 import { buildCommitBody, canCommit, type Target } from "./commit";
 import { DiagnoseTable } from "./DiagnoseTable";
 import { MappingPanel } from "./MappingPanel";
@@ -30,11 +30,14 @@ export function ImportPage() {
   const [text, setText] = useState("");
   const [skip, setSkip] = useState<Set<number>>(new Set());
   const [confirmed, setConfirmed] = useState(false);
+  const [aiRunId, setAiRunId] = useState<ImportPreview["column_map"]["ai_run_id"]>(null);
+  const inputRevision = useRef(0);
 
   const target: Target | null = dest.mode === "new" ? "new" : dest.projectId;
   const ready = text.trim() !== "" && target !== null && (dest.mode === "existing" || dest.newName.trim() !== "");
 
   const preview = useMutation({
+    onMutate: () => inputRevision.current,
     mutationFn: (columnMap?: ColumnIndexes) =>
       api<ImportPreview>("/projects/import/preview", {
         body: {
@@ -43,7 +46,10 @@ export function ImportPage() {
           ...(columnMap ? { column_map: columnMap } : {}),
         },
       }),
-    onSuccess: () => {
+    onSuccess: (response, _map, revision) => {
+      // 原文／目標已變更時，不讓晚回的舊預覽帶回舊 AI 呼叫識別。
+      if (revision !== inputRevision.current) return;
+      if (response.column_map.ai_run_id != null) setAiRunId(current => current ?? response.column_map.ai_run_id);
       setSkip(new Set());
       setConfirmed(false);
     },
@@ -53,10 +59,12 @@ export function ImportPage() {
     mutationFn: (body: ReturnType<typeof buildCommitBody>) =>
       api<ImportCommitResult>("/projects/import/commit", { body, idempotencyKey: newIdempotencyKey() }),
     onSuccess: () => {
+      inputRevision.current++;
+      setAiRunId(null);
       preview.reset();
       setText("");
       qc.invalidateQueries({ queryKey: queryRoots.projects });
-      qc.invalidateQueries({ queryKey: ["tasks"] });
+      qc.invalidateQueries({ queryKey: queryRoots.tasks });
     },
     onError: (err) => {
       if (!commitErrorMessage(err)) qc.invalidateQueries({ queryKey: queryRoots.projects });
@@ -65,6 +73,8 @@ export function ImportPage() {
 
   // 目標或原文一改，舊的預覽就不再對應目前輸入（D-1、D-4）
   const invalidate = () => {
+    inputRevision.current++;
+    setAiRunId(null);
     preview.reset();
     commit.reset();
     setSkip(new Set());
@@ -126,7 +136,8 @@ export function ImportPage() {
                   <span className="hint">{check?.reason}</span>
                 )}
                 <button type="button" className="primary" disabled={!check?.ok || commit.isPending}
-                  onClick={() => target !== null && commit.mutate(buildCommitBody({ target, newName: dest.newName }, data.rows, skip))}>
+                  onClick={() => target !== null && commit.mutate(buildCommitBody({ target, newName: dest.newName }, data.rows, skip,
+                    { ...data.column_map, ai_run_id: aiRunId }))}>
                   保存基準
                 </button>
               </section>

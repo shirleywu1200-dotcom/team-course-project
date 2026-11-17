@@ -6,8 +6,9 @@ import { useEffect, useState } from "react";
 
 import { api, newIdempotencyKey } from "../../api/client";
 import { fetchIngestJob, keys } from "../../api/queries";
+import { queryRoots } from "../../api/queryKeys";
 import type { AiStatus, IngestJob, IngestResult, IngestSummary } from "../../api/types";
-import { ErrorBanner } from "../../components/standin/ErrorBanner";
+import { ErrorBanner } from "../../components/ErrorBanner";
 
 export const POLL_MS = 3_000;   // FR-INB-05：每 3 秒
 export const POLL_LIMIT_MS = 60_000;   // spec 6.1：超過 60 秒停止輪詢，工作持續
@@ -49,7 +50,7 @@ export function PasteBox({ pollMs, pollLimitMs }: Props) {
       if (r.mode === "async") setJobId(r.job_id);
       else {
         setJobId(null);
-        qc.invalidateQueries({ queryKey: ["candidates"] });
+        qc.invalidateQueries({ queryKey: queryRoots.candidates });
       }
     },
   });
@@ -69,7 +70,7 @@ export function PasteBox({ pollMs, pollLimitMs }: Props) {
 
   const jobDone = finished(job.data);
   useEffect(() => {
-    if (jobDone) qc.invalidateQueries({ queryKey: ["candidates"] });
+    if (jobDone) qc.invalidateQueries({ queryKey: queryRoots.candidates });
   }, [jobDone, qc]);
 
   const polling = jobId !== null && !jobDone && !timedOut;

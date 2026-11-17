@@ -7,7 +7,7 @@ import { useState } from "react";
 
 import { fetchCandidates, fetchSettings, keys } from "../../api/queries";
 import type { DecideResult } from "../../api/types";
-import { ErrorBanner } from "../../components/standin/ErrorBanner";
+import { ErrorBanner } from "../../components/ErrorBanner";
 import { CandidateCard } from "./CandidateCard";
 import { DecidedItem } from "./DecidedItem";
 import { groupCandidates, ZONES } from "./group";

@@ -2,6 +2,7 @@
 // 前端條件只是避免白送；後端 commit 仍會每列重新驗證（AC-31）。
 
 import type { ImportPreview, ImportRow } from "../../api/types";
+import type { paths } from "../../api/types.generated";
 
 export type Target = "new" | number;
 
@@ -17,12 +18,20 @@ export function canCommit(preview: ImportPreview, confirmed: boolean, skip: Set<
   return { ok: true };
 }
 
-export function buildCommitBody(dest: { target: Target; newName: string }, rows: ImportRow[], skip: Set<number>) {
+type CommitBody = paths["/api/v1/projects/import/commit"]["post"]["requestBody"]["content"]["application/json"];
+
+export function buildCommitBody(dest: { target: Target; newName: string }, rows: ImportRow[], skip: Set<number>,
+  mapping?: ImportPreview["column_map"]): CommitBody {
   return {
     target: dest.target,
     ...(dest.target === "new" ? { new_name: dest.newName.trim() } : {}),
     rows: rows.map((r) => ({
       index: r.index, title: r.title, owner: r.owner, start: r.start, end: r.end, skip: skip.has(r.index),
     })),
+    // FR-AI-04／D-3：兩個欄位一起送；只傳索引，後端自行比對 accepted／changed。
+    ...(mapping?.ai_run_id != null && mapping.title != null && mapping.end != null ? {
+      ai_run_id: mapping.ai_run_id,
+      column_map: { title: mapping.title, owner: mapping.owner, start: mapping.start, end: mapping.end },
+    } : {}),
   };
 }
