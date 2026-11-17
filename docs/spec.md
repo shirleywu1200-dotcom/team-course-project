@@ -694,7 +694,7 @@ CREATE TABLE idempotency_keys (
   - `draft` 為字串、`items` 為陣列；`section` 為 `done`、`delay`、`next`。`done`、`delay` 的 `event_id` 必填，`next` 必須為 null。
   - 缺欄位、型別不對、`section` 不在值域內，算 `invalid_output`。`draft` 空白、超過 20,000 字或含 NUL 字元也算 `invalid_output`（#18 K8）。
   - 每一項只讀 `section`、`task_id`、`event_id`，其他鍵丟棄，不算錯誤（#22）。
-- 重試與紀錄（同 AI-01）：任何例外都算一次失敗、繼續重試，總共最多 3 次；只有 `AIUnavailable` 立刻停。每次嘗試寫一列 `ai_runs`（`latency_ms` 失敗也記；`error` 只放例外類別名稱，R4 失敗記 `R4_MISMATCH`）。**AI-05 不存 `raw_output`**。
+- 重試與紀錄（同 AI-01）：任何例外都算一次失敗、繼續重試，總共最多 3 次；`AIUnavailable` 與 R4 對帳失敗立刻停。最終 `ai_status` 以最後一次嘗試為準：最後一次是格式錯誤（`AIInvalidOutput`）或 R4 失敗回 `invalid_output`，其餘回 `unavailable`（#18 J3、K3）。`error` 欄的 `R4_MISMATCH` 與供應商格式錯誤的 `AIInvalidOutput` 分得開，可據以算週報對帳結果（spec 1.3）。每次嘗試寫一列 `ai_runs`（`latency_ms` 失敗也記；`error` 只放例外類別名稱，R4 失敗記 `R4_MISMATCH`）。**AI-05 不存 `raw_output`**。
   - R4 對帳（項目引用的 `task_id`、`event_id` 是否在 payload 裡）不重試、立刻停：`ai_runs` 記 `status='invalid_output'`、`error='R4_MISMATCH'`；回應 `ai_status='invalid_output'`、`validated=false`、`draft=null`、`items` 為退路清單（AC-66；2026-11-17 Dev-B 確認，#22）。
 
 ### 5.4 設定與量表
@@ -1033,7 +1033,7 @@ CREATE TABLE idempotency_keys (
 | GET | `/reports/weekly/{id}` | 取得 |
 | PUT | `/reports/weekly/{id}/manual` | 儲存人工版 |
 
-`POST /reports/weekly/draft` 輸入：`{ "week_start": "2026-11-09" }`。`week_start` 必須是星期一，且不能晚於本週（只能產生本週或過去的週報），否則 `VALIDATION_ERROR`（#18 第 5 點、G7）；早於今天前 365 天回 `DATE_OUT_OF_RANGE`（#18 J6；2026-11-17 定案）。過去週的「下週重點」依現在的狀態計算，畫面上要註明。回 200（AI 失敗也是 200，附退路內容，spec 5.3）。三個端點的輸出相同：
+`POST /reports/weekly/draft` 輸入：`{ "week_start": "2026-11-09" }`。`week_start` 必須是星期一，且不能晚於本週（只能產生本週或過去的週報），否則 `VALIDATION_ERROR`（#18 第 5 點、G7）；早於今天前 365 天回 `DATE_OUT_OF_RANGE`（#18 J6；2026-11-17 定案）。過去週的「下週重點」依現在的狀態計算，畫面上要註明。回 200（AI 失敗也是 200，附退路內容，spec 5.3）。所有端點（產生、依 id 或週次讀取、存人工版）的輸出相同：
 
 ```json
 {

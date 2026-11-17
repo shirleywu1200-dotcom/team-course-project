@@ -748,3 +748,16 @@ def test_standalone_task_carries_readable_fields(client, data, seed):
     item = next(i for i in draft(client).json()["items"] if i["task_id"] == 5)
     assert (item["title"], item["owner"], item["done_date"], item["event"]["from_value"]) == \
         ("單點完成", "阿德", "2026-11-11", "doing")
+
+
+def test_task_turned_private_during_ai_call_is_not_listed(client, data, db):
+    """失敗路徑的退路清單用呼叫 AI 前的彙整；AI 呼叫期間任務改成私人，回應不能帶出它的事件證據（code-review）。"""
+    class Racing(FakeAIClient):
+        def call(self, node_id, payload, **kw):
+            db.run(lambda c: c.execute(text("UPDATE tasks SET scope = 'private' WHERE id = 2")))
+            raise AIUnavailable("down")
+    client.app.state.ai = Racing()
+    r = draft(client)
+    assert r.status_code == 200 and r.json()["validated"] is False
+    assert all(i["task_id"] != 2 for i in r.json()["items"])
+    assert "2026-11-12" not in r.text and "小薇" not in r.text

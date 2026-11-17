@@ -114,17 +114,19 @@ _ALL_FIELDS = ("done_date", "orig_due", "latest_due", "blocked")
 def readable_items(items: list[dict], tasks: dict[int, dict], events: dict[int, dict]) -> list[dict]:
     """在 items 上加可讀內容（2026-11-17 #23）：任務現值與事件證據。
 
-    tasks、events 由呼叫端依 items 的 id 查好（只含工作範圍的任務）。查不到的任務，其欄位為 None。
+    tasks、events 由呼叫端依 items 的 id 查好；tasks 只含工作範圍的任務。
+    任務不在 tasks 裡（例如產生期間改成私人）的項目整個不列，連事件證據也不露出（spec 5.14）。
     """
     out = []
     for item in items:
-        task = tasks.get(item["task_id"], {})
+        task = tasks.get(item["task_id"])
+        if task is None:
+            continue
         fields = _SECTION_FIELDS[item["section"]]
-        event = events.get(item["event_id"]) if item["section"] in ("done", "delay") else None
         out.append({
-            **item, "title": task.get("title"), "owner": task.get("owner_name"),
-            **{f: (task.get(f) if f in fields else None) for f in _ALL_FIELDS},
-            "event": event,
+            **item, "title": task["title"], "owner": task["owner_name"],
+            **{f: (task[f] if f in fields else None) for f in _ALL_FIELDS},
+            "event": events.get(item["event_id"]),   # next 的 event_id 一定是 None（parse_output、fallback_items）
         })
     return out
 
