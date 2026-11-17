@@ -1,5 +1,39 @@
 // 由 npm run types:generate 產生，請勿手動編輯。
 export interface paths {
+    "/api/v1/projects/import/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Preview */
+        post: operations["preview_api_v1_projects_import_preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/projects/import/commit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Commit */
+        post: operations["commit_api_v1_projects_import_commit_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/projects": {
         parameters: {
             query?: never;
@@ -326,6 +360,283 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Events */
+        get: operations["list_events_api_v1_events_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/projects/{project_id}/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Project History */
+        get: operations["project_history_api_v1_projects__project_id__history_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/projects/{project_id}/gantt": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Project Gantt */
+        get: operations["project_gantt_api_v1_projects__project_id__gantt_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ingest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Ingest */
+        post: operations["ingest_api_v1_ingest_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ingest/jobs/{job_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Job */
+        get: operations["get_job_api_v1_ingest_jobs__job_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Candidates */
+        get: operations["list_candidates_api_v1_candidates_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/candidates/{candidate_id}/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Confirm */
+        post: operations["confirm_api_v1_candidates__candidate_id__confirm_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/candidates/{candidate_id}/clarify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Clarify */
+        post: operations["clarify_api_v1_candidates__candidate_id__clarify_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/candidates/{candidate_id}/create-task": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Task */
+        post: operations["create_task_api_v1_candidates__candidate_id__create_task_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/candidates/{candidate_id}/ignore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Ignore */
+        post: operations["ignore_api_v1_candidates__candidate_id__ignore_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Settings */
+        get: operations["get_settings_api_v1_settings_get"];
+        /** Put Settings */
+        put: operations["put_settings_api_v1_settings_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/settings/onboarding/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Complete Onboarding */
+        post: operations["complete_onboarding_api_v1_settings_onboarding_complete_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/rubrics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Rubrics */
+        get: operations["list_rubrics_api_v1_rubrics_get"];
+        put?: never;
+        /** Confirm Rubric */
+        post: operations["confirm_rubric_api_v1_rubrics_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/rubrics/interview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Interview */
+        post: operations["interview_api_v1_rubrics_interview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sources/purge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Purge Sources */
+        post: operations["purge_sources_api_v1_sources_purge_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Export
+         * @description 直接回傳下載檔，伺服器不落地存檔（SDD 第 6 節）。
+         */
+        post: operations["export_api_v1_export_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -529,12 +840,137 @@ export interface components {
              */
             defer_mark?: boolean;
         };
+        /** CandidateListOut */
+        CandidateListOut: {
+            /** Items */
+            items: components["schemas"]["CandidateOut"][];
+            /** Total */
+            total: number;
+        };
+        /** CandidateOut */
+        CandidateOut: {
+            /** Id */
+            id: number;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "delay" | "done" | "stuck" | "unclear" | "unmatched";
+            /**
+             * Certainty
+             * @enum {string}
+             */
+            certainty: "sure" | "to_clarify" | "to_match";
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "open" | "confirmed" | "ignored";
+            task: components["schemas"]["CandidateTaskOut"] | null;
+            proposed: components["schemas"]["ProposedOut"] | null;
+            /**
+             * Quote
+             * @description 原文已清除時為 null
+             */
+            quote: string | null;
+            /** Speaker */
+            speaker: string;
+            /** Spoken At */
+            spoken_at: string | null;
+            /** Note */
+            note: string | null;
+            suggest: components["schemas"]["SuggestOut"] | null;
+        };
+        /** CandidateTaskOut */
+        CandidateTaskOut: {
+            /** Id */
+            id: number;
+            /** Title */
+            title: string;
+            /**
+             * Latest Due
+             * Format: date
+             */
+            latest_due: string;
+            /**
+             * Orig Due
+             * Format: date
+             */
+            orig_due: string;
+            /** Version */
+            version: number;
+        };
         /** CodeLabelOut */
         CodeLabelOut: {
             /** Code */
             code: string;
             /** Label */
             label: string;
+        };
+        /** ColumnMap */
+        ColumnMap: {
+            /** Title */
+            title: number;
+            /** End */
+            end: number;
+            /** Owner */
+            owner?: number | null;
+            /** Start */
+            start?: number | null;
+        };
+        /** ColumnMapOut */
+        ColumnMapOut: {
+            /** Title */
+            title: number | null;
+            /** Owner */
+            owner: number | null;
+            /** Start */
+            start: number | null;
+            /** End */
+            end: number | null;
+            /**
+             * Mapped By
+             * @description 必填欄位對應不到時為 null，rows 為空
+             */
+            mapped_by: ("rule" | "ai" | "manual") | null;
+            /**
+             * Ai Run Id
+             * @description mapped_by 為 ai 時才出現；commit 時與 column_map 一起送回（12.7 D-3）
+             */
+            ai_run_id?: number | null;
+        };
+        /** CommitIn */
+        CommitIn: {
+            /**
+             * Target
+             * @default new
+             */
+            target?: "new" | number;
+            /** New Name */
+            new_name?: string | null;
+            /** Rows */
+            rows: components["schemas"]["CommitRow"][];
+            /** Ai Run Id */
+            ai_run_id?: number | null;
+            column_map?: components["schemas"]["ColumnMap"] | null;
+        };
+        /** CommitRow */
+        CommitRow: {
+            /** Index */
+            index: number;
+            /** Title */
+            title?: string | null;
+            /** Owner */
+            owner?: string | null;
+            /** Start */
+            start?: string | null;
+            /** End */
+            end?: string | null;
+            /**
+             * Skip
+             * @default false
+             */
+            skip?: boolean;
         };
         /** Complete */
         Complete: {
@@ -550,12 +986,56 @@ export interface components {
             /** Feedback Required */
             feedback_required: boolean;
         };
+        /** ConfirmIn */
+        ConfirmIn: {
+            /** Expected Version */
+            expected_version: number;
+            /** New Due */
+            new_due?: string | null;
+        };
         /** CountDays */
         CountDays: {
             /** Count */
             count: number;
             /** Days */
             days: number;
+        };
+        /** CreateTaskIn */
+        CreateTaskIn: {
+            /** Title */
+            title: string;
+            /**
+             * Due
+             * Format: date
+             */
+            due: string;
+            /** Owner */
+            owner?: string | null;
+            /** Project Id */
+            project_id?: number | null;
+        };
+        /** DecideOut */
+        DecideOut: {
+            candidate: components["schemas"]["CandidateOut"];
+            /** @description 忽略時不出現 */
+            task?: components["schemas"]["TaskOut"] | null;
+            /** @description 忽略、建任務時不出現 */
+            event?: components["schemas"]["EventOut"] | null;
+            /**
+             * Needs Mark
+             * @description 確認延期時才出現
+             */
+            needs_mark?: boolean | null;
+            /**
+             * Warnings
+             * @description 確認延期時才出現；可含 BEFORE_START（新日期早於開始日）
+             */
+            warnings?: string[] | null;
+            /**
+             * Feedback Required
+             * @description 確認完成時才出現
+             */
+            feedback_required?: boolean | null;
         };
         /** DueReasonOut */
         DueReasonOut: {
@@ -638,6 +1118,26 @@ export interface components {
                 [key: string]: unknown;
             } | null;
         };
+        /** ExportOut */
+        ExportOut: {
+            /**
+             * Exported At
+             * Format: date-time
+             */
+            exported_at: string;
+            /** Schema Version */
+            schema_version: string | null;
+            /** Counts */
+            counts: {
+                [key: string]: number;
+            };
+            /** Tables */
+            tables: {
+                [key: string]: {
+                    [key: string]: unknown;
+                }[];
+            };
+        };
         /** FromToDate */
         FromToDate: {
             /**
@@ -658,6 +1158,67 @@ export interface components {
             /** To */
             to: number;
         };
+        /** GanttOut */
+        GanttOut: {
+            /** @description 沒有任務時為 null */
+            range: components["schemas"]["FromToDate"] | null;
+            /**
+             * Today
+             * Format: date
+             */
+            today: string;
+            summary: components["schemas"]["GanttSummary"];
+            /** Rows */
+            rows: components["schemas"]["GanttRowOut"][];
+        };
+        /** GanttRowOut */
+        GanttRowOut: {
+            /** Task Id */
+            task_id: number;
+            /** Title */
+            title: string;
+            /** Owner */
+            owner: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "todo" | "doing" | "done";
+            /**
+             * Start
+             * Format: date
+             */
+            start: string;
+            /**
+             * Orig Due
+             * Format: date
+             */
+            orig_due: string;
+            /**
+             * Latest Due
+             * Format: date
+             */
+            latest_due: string;
+            /** Delta Days */
+            delta_days: number;
+            /** Done Date */
+            done_date: string | null;
+            /** Blocked */
+            blocked: boolean;
+            /** Version */
+            version: number;
+        };
+        /** GanttSummary */
+        GanttSummary: {
+            /** Done */
+            done: number;
+            /** Total */
+            total: number;
+            /** Delayed */
+            delayed: number;
+            /** Open Candidates */
+            open_candidates: number;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -676,12 +1237,273 @@ export interface components {
              */
             ai: "ok" | "unavailable";
         };
+        /** HistoryItemOut */
+        HistoryItemOut: {
+            /** Id */
+            id: number;
+            /**
+             * Ts
+             * Format: date-time
+             */
+            ts: string;
+            /** Project Id */
+            project_id: number | null;
+            /** Task Id */
+            task_id: number | null;
+            /** Task Title */
+            task_title: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "due" | "annotation" | "status" | "task" | "feedback" | "goal" | "baseline" | "project";
+            /** Field */
+            field: string;
+            /** From Value */
+            from_value: string | null;
+            /** To Value */
+            to_value: string | null;
+            /**
+             * Origin
+             * @enum {string}
+             */
+            origin: "candidate" | "manual" | "bulk" | "import" | "baseline_correction" | "system";
+            /** Origin Ref */
+            origin_ref: number | null;
+            /** Source Id */
+            source_id: number | null;
+            /** Reason */
+            reason: string | null;
+            /** Note */
+            note: string | null;
+            /** Delta Days */
+            delta_days: number | null;
+            /** Mark */
+            mark: ("better" | "worse" | "none") | null;
+            /** Mine */
+            mine: boolean;
+            /** Ref Event Id */
+            ref_event_id: number | null;
+            /** Batch Id */
+            batch_id: number | null;
+            /** Actor */
+            actor: string;
+            /** Extra */
+            extra: {
+                [key: string]: unknown;
+            } | null;
+            /** Project Name */
+            project_name: string | null;
+            /** Effective Mark */
+            effective_mark: ("better" | "worse" | "none") | null;
+            source: components["schemas"]["SourceRefOut"];
+        };
+        /** HistoryListOut */
+        HistoryListOut: {
+            /** Items */
+            items: components["schemas"]["HistoryItemOut"][];
+            /** Total */
+            total: number;
+        };
+        /** ImportCommitOut */
+        ImportCommitOut: {
+            /** Project Id */
+            project_id: number;
+            /** Created */
+            created: number;
+            /** Skipped */
+            skipped: number;
+            /** Event Id */
+            event_id: number;
+        };
+        /** ImportIssueOut */
+        ImportIssueOut: {
+            /**
+             * Level
+             * @enum {string}
+             */
+            level: "error" | "warn";
+            /** Code */
+            code: string;
+            /** Message */
+            message: string;
+        };
+        /** ImportPreviewOut */
+        ImportPreviewOut: {
+            /**
+             * Ai Status
+             * @enum {string}
+             */
+            ai_status: "ok" | "unavailable" | "invalid_output";
+            /** Header */
+            header: string[];
+            column_map: components["schemas"]["ColumnMapOut"];
+            /** Rows */
+            rows: components["schemas"]["ImportRowOut"][];
+            summary: components["schemas"]["ImportSummary"];
+        };
+        /** ImportRowOut */
+        ImportRowOut: {
+            /** Index */
+            index: number;
+            /** Title */
+            title: string;
+            /** Owner */
+            owner: string;
+            /** Start */
+            start: string | null;
+            /** End */
+            end: string | null;
+            /** Blocking */
+            blocking: boolean;
+            /** Issues */
+            issues: components["schemas"]["ImportIssueOut"][];
+        };
+        /** ImportSummary */
+        ImportSummary: {
+            /** Importable */
+            importable: number;
+            /** Blocking */
+            blocking: number;
+        };
+        /** IngestAsyncOut */
+        IngestAsyncOut: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            mode: "async";
+            /** Job Id */
+            job_id: number;
+            /**
+             * Status
+             * @constant
+             */
+            status: "queued";
+        };
+        /** IngestIn */
+        IngestIn: {
+            /** Text */
+            text: string;
+            /** Project Id */
+            project_id?: number | null;
+        };
+        /** IngestJobOut */
+        IngestJobOut: {
+            /** Id */
+            id: number;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "queued" | "running" | "succeeded" | "failed";
+            /** Attempts */
+            attempts: number;
+            result: components["schemas"]["IngestJobResult"] | null;
+            /** Error */
+            error: string | null;
+        };
+        /** IngestJobResult */
+        IngestJobResult: {
+            /** Created */
+            created: number;
+            /** Skipped */
+            skipped: number;
+            /** Duplicates */
+            duplicates: number;
+            /** Unparsed Lines */
+            unparsed_lines: number[];
+            /**
+             * Ai Status
+             * @enum {string}
+             */
+            ai_status: "ok" | "unavailable" | "invalid_output";
+            /** Candidate Ids */
+            candidate_ids: number[];
+        };
+        /** IngestSummary */
+        IngestSummary: {
+            /** Created */
+            created: number;
+            /** Skipped */
+            skipped: number;
+            /** Duplicates */
+            duplicates: number;
+            /** Unparsed Lines */
+            unparsed_lines: number[];
+        };
+        /** IngestSyncOut */
+        IngestSyncOut: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            mode: "sync";
+            /**
+             * Ai Status
+             * @enum {string}
+             */
+            ai_status: "ok" | "unavailable" | "invalid_output";
+            result: components["schemas"]["IngestSummary"];
+            /** Candidates */
+            candidates: components["schemas"]["CandidateOut"][];
+        };
+        /** InterviewAnswers */
+        InterviewAnswers: {
+            /** Q1 */
+            q1: string;
+            /** Q2 */
+            q2: string;
+            /** Q3 */
+            q3: string;
+        };
+        /** InterviewIn */
+        InterviewIn: {
+            /** Q1 */
+            q1: string;
+            /** Q2 */
+            q2: string;
+            /** Q3 */
+            q3: string;
+        };
+        /** InterviewRecord */
+        InterviewRecord: {
+            /** Q1 */
+            q1: string;
+            /** Q2 */
+            q2: string;
+            /** Q3 */
+            q3: string;
+            /** Draft */
+            draft?: string[] | null;
+        };
+        /** OnboardingIn */
+        OnboardingIn: {
+            /**
+             * Skipped
+             * @default false
+             */
+            skipped?: boolean;
+        };
         /** OwnerChange */
         OwnerChange: {
             /** Expected Version */
             expected_version: number;
             /** Owner */
             owner: string;
+        };
+        /** PreviewIn */
+        PreviewIn: {
+            /** Text */
+            text: string;
+            /**
+             * Target
+             * @default new
+             */
+            target?: "new" | number;
+            /** New Name */
+            new_name?: string | null;
+            column_map?: components["schemas"]["ColumnMap"] | null;
         };
         /** ProjectCreate */
         ProjectCreate: {
@@ -790,6 +1612,21 @@ export interface components {
             /** Changes */
             changes: components["schemas"]["EventOut"][];
         };
+        /** ProposedOut */
+        ProposedOut: {
+            /** New Due */
+            new_due?: string | null;
+        };
+        /** PurgeIn */
+        PurgeIn: {
+            /** Confirm */
+            confirm: boolean;
+        };
+        /** PurgeOut */
+        PurgeOut: {
+            /** Purged */
+            purged: number;
+        };
         /** ReasonsOut */
         ReasonsOut: {
             /** Due */
@@ -798,6 +1635,132 @@ export interface components {
             baseline_types: components["schemas"]["CodeLabelOut"][];
             /** Baseline Reasons */
             baseline_reasons: components["schemas"]["CodeLabelOut"][];
+        };
+        /** RubricCreatedOut */
+        RubricCreatedOut: {
+            /** Id */
+            id: number;
+            /** Version */
+            version: number;
+        };
+        /** RubricDraftOut */
+        RubricDraftOut: {
+            /**
+             * Ai Status
+             * @constant
+             */
+            ai_status: "ok";
+            /** Draft */
+            draft: string[];
+        };
+        /** RubricIn */
+        RubricIn: {
+            /** Levels */
+            levels: string[];
+            interview: components["schemas"]["InterviewRecord"];
+        };
+        /** RubricListOut */
+        RubricListOut: {
+            /** Items */
+            items: components["schemas"]["RubricOut"][];
+            /** Total */
+            total: number;
+        };
+        /** RubricOut */
+        RubricOut: {
+            /** Id */
+            id: number;
+            /** Version */
+            version: number;
+            /** Levels */
+            levels: string[];
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "default" | "interview";
+            interview: components["schemas"]["InterviewAnswers"] | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /** SettingsOut */
+        SettingsOut: {
+            /**
+             * Default Scope
+             * @enum {string}
+             */
+            default_scope: "work" | "private";
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "project_owner" | "wbs_owner" | "both";
+            /**
+             * Report Audience
+             * @enum {string}
+             */
+            report_audience: "manager" | "client" | "none";
+            /** Confirm Time */
+            confirm_time: string;
+            /** Confirm Cap Min */
+            confirm_cap_min: number;
+            /**
+             * Remind Default
+             * @enum {string}
+             */
+            remind_default: "morning" | "eve_before" | "none";
+            /** Retention Days */
+            retention_days: number;
+            /** Energy Def High */
+            energy_def_high: string;
+            /** Energy Def Mid */
+            energy_def_mid: string;
+            /** Energy Def Low */
+            energy_def_low: string;
+            /** Goal Types Enabled */
+            goal_types_enabled: ("growth" | "time" | "expectation")[];
+            /** Onboarded At */
+            onboarded_at: string | null;
+        };
+        /** SettingsPatch */
+        SettingsPatch: {
+            /** Default Scope */
+            default_scope?: ("work" | "private") | null;
+            /** Role */
+            role?: ("project_owner" | "wbs_owner" | "both") | null;
+            /** Report Audience */
+            report_audience?: ("manager" | "client" | "none") | null;
+            /** Confirm Time */
+            confirm_time?: ("12:00" | "18:00" | "21:00") | null;
+            /** Confirm Cap Min */
+            confirm_cap_min?: (3 | 5 | 10) | null;
+            /** Remind Default */
+            remind_default?: ("morning" | "eve_before" | "none") | null;
+            /** Retention Days */
+            retention_days?: (30 | 90 | 180) | null;
+            /** Energy Def High */
+            energy_def_high?: string | null;
+            /** Energy Def Mid */
+            energy_def_mid?: string | null;
+            /** Energy Def Low */
+            energy_def_low?: string | null;
+            /** Goal Types Enabled */
+            goal_types_enabled?: ("growth" | "time" | "expectation")[] | null;
+        };
+        /** SourceRefOut */
+        SourceRefOut: {
+            /** Label */
+            label: string;
+            /**
+             * Quote
+             * @description 原文已清除或沒有來源時為 null
+             */
+            quote: string | null;
+            /** Purged */
+            purged: boolean;
         };
         /** StatusChange */
         StatusChange: {
@@ -808,6 +1771,16 @@ export interface components {
              * @enum {string}
              */
             status: "todo" | "doing";
+        };
+        /** SuggestOut */
+        SuggestOut: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "delay" | "done" | "stuck";
+            /** New Due */
+            new_due?: string | null;
         };
         /** TaskCreate */
         TaskCreate: {
@@ -944,8 +1917,16 @@ export interface components {
             worse_by_energy: components["schemas"]["EnergyDistribution"];
             /** Min Sample */
             min_sample: number;
-            /** Judgement */
+            /**
+             * Judgement
+             * @description 樣本不足 min_sample 時為 null；規則見 spec FR-MRK-07
+             */
             judgement: string | null;
+            /**
+             * Judgement Note
+             * @description 判讀說明：樣本不足的說明，或變好／變差次數＋精力洞察（FR-MRK-07）
+             */
+            judgement_note: string;
         };
         /** ValidationError */
         ValidationError: {
@@ -969,6 +1950,72 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    preview_api_v1_projects_import_preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PreviewIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportPreviewOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    commit_api_v1_projects_import_commit_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CommitIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportCommitOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_projects_api_v1_projects_get: {
         parameters: {
             query?: {
@@ -1682,6 +2729,581 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HealthOut"];
+                };
+            };
+        };
+    };
+    list_events_api_v1_events_get: {
+        parameters: {
+            query?: {
+                project_id?: string | null;
+                kind?: ("due" | "annotation" | "status" | "task" | "feedback" | "goal" | "baseline" | "project") | null;
+                task_id?: number | null;
+                batch_id?: number | null;
+                from?: string | null;
+                to?: string | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HistoryListOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    project_history_api_v1_projects__project_id__history_get: {
+        parameters: {
+            query?: {
+                kind?: ("due" | "annotation" | "status" | "task" | "feedback" | "goal" | "baseline" | "project") | null;
+                task_id?: number | null;
+                batch_id?: number | null;
+                from?: string | null;
+                to?: string | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                project_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HistoryListOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    project_gantt_api_v1_projects__project_id__gantt_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GanttOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ingest_api_v1_ingest_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IngestIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IngestSyncOut"] | components["schemas"]["IngestAsyncOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_job_api_v1_ingest_jobs__job_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IngestJobOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_candidates_api_v1_candidates_get: {
+        parameters: {
+            query?: {
+                state?: "open" | "confirmed" | "ignored";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CandidateListOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    confirm_api_v1_candidates__candidate_id__confirm_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                candidate_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfirmIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DecideOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    clarify_api_v1_candidates__candidate_id__clarify_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                candidate_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfirmIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DecideOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_task_api_v1_candidates__candidate_id__create_task_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                candidate_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateTaskIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DecideOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ignore_api_v1_candidates__candidate_id__ignore_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                candidate_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DecideOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_settings_api_v1_settings_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SettingsOut"];
+                };
+            };
+        };
+    };
+    put_settings_api_v1_settings_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SettingsPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SettingsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    complete_onboarding_api_v1_settings_onboarding_complete_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OnboardingIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SettingsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_rubrics_api_v1_rubrics_get: {
+        parameters: {
+            query?: {
+                active?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RubricListOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    confirm_rubric_api_v1_rubrics_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RubricIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RubricCreatedOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    interview_api_v1_rubrics_interview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InterviewIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RubricDraftOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    purge_sources_api_v1_sources_purge_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PurgeIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PurgeOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_api_v1_export_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 下載檔（Content-Disposition: attachment） */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExportOut"];
                 };
             };
         };

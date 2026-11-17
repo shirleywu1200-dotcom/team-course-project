@@ -13,6 +13,8 @@ const MESSAGES: Record<string, string> = {
   ACK_REQUIRED: "請先勾選聲明再確認。",
   CONFIRMATION_INVALID: "確認憑證已過期、已使用，或任務已變動，請重新預覽。",
   UNAUTHORIZED: "存取 token 錯誤或未設定。",
+  CANDIDATE_NOT_OPEN: "這個候選已經處理過，已重新載入清單。",
+  PAYLOAD_TOO_LARGE: "貼上的內容太長：收件匣不能超過 20,000 字；匯入最多 500 列、50,000 字。請分段貼上。",
 };
 
 export function errorMessage(err: unknown): string {

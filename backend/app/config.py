@@ -6,10 +6,12 @@
 
 import os
 from dataclasses import dataclass
+from datetime import timedelta
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_ENV_FILE = REPO_ROOT / "env" / "local.env"
+IDEMPOTENCY_TTL = timedelta(hours=24)
 
 
 def load_env_file(path: Path) -> None:

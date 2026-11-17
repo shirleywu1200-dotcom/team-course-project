@@ -14,7 +14,7 @@ from sqlalchemy import Connection
 from app.ai.client import DEFAULT_TIMEOUT_S, AIClient, AIInvalidOutput, AITimeout, AIUnavailable
 from app.clock import get_clock
 from app.db.database import Database
-from app.db.repo import ai_run_log, reports_repo, weekly_repo
+from app.db.repo import ai_runs_repo, reports_repo, weekly_repo
 from app.domain import ai05, weekly_report
 from app.domain.due import check_date_range
 from app.errors import DomainError
@@ -59,7 +59,7 @@ def _ask_ai(db: Database, ai: AIClient, data: weekly_report.WeekData) -> tuple[s
         status, error, result = _attempt(ai, payload, data)
         run = {"node_id": ai05.NODE, "status": status, "attempt": attempt, "error": error,
                "latency_ms": int((time.monotonic() - started) * 1000), "created_at": get_clock().now()}
-        db.run(lambda c, r=run: ai_run_log.insert(c, r))   # raw_output 不存（#18 K1）
+        db.run(lambda c, r=run: ai_runs_repo.insert_run(c, r))   # raw_output 不存（#18 K1）
         if result is not None:
             return "ok", *result
         if error in STOP_ERRORS:

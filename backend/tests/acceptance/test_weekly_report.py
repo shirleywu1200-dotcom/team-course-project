@@ -270,6 +270,32 @@ def test_endpoints_never_touch_history(client, data, ai, query):
     assert snapshot() == before
 
 
+# ---------- J7：不存冪等快取 ----------
+
+def test_draft_replay_with_same_key_reconciles_again(client, data, ai, seed, query):
+    """重播若回快取，會略過重新對帳，回過期的 validated=true（#18 J7）。"""
+    h = {"Idempotency-Key": "weekly-draft-1"}
+    ai.script("AI-05", AI_OK)
+    assert client.post(DRAFT, json={"week_start": WEEK}, headers=h).json()["validated"] is True
+    seed("UPDATE tasks SET scope = 'private' WHERE id = 2;")
+    ai.script("AI-05", AI_OK)
+    again = client.post(DRAFT, json={"week_start": WEEK}, headers=h)
+    assert again.headers.get("Idempotent-Replay") is None
+    assert (again.json()["validated"], again.json()["draft"]) == (False, None)
+    assert query("SELECT count(*) AS n FROM idempotency_keys")[0]["n"] == 0
+
+
+def test_manual_replay_with_same_key_is_not_cached(client, data, ai, query):
+    """快取會多存一份人工版，清除與匯出範圍外又多一份副本（#18 J7）。"""
+    rid = generate_ok(client, ai)
+    h = {"Idempotency-Key": "weekly-manual-1"}
+    client.put(MANUAL.format(rid), json={"manual_text": f"第一版{MARK}"}, headers=h)
+    again = client.put(MANUAL.format(rid), json={"manual_text": "第二版"}, headers=h)
+    assert again.headers.get("Idempotent-Replay") is None
+    assert again.json()["manual_text"] == "第二版"
+    assert query("SELECT count(*) AS n FROM idempotency_keys")[0]["n"] == 0
+
+
 # ---------- week_start（第 5 點、G7、J6）----------
 
 @pytest.mark.parametrize("week", ["2026-11-10", "2026-11-08", "2026-11-16", "2026-11-9", "x", None])

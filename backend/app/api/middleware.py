@@ -6,7 +6,6 @@
 import hmac
 import json
 import logging
-from datetime import timedelta
 
 from starlette.concurrency import run_in_threadpool
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -14,6 +13,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 
 from app.clock import get_clock
+from app.config import IDEMPOTENCY_TTL
 from app.db.repo import misc_repo
 from app.errors import DomainError
 
@@ -21,7 +21,10 @@ log = logging.getLogger("g4")
 
 API_PREFIX = "/api/v1"
 IDEMPOTENT_METHODS = {"POST", "PUT", "PATCH"}
-IDEMPOTENCY_TTL = timedelta(hours=24)
+# 回應含全部原文，不能存進快取，否則多一份要清除的副本（Phase 8 SDD 第 6 節）
+NO_CACHE_PATHS = {f"{API_PREFIX}/export"}
+# 週報產生與人工版：重播會略過重新對帳，快取也會多存一份初稿與人工版（#18 J7）。路徑含 id，以前綴比對
+NO_CACHE_PREFIXES = (f"{API_PREFIX}/reports/weekly/",)
 
 
 def _error(code: str, message: str | None = None) -> JSONResponse:
@@ -58,7 +61,9 @@ class BearerTokenMiddleware(BaseHTTPMiddleware):
 class IdempotencyMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         key = request.headers.get("Idempotency-Key")
-        if not key or request.method not in IDEMPOTENT_METHODS or not request.url.path.startswith(API_PREFIX):
+        path = request.url.path
+        if not key or request.method not in IDEMPOTENT_METHODS or not path.startswith(API_PREFIX) \
+                or path in NO_CACHE_PATHS or path.startswith(NO_CACHE_PREFIXES):
             return await call_next(request)
         db = request.app.state.db
         endpoint = f"{request.method} {request.url.path}"
