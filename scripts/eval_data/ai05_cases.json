@@ -1,0 +1,380 @@
+{
+ "note": "AI-05 評估案例；全部虛構。s1～s3 取自 #22（Dev-A 由測試種子跑 build_payload 產生），large、similar 為 Dev-B 自擬。",
+ "cases": [
+  {
+   "id": "s1",
+   "category": "#22 樣本 1：空的一週",
+   "payload": {
+    "week": {
+     "start": "2026-11-09",
+     "end": "2026-11-15"
+    },
+    "done": [],
+    "delay": [],
+    "next": []
+   }
+  },
+  {
+   "id": "s2",
+   "category": "#22 樣本 2：小型",
+   "payload": {
+    "week": {
+     "start": "2026-11-09",
+     "end": "2026-11-15"
+    },
+    "done": [
+     {
+      "task_id": 1,
+      "title": "本週完成",
+      "owner": "我",
+      "done_date": "2026-11-10",
+      "event_id": 11
+     }
+    ],
+    "delay": [
+     {
+      "task_id": 2,
+      "title": "延期任務",
+      "owner": "小薇",
+      "orig_due": "2026-11-12",
+      "latest_due": "2026-11-15",
+      "event_ids": [
+       21
+      ]
+     }
+    ],
+    "next": [
+     {
+      "task_id": 2,
+      "title": "延期任務",
+      "owner": "小薇",
+      "latest_due": "2026-11-15",
+      "blocked": false
+     },
+     {
+      "task_id": 3,
+      "title": "下週到期",
+      "owner": "我",
+      "latest_due": "2026-11-18",
+      "blocked": false
+     }
+    ]
+   }
+  },
+  {
+   "id": "s3",
+   "category": "#22 樣本 3：邊界",
+   "payload": {
+    "week": {
+     "start": "2026-11-09",
+     "end": "2026-11-15"
+    },
+    "done": [
+     {
+      "task_id": 1,
+      "title": "本週完成",
+      "owner": "我",
+      "done_date": "2026-11-10",
+      "event_id": 102
+     }
+    ],
+    "delay": [
+     {
+      "task_id": 4,
+      "title": "延期兩次",
+      "owner": "小薇",
+      "orig_due": "2026-11-12",
+      "latest_due": "2026-11-15",
+      "event_ids": [
+       110,
+       111
+      ]
+     },
+     {
+      "task_id": 5,
+      "title": "邊界延期",
+      "owner": "阿德",
+      "orig_due": "2026-11-12",
+      "latest_due": "2026-11-30",
+      "event_ids": [
+       121
+      ]
+     },
+     {
+      "task_id": 15,
+      "title": "單點延期",
+      "owner": "我",
+      "orig_due": "2026-11-12",
+      "latest_due": "2026-12-13",
+      "event_ids": [
+       140
+      ]
+     }
+    ],
+    "next": [
+     {
+      "task_id": 4,
+      "title": "延期兩次",
+      "owner": "小薇",
+      "latest_due": "2026-11-15",
+      "blocked": false
+     },
+     {
+      "task_id": 13,
+      "title": "下週一到期",
+      "owner": "我",
+      "latest_due": "2026-11-16",
+      "blocked": false
+     },
+     {
+      "task_id": 9,
+      "title": "私人專案的工作",
+      "owner": "我",
+      "latest_due": "2026-11-20",
+      "blocked": false
+     },
+     {
+      "task_id": 14,
+      "title": "下週日到期",
+      "owner": "我",
+      "latest_due": "2026-11-22",
+      "blocked": false
+     },
+     {
+      "task_id": 10,
+      "title": "卡住",
+      "owner": "我",
+      "latest_due": "2026-12-30",
+      "blocked": true
+     }
+    ]
+   }
+  },
+  {
+   "id": "large",
+   "category": "自擬：大型週（20 項、17 個任務）",
+   "payload": {
+    "week": {
+     "start": "2026-11-09",
+     "end": "2026-11-15"
+    },
+    "done": [
+     {
+      "task_id": 201,
+      "title": "官網首頁改版",
+      "owner": "阿德",
+      "done_date": "2026-11-09",
+      "event_id": 501
+     },
+     {
+      "task_id": 202,
+      "title": "客戶滿意度問卷",
+      "owner": "小薇",
+      "done_date": "2026-11-10",
+      "event_id": 502
+     },
+     {
+      "task_id": 203,
+      "title": "月報資料整理",
+      "owner": "我",
+      "done_date": "2026-11-11",
+      "event_id": 503
+     },
+     {
+      "task_id": 204,
+      "title": "供應商合約續約",
+      "owner": "老周",
+      "done_date": "2026-11-12",
+      "event_id": 504
+     },
+     {
+      "task_id": 205,
+      "title": "新人訓練教材",
+      "owner": "小薇",
+      "done_date": "2026-11-13",
+      "event_id": 505
+     },
+     {
+      "task_id": 206,
+      "title": "伺服器憑證更新",
+      "owner": "阿德",
+      "done_date": "2026-11-14",
+      "event_id": 506
+     },
+     {
+      "task_id": 207,
+      "title": "年度預算草案",
+      "owner": "我",
+      "done_date": "2026-11-15",
+      "event_id": 507
+     }
+    ],
+    "delay": [
+     {
+      "task_id": 211,
+      "title": "行銷活動企劃",
+      "owner": "小薇",
+      "orig_due": "2026-11-10",
+      "latest_due": "2026-11-20",
+      "event_ids": [
+       511,
+       512
+      ]
+     },
+     {
+      "task_id": 212,
+      "title": "資料庫遷移",
+      "owner": "阿德",
+      "orig_due": "2026-11-11",
+      "latest_due": "2026-11-14",
+      "event_ids": [
+       513
+      ]
+     },
+     {
+      "task_id": 213,
+      "title": "展覽攤位設計",
+      "owner": "老周",
+      "orig_due": "2026-11-12",
+      "latest_due": "2026-11-26",
+      "event_ids": [
+       514
+      ]
+     },
+     {
+      "task_id": 214,
+      "title": "內部稽核報告",
+      "owner": "我",
+      "orig_due": "2026-11-13",
+      "latest_due": "2026-11-19",
+      "event_ids": [
+       515
+      ]
+     },
+     {
+      "task_id": 215,
+      "title": "產品說明書翻譯",
+      "owner": "小薇",
+      "orig_due": "2026-11-14",
+      "latest_due": "2026-12-05",
+      "event_ids": [
+       516
+      ]
+     }
+    ],
+    "next": [
+     {
+      "task_id": 211,
+      "title": "行銷活動企劃",
+      "owner": "小薇",
+      "latest_due": "2026-11-20",
+      "blocked": false
+     },
+     {
+      "task_id": 212,
+      "title": "資料庫遷移",
+      "owner": "阿德",
+      "latest_due": "2026-11-14",
+      "blocked": false
+     },
+     {
+      "task_id": 214,
+      "title": "內部稽核報告",
+      "owner": "我",
+      "latest_due": "2026-11-19",
+      "blocked": false
+     },
+     {
+      "task_id": 221,
+      "title": "季度業績簡報",
+      "owner": "我",
+      "latest_due": "2026-11-17",
+      "blocked": false
+     },
+     {
+      "task_id": 222,
+      "title": "採購單審核",
+      "owner": "老周",
+      "latest_due": "2026-11-18",
+      "blocked": true
+     },
+     {
+      "task_id": 223,
+      "title": "教育訓練場地",
+      "owner": "小薇",
+      "latest_due": "2026-11-21",
+      "blocked": false
+     },
+     {
+      "task_id": 224,
+      "title": "系統備份演練",
+      "owner": "阿德",
+      "latest_due": "2026-11-22",
+      "blocked": false
+     },
+     {
+      "task_id": 225,
+      "title": "合作提案回覆",
+      "owner": "我",
+      "latest_due": "2026-12-15",
+      "blocked": true
+     }
+    ]
+   }
+  },
+  {
+   "id": "similar",
+   "category": "自擬：相似標題",
+   "payload": {
+    "week": {
+     "start": "2026-11-09",
+     "end": "2026-11-15"
+    },
+    "done": [
+     {
+      "task_id": 301,
+      "title": "報價單（甲客戶）",
+      "owner": "我",
+      "done_date": "2026-11-11",
+      "event_id": 601
+     },
+     {
+      "task_id": 302,
+      "title": "報價單（乙客戶）",
+      "owner": "小薇",
+      "done_date": "2026-11-12",
+      "event_id": 602
+     }
+    ],
+    "delay": [
+     {
+      "task_id": 303,
+      "title": "報價單（甲客戶）修訂",
+      "owner": "阿德",
+      "orig_due": "2026-11-12",
+      "latest_due": "2026-11-18",
+      "event_ids": [
+       603
+      ]
+     }
+    ],
+    "next": [
+     {
+      "task_id": 303,
+      "title": "報價單（甲客戶）修訂",
+      "owner": "阿德",
+      "latest_due": "2026-11-18",
+      "blocked": false
+     },
+     {
+      "task_id": 304,
+      "title": "報價單（丙客戶）",
+      "owner": "我",
+      "latest_due": "2026-11-19",
+      "blocked": true
+     }
+    ]
+   }
+  }
+ ]
+}
