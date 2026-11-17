@@ -86,10 +86,10 @@ spec 只說「提供文字供你複製」（FR-RPT-05），沒寫讀者與格式
 | --- | --- | --- |
 | T1 | `NODES` 有 `"AI-05"`，且 `Output` 能驗證 spec 5.3a 的輸出範例 | 節點不存在 |
 | T2 | `Item.section` 的值域等於 `weekly_report.SECTIONS` | 節點不存在 |
-| T3 | `Output` 拒絕 `section="other"`、`task_id="3"`、缺 `draft` | 節點不存在 |
+| T3 | `Output` 拒絕 `section="other"`、`task_id="abc"`、缺 `draft`（`"3"` 在 JSON 寬鬆模式會轉成 3，不算錯型別，與其他節點一致；11/17 Mora 定） | 節點不存在 |
 | T4 | `real_ai` 標記：樣本 2 實際呼叫，`parse_output` 通過，且 R4 對 payload 允許的組合通過 | 節點不存在（CI 與 `AI_PROVIDER=off` 時跳過） |
 
-不改既有測試。跑全套一律加 `AI_PROVIDER=off`。
+既有測試只改一處：`test_unregistered_node_is_unavailable_without_calling` 原以 AI-05 當未登記節點，改用永不登記的 `AI-99`，意圖不變。跑全套一律加 `AI_PROVIDER=off`。
 
 ## 5. 評估與費用（Q3 選 A 時）
 

@@ -6,6 +6,7 @@
 
 import json
 import os
+from datetime import date
 from types import SimpleNamespace
 
 import anthropic
@@ -14,8 +15,11 @@ import pytest
 
 from app.ai.anthropic_client import AnthropicAIClient
 from app.ai.client import AIInvalidOutput, AITimeout, AIUnavailable, FakeAIClient
+from app.ai.nodes import NODES
 from app.ai.provider import ai_from_settings
 from app.config import Settings
+from app.domain import ai05
+from app.domain.weekly_report import SECTIONS, WeekData, reconcile
 
 REQ = httpx2.Request("POST", "https://api.anthropic.com/v1/messages")
 AI01_PAYLOAD = {"today": "2026-11-11", "messages": [{"ref": 1, "speaker": "王", "spoken_at": None, "text": "報價單延到 11/18"}],
@@ -78,6 +82,34 @@ def test_registered_nodes_parse(node, out):
     assert _client(FakeSDK(result=_reply(out))).call(node, {}) == out
 
 
+# AI-05（docs/dev-b/ai-05-sdd.md）：輸出範例取自 spec 5.3a
+AI05_OUT = {"draft": "本週（11/09–11/15）工作進度…",
+            "items": [{"section": "done", "task_id": 3, "event_id": 41},
+                      {"section": "next", "task_id": 5, "event_id": None}]}
+
+
+def test_ai05_registered_and_parses_spec_example():
+    assert "AI-05" in NODES
+    assert _client(FakeSDK(result=_reply(AI05_OUT))).call("AI-05", {}) == AI05_OUT
+
+
+def test_ai05_section_values_match_weekly_report_sections():
+    # 值域只有一份事實：weekly_report.SECTIONS；節點 schema 必須與它相同（SDD 2.1、Q1）
+    schema = NODES["AI-05"].output.model_json_schema()
+    item = schema["$defs"]["Item"]["properties"]["section"]
+    assert set(item["enum"]) == set(SECTIONS)
+
+
+@pytest.mark.parametrize("bad", [
+    {"draft": "x", "items": [{"section": "other", "task_id": 3, "event_id": 41}]},
+    {"draft": "x", "items": [{"section": "done", "task_id": "abc", "event_id": 41}]},   # "3" 會被寬鬆轉型成 3，與其他節點一致
+    {"items": []},
+])
+def test_ai05_rejects_out_of_shape_output(bad):
+    with pytest.raises(AIInvalidOutput):
+        _client(FakeSDK(result=_reply(bad))).call("AI-05", {})
+
+
 def test_sdk_retries_disabled():
     assert AnthropicAIClient(api_key="k", model="m").sdk.max_retries == 0
 
@@ -128,7 +160,7 @@ def test_refusal_maps_to_unavailable():   # 重試通常仍拒答，直接走退
 def test_unregistered_node_is_unavailable_without_calling():
     sdk = FakeSDK(result=_reply({}))
     with pytest.raises(AIUnavailable):
-        _client(sdk).call("AI-05", {})
+        _client(sdk).call("AI-99", {})   # 永遠不登記的節點；原本用 AI-05，AI-05 已登記（ai-05-sdd）
     assert sdk.kwargs is None
 
 
@@ -190,3 +222,24 @@ def test_real_ai06_smoke():
 @real_ai
 def test_real_ai07_smoke():
     assert _real().call("AI-07", AI07_PAYLOAD) == {"title": 0, "owner": 1, "start": 2, "end": 3}
+
+
+# #22 Dev-A 給的樣本 2（小型；任務 2 同時延期又逾期，出現在 delay 與 next）
+AI05_PAYLOAD = {
+    "week": {"start": "2026-11-09", "end": "2026-11-15"},
+    "done": [{"task_id": 1, "title": "本週完成", "owner": "我", "done_date": "2026-11-10", "event_id": 11}],
+    "delay": [{"task_id": 2, "title": "延期任務", "owner": "小薇", "orig_due": "2026-11-12",
+               "latest_due": "2026-11-15", "event_ids": [21]}],
+    "next": [{"task_id": 2, "title": "延期任務", "owner": "小薇", "latest_due": "2026-11-15", "blocked": False},
+             {"task_id": 3, "title": "下週到期", "owner": "我", "latest_due": "2026-11-18", "blocked": False}],
+}
+
+
+@pytest.mark.real_ai
+@real_ai
+def test_real_ai05_smoke():
+    data = WeekData(week_start=date(2026, 11, 9), week_end=date(2026, 11, 15), excluded_private=0,
+                    **{s: AI05_PAYLOAD[s] for s in SECTIONS})
+    draft, items = ai05.parse_output(_real().call("AI-05", AI05_PAYLOAD, timeout_s=20))
+    assert reconcile(items, data)
+    assert {(i["section"], i["task_id"]) for i in items} == {("done", 1), ("delay", 2), ("next", 2), ("next", 3)}
