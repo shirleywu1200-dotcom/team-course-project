@@ -1,6 +1,6 @@
 // 12.7 匯入精靈的 Dev 元件測試（Vitest＋MSW；SDD 第 7 節）。
 
-import { screen, waitFor, within } from "@testing-library/react";
+import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 
@@ -212,4 +212,82 @@ test("commit 422 VALIDATION_ERROR 指出列號並提示重新預覽", async () =
   await screen.findByText("任務 0");
   await user.click(saveButton());
   expect(await screen.findByRole("alert")).toHaveTextContent("第 1 列仍有錯誤，請修正原文後重新預覽。");
+});
+
+function aiPreview(id = 71): ImportPreview {
+  const data = previewOf([row(0)], "ai");
+  return { ...data, column_map: { ...data.column_map, ai_run_id: id } };
+}
+const imported = () => HttpResponse.json({ project_id: 9, created: 1, skipped: 0, event_id: 40 }, { status: 201 });
+
+test("C1 accepted：確認 AI 建議再保存，commit 帶 AI id、四欄對應與 Idempotency-Key", async () => {
+  const user = userEvent.setup();
+  capture("/projects/import/preview", () => HttpResponse.json(aiPreview()));
+  const commits = capture("/projects/import/commit", imported);
+  renderWithClient(<ImportPage />);
+  await pasteAndPreview(user);
+  await user.click(await screen.findByRole("button", { name: "確認對應" }));
+  await user.click(saveButton());
+  await waitFor(() => expect(commits).toHaveLength(1));
+  expect(commits[0].body).toMatchObject({ ai_run_id: 71, column_map: { title: 0, owner: 1, start: 2, end: 3 } });
+  expect(commits[0].key).toBeTruthy();
+});
+
+test("C1 changed：重送預覽只帶四欄索引；manual 回應無 id，保存仍帶第一次 AI id", async () => {
+  const user = userEvent.setup();
+  const previews = capture("/projects/import/preview", () => HttpResponse.json(aiPreview()),
+    () => HttpResponse.json(previewOf([row(0)], "manual", {
+      column_map: { title: 0, owner: null, start: 2, end: 3, mapped_by: "manual" },
+    })));
+  const commits = capture("/projects/import/commit", imported);
+  renderWithClient(<ImportPage />);
+  await pasteAndPreview(user);
+  await screen.findByRole("button", { name: "確認對應" });
+  await user.selectOptions(screen.getByLabelText("負責人"), "");
+  await user.click(screen.getByRole("button", { name: "套用對應" }));
+  await waitFor(() => expect(saveButton()).toBeEnabled());
+  expect(previews[1].body.column_map).toEqual({ title: 0, owner: null, start: 2, end: 3 });
+  await user.click(saveButton());
+  await waitFor(() => expect(commits).toHaveLength(1));
+  expect(commits[0].body).toMatchObject({ ai_run_id: 71, column_map: { title: 0, owner: null, start: 2, end: 3 } });
+});
+
+test.each(["原文", "目標"])("C1：改%s後清除 AI id，新一輪規則預覽不送舊回饋", async (changed) => {
+  const user = userEvent.setup();
+  capture("/projects/import/preview", () => HttpResponse.json(aiPreview()), () => HttpResponse.json(previewOf([row(0)])));
+  const commits = capture("/projects/import/commit", imported);
+  renderWithClient(<ImportPage />);
+  await pasteAndPreview(user);
+  await screen.findByRole("button", { name: "確認對應" });
+  await user.type(screen.getByLabelText(changed === "原文" ? "貼上表格" : "新專案名稱"), "x");
+  await user.click(screen.getByRole("button", { name: "預覽" }));
+  await waitFor(() => expect(saveButton()).toBeEnabled());
+  await user.click(saveButton());
+  await waitFor(() => expect(commits).toHaveLength(1));
+  expect(commits[0].body).not.toHaveProperty("ai_run_id");
+  expect(commits[0].body).not.toHaveProperty("column_map");
+});
+
+test("C1：改原文後晚回的舊 AI 預覽不污染新一輪匯入的回饋", async () => {
+  const user = userEvent.setup();
+  let release!: () => void;
+  const oldPending = new Promise<void>(resolve => { release = resolve; });
+  let requests = 0;
+  server.use(http.post(`${API}/projects/import/preview`, async () => {
+    requests++;
+    if (requests === 1) { await oldPending; return HttpResponse.json(aiPreview()); }
+    return HttpResponse.json(previewOf([row(0)]));
+  }));
+  const commits = capture("/projects/import/commit", imported);
+  renderWithClient(<ImportPage />);
+  await pasteAndPreview(user);
+  await waitFor(() => expect(requests).toBe(1));
+  await user.type(screen.getByLabelText("貼上表格"), "x");
+  await user.click(screen.getByRole("button", { name: "預覽" }));
+  await waitFor(() => expect(saveButton()).toBeEnabled());
+  await act(async () => { release(); });
+  await user.click(saveButton());
+  await waitFor(() => expect(commits).toHaveLength(1));
+  expect(commits[0].body).not.toHaveProperty("ai_run_id");
+  expect(commits[0].body).not.toHaveProperty("column_map");
 });

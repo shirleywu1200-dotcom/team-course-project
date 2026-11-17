@@ -9,8 +9,8 @@ import { api, newIdempotencyKey } from "../../api/client";
 import { directionOf } from "../../api/dates";
 import { fetchReasons, keys } from "../../api/queries";
 import type { DecideResult } from "../../api/types";
-import { ErrorBanner } from "../../components/standin/ErrorBanner";
-import { MarkChoice, type MarkValue } from "../../components/standin/MarkChoice";
+import { ErrorBanner } from "../../components/ErrorBanner";
+import { MarkChoice, type MarkValue } from "../../components/MarkChoice";
 import { isExternal, ReasonSelect } from "../../components/standin/ReasonSelect";
 
 function decision(r: DecideResult): string {

@@ -37,6 +37,7 @@ export const RUBRIC_V0: Rubric = {
 };
 
 export const devbHandlers = [
+  http.get(`${API}/projects`, () => HttpResponse.json({ items: [], total: 0 })),
   http.get(`${API}/settings`, () => HttpResponse.json(makeSettings())),
   http.get(`${API}/rubrics`, () => HttpResponse.json({ items: [RUBRIC_V0], total: 1 })),
   http.get(`${API}/candidates`, () => HttpResponse.json({ items: [], total: 0 })),

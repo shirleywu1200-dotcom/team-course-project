@@ -9,6 +9,14 @@ import { ReasonSelect as LegacyReasonSelect } from "./standin/ReasonSelect";
 import { reasons } from "../test/reasons";
 import { ApiError } from "../api/client";
 
+test.each([
+  [409, "CANDIDATE_NOT_OPEN", "這個候選已經處理過，已重新載入清單。"],
+  [413, "PAYLOAD_TOO_LARGE", "匯入最多 500 列、50,000 字"],
+] as const)("M2：正式錯誤橫幅支援 %s %s", (status, code, message) => {
+  render(<ErrorBanner error={new ApiError(status, code, "原始錯誤")} />);
+  expect(screen.getByRole("alert")).toHaveTextContent(message);
+});
+
 test("日期選擇不預填，送出 YYYY-MM-DD 原字串，不轉時區", () => {
   const change = vi.fn();
   const view = render(<DatePicker id="due" label="最新預計" value="" onChange={change} />);

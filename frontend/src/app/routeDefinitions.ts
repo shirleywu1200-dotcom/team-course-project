@@ -8,7 +8,6 @@ export const pageRoutes = [
   { path: "/projects/:projectId/history", title: "專案歷程", todo: "12.6" },
   { path: "/import", title: "匯入專案", todo: "12.7", nav: true },
   { path: "/inbox", title: "收件匣", todo: "12.8", nav: true, compactOrder: 1 },
-  { path: "/confirmations", title: "每日確認", todo: "12.8" },
   { path: "/today", title: "今日", todo: "12.9", nav: true, compactOrder: 2 },
   { path: "/tasks/:taskId/feedback", title: "完成回報", todo: "12.9" },
   { path: "/time-management", title: "時間管理統計", todo: "12.10", nav: true },

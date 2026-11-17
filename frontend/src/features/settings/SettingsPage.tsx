@@ -7,7 +7,7 @@ import { useState } from "react";
 
 import { fetchSettings, keys } from "../../api/queries";
 import type { AppSettings } from "../../api/types";
-import { ErrorBanner } from "../../components/standin/ErrorBanner";
+import { ErrorBanner } from "../../components/ErrorBanner";
 import { draftValid, GroupFields } from "./GroupFields";
 import { changedFields, groupOf, GROUPS, type GroupId } from "./options";
 import { saveSettings } from "./requests";

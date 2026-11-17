@@ -57,3 +57,24 @@ test("匯入既有專案時不送 new_name", () => {
     rows: [{ index: 0, title: "任務 0", owner: "我", start: "2026-11-16", end: "2026-11-18", skip: false }],
   });
 });
+
+test("C1：AI 回饋成對送出 ai_run_id 與最終四欄索引，不夾帶回應 metadata", () => {
+  const mapping = { ...preview([row(0)], "ai").column_map, ai_run_id: 71 };
+  const body = buildCommitBody({ target: "new", newName: "範例匯入" }, [row(0)], new Set(), mapping);
+  expect(body).toMatchObject({ ai_run_id: 71, column_map: { title: 0, owner: 1, start: 2, end: 3 } });
+  expect(Object.keys(body.column_map!)).toEqual(["title", "owner", "start", "end"]);
+});
+
+test("C1：使用者修改 AI 對應後送最終索引，仍指向原始 AI 呼叫", () => {
+  const mapping = { ...preview([row(0)], "manual").column_map, owner: null, ai_run_id: 71 };
+  const body = buildCommitBody({ target: 3, newName: "" }, [row(0)], new Set(), mapping);
+  expect(body).toMatchObject({ ai_run_id: 71, column_map: { title: 0, owner: null, start: 2, end: 3 } });
+  expect(body).not.toHaveProperty("new_name");
+});
+
+test.each([undefined, null])("C1：沒有 AI 呼叫 id（%s）時兩個回饋鍵都省略", (ai_run_id) => {
+  const mapping = { ...preview([row(0)]).column_map, ai_run_id };
+  const body = buildCommitBody({ target: 3, newName: "" }, [row(0)], new Set(), mapping);
+  expect(body).not.toHaveProperty("ai_run_id");
+  expect(body).not.toHaveProperty("column_map");
+});
