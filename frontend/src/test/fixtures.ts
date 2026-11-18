@@ -49,6 +49,12 @@ export const historyFixtures = {
   empty: { items: [], total: 0 } satisfies HistoryList,
 };
 
+export const historyProjectFixture = {
+  id: 1, name: "範例專案", scope: "work", audience: "none", line_group_id: null,
+  created_at: "2026-11-01T09:00:00+08:00", updated_at: "2026-11-02T09:00:00+08:00", archived_at: null,
+  task_count: 1, baseline_saved_at: null,
+} satisfies components["schemas"]["ProjectDetailOut"];
+
 function statusFixture(status: StatusChange["status"]) {
   return {
     request: { status, expected_version: 1 } satisfies StatusChange,
