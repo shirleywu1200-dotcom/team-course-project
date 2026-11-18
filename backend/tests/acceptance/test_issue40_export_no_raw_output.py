@@ -47,13 +47,7 @@ def test_ai_runs_rows_have_no_raw_output_and_keep_other_columns(client, seed, qu
     assert MARK not in r.text
 
 
-def test_other_tables_keep_all_columns(client, seed, query):
-    seed(SEED_BASE + RUNS)
-    tables = export(client).json()["tables"]
-    for table, rows in tables.items():
-        if table == "ai_runs" or not rows:
-            continue
-        assert set(rows[0]) == columns(query, table), table
+# 其他表照帶全部欄位：改由 test_issue54_export_excluded_columns.py 的 E7 驗（種子涵蓋全部表，不會遇空表空轉；#54）
 
 
 def test_empty_ai_runs_exports_empty_list(client, seed):
