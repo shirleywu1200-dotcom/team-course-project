@@ -10,7 +10,7 @@ from datetime import date
 from sqlalchemy import Connection
 
 from app.clock import get_clock
-from app.db.repo import ai_runs_repo, candidates_repo, sources_repo
+from app.db.repo import ai_runs_repo, candidates_repo, projects_repo, sources_repo
 from app.domain import tasks
 from app.domain.due import adjust_due
 from app.domain.inbox.ingest import NODE
@@ -83,15 +83,20 @@ def create_task_from(conn: Connection, candidate_id: int, *, title: str, due: da
     """unmatched 候選：建立新任務，負責人預設為發言者（FR-INB-14）。建立事件記錄候選依據（R-01）。
 
     project_id 沒送時沿用候選收件時的專案；有送（含 null）以送來的為準（PR #20 B5）。
+    沿用的專案已封存時改建無專案任務，並回警告 PROJECT_ARCHIVED（#44 裁定 A）。
     """
     cand = _load_open(conn, candidate_id, {"unmatched"})
     owner = owner or sources_repo.get_many(conn, [cand["source_id"]])[0]["speaker"]
+    warnings: list[str] = []
     if project_id is _FROM_CANDIDATE:
         project_id = cand["project_id"]
+        if project_id is not None and projects_repo.get(conn, project_id)["archived_at"] is not None:
+            project_id = None
+            warnings.append("PROJECT_ARCHIVED")
     task = tasks.create_task(conn, title=title, owner=owner, due=due, project_id=project_id, origin="candidate",
                              origin_ref=cand["id"], source_id=cand["source_id"])
     return {"candidate": _close(conn, cand, "confirmed", "create_task", "changed", {"task_id": task["id"]}),
-            "task": task}
+            "task": task, "warnings": warnings}
 
 
 def ignore(conn: Connection, candidate_id: int) -> dict:

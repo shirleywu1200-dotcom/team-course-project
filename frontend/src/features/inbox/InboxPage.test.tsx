@@ -165,6 +165,28 @@ test("待配對：期限不預填，填了才能建立新任務", async () => {
   expect(calls[0].body).toEqual({ title: "報表處理我來", owner: "小薇", due: "2026-12-20" });
 });
 
+async function createTaskWith(warnings: string[]) {
+  const user = userEvent.setup();
+  const c = makeCandidate({ kind: "unmatched", certainty: "to_match", task: null, proposed: null,
+    quote: "報表處理我來", speaker: "小薇" });
+  serveOpen([c], []);
+  capture("/candidates/21/create-task", () => decided(c, { task: makeTask({ id: 9 }), warnings }));
+  renderWithClient(<InboxPage />);
+  await user.type(await screen.findByLabelText("期限"), "2026-12-20");
+  await user.click(screen.getByRole("button", { name: "建立新任務" }));
+  return screen.findByRole("region", { name: /^已處理/ });
+}
+
+test("#57 建任務回 PROJECT_ARCHIVED：已處理區顯示原專案已封存", async () => {
+  const done = await createTaskWith(["PROJECT_ARCHIVED"]);
+  expect(within(done).getByText("原專案已封存，任務已建為無專案")).toBeInTheDocument();
+});
+
+test("#57 建任務沒有警告：不顯示封存提示", async () => {
+  const done = await createTaskWith([]);
+  expect(within(done).queryByText("原專案已封存，任務已建為無專案")).not.toBeInTheDocument();
+});
+
 test("忽略：呼叫 ignore，不帶內容", async () => {
   const user = userEvent.setup();
   const c = makeCandidate({ kind: "stuck", proposed: null });

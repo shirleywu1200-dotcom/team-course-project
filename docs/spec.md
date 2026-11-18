@@ -219,7 +219,7 @@
 - FR-INB-11 確認 `done` 候選：任務標為完成、記完成日，並開啟完成回報（FR-FBK）。
 - FR-INB-12 確認 `stuck` 候選：任務 `blocked=1`，寫 `status` 事件。
 - FR-INB-13 `unclear` 候選：提供「我確認」（依建議值，事件依據註記為「待釐清，你確認」）與「忽略」。
-- FR-INB-14 `unmatched` 候選：可「建立新任務」（標題、負責人為發言者、期限由你確認）或「忽略」。
+- FR-INB-14 `unmatched` 候選：可「建立新任務」（標題、負責人為發言者、期限由你確認）或「忽略」。建任務時沒送 `project_id`，沿用候選收件時的專案（PR #20 B5）；該專案已封存時，任務建成無專案，回應 `warnings` 含 `PROJECT_ARCHIVED`（畫面顯示「原專案已封存，任務已建為無專案」）。明確送了 `project_id`（含已封存的專案、含 null）照舊，不檢查（#44 裁定 A）。
 - FR-INB-15 忽略保留紀錄，作為評估資料。
 - FR-INB-16 每日合併確認：在設定時間推播待確認數；確認時間以使用者設定上限為準，超過不強迫，但記錄實際使用時間供校正。
 
@@ -984,7 +984,7 @@ CREATE TABLE idempotency_keys (
 
 `confirm` 對 `done` 候選：輸出含 `feedback_required=true`。對 `unclear`、`unmatched` 使用專用端點；用錯端點回 `VALIDATION_ERROR`。
 
-`POST /candidates/{id}/create-task` 輸入：`{ "title": "報表處理", "owner": "阿德", "due": "2026-12-20", "project_id": 1 }`。
+`POST /candidates/{id}/create-task` 輸入：`{ "title": "報表處理", "owner": "阿德", "due": "2026-12-20", "project_id": 1 }`。輸出含 `warnings`（沒有時為 `[]`），可含 `PROJECT_ARCHIVED`：沒送 `project_id`、沿用的候選專案已封存，任務已建為無專案（FR-INB-14，#44）。
 
 ### 5.12 完成回報
 
