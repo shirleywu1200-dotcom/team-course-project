@@ -35,3 +35,23 @@ test("AC-08／10：只有我的非零 due 事件提供補或改註記入口", as
   rerender(<HistoryEventList items={historyFixtures.otherOwner.items} onAnnotate={onAnnotate} />);
   expect(screen.queryByRole("button", { name: /註記/ })).not.toBeInTheDocument();
 });
+
+test("12.6 選用捷徑為加法：未注入時列輸出完全相同，注入後才呼叫頁面 callback", async () => {
+  const user = userEvent.setup();
+  const item = { ...historyFixtures.marked.items[0], batch_id: 31 };
+  const { container, rerender } = render(<HistoryEventList items={[item]} />);
+  const original = container.innerHTML;
+  const onOpenTask = vi.fn();
+  const onOpenProjectHistory = vi.fn();
+  const onBatchFilter = vi.fn();
+  rerender(<HistoryEventList items={[item]} onOpenTask={onOpenTask}
+    onOpenProjectHistory={onOpenProjectHistory} onBatchFilter={onBatchFilter} />);
+  await user.click(screen.getByRole("button", { name: "查看任務：舊任務名稱" }));
+  await user.click(screen.getByRole("button", { name: "查看專案歷程：範例專案" }));
+  await user.click(screen.getByRole("button", { name: "篩選批次 #31" }));
+  expect(onOpenTask).toHaveBeenCalledWith(item);
+  expect(onOpenProjectHistory).toHaveBeenCalledWith(item);
+  expect(onBatchFilter).toHaveBeenCalledWith(item);
+  rerender(<HistoryEventList items={[item]} />);
+  expect(container.innerHTML).toBe(original);
+});

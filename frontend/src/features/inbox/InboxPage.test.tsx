@@ -323,3 +323,49 @@ test("確認候選後一併失效任務、時間管理統計與專案查詢", as
     expect(roots).toContain(root);
   }
 });
+
+// ---------- 快取失效：甘特（12.1）與歷程（12.6）會讀到收件匣寫入的結果 ----------
+
+const invalidatedRoots = (spy: { mock: { calls: unknown[][] } }) =>
+  spy.mock.calls.map(([f]) => JSON.stringify((f as { queryKey?: unknown } | undefined)?.queryKey));
+
+test("確認候選後一併失效甘特與歷程查詢", async () => {
+  const user = userEvent.setup();
+  const c = makeCandidate();
+  serveOpen([c], []);
+  capture("/candidates/21/confirm", () => decided(c));
+  const { client } = renderWithClient(<InboxPage />);
+  const spy = vi.spyOn(client, "invalidateQueries");
+  await user.click(await screen.findByRole("button", { name: "確認" }));
+  await waitFor(() => expect(invalidatedRoots(spy)).toContain('["candidates"]'));
+  expect(invalidatedRoots(spy)).toEqual(expect.arrayContaining(['["gantt"]', '["events"]']));
+});
+
+test("同步解析成功後一併失效甘特查詢", async () => {
+  const user = userEvent.setup();
+  capture("/ingest", () => HttpResponse.json({
+    mode: "sync", ai_status: "ok", candidates: [],
+    result: { created: 1, skipped: 0, duplicates: 0, unparsed_lines: [] },
+  }));
+  const { client } = renderWithClient(<InboxPage />);
+  const spy = vi.spyOn(client, "invalidateQueries");
+  await user.type(await screen.findByLabelText("貼上群組對話"), "x");
+  await user.click(screen.getByRole("button", { name: "解析" }));
+  await waitFor(() => expect(invalidatedRoots(spy)).toContain('["candidates"]'));
+  expect(invalidatedRoots(spy)).toContain('["gantt"]');
+});
+
+test("背景解析完成後一併失效甘特查詢", async () => {
+  const user = userEvent.setup();
+  capture("/ingest", () => HttpResponse.json({ mode: "async", job_id: 15, status: "queued" }));
+  server.use(http.get(`${API}/ingest/jobs/15`, () => HttpResponse.json({
+    id: 15, status: "succeeded", attempts: 1, error: null,
+    result: { created: 1, skipped: 0, duplicates: 0, unparsed_lines: [], ai_status: "ok", candidate_ids: [21] },
+  })));
+  const { client } = renderWithClient(<InboxPage pollMs={10} pollLimitMs={5000} />);
+  const spy = vi.spyOn(client, "invalidateQueries");
+  await user.type(await screen.findByLabelText("貼上群組對話"), "x");
+  await user.click(screen.getByRole("button", { name: "解析" }));
+  await waitFor(() => expect(invalidatedRoots(spy)).toContain('["candidates"]'));
+  expect(invalidatedRoots(spy)).toContain('["gantt"]');
+});

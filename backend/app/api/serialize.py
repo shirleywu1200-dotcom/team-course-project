@@ -23,3 +23,17 @@ def project_out(p: dict) -> dict:
     keys = ("id", "name", "scope", "audience", "line_group_id", "created_at", "updated_at", "archived_at",
             "task_count", "baseline_saved_at")
     return {k: p[k] for k in keys if k in p}
+
+
+def feedback_out(f: dict) -> dict:
+    """completion_feedback 列（spec 5.12 FeedbackOut）。"""
+    return {k: f[k] for k in (
+        "id", "task_id", "actual_stars", "energy", "invest_vs_expected", "overdue_days", "rubric_id", "created_at")}
+
+
+def pending_feedback_out(r: dict) -> dict:
+    """待補完成回報的一列（spec 5.12 PendingItem）。"""
+    return {"task_id": r["task_id"], "title": r["title"], "owner": r["owner_name"], "project_id": r["project_id"],
+            "done_date": r["done_date"], "orig_due": r["orig_due"], "overdue_days": r["overdue_days"],
+            "expected_stars": r["expected_stars"], "star_source": r["star_source"]}
+

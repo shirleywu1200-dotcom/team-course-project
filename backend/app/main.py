@@ -11,10 +11,12 @@ from app.ai.provider import ai_from_settings
 from app.api import (
     error_handlers,
     routes_events,
+    routes_feedback,
     routes_governance,
     routes_history,
     routes_import,
     routes_inbox,
+    routes_meta,
     routes_projects,
     routes_reports,
     routes_settings,
@@ -52,6 +54,8 @@ def create_app(settings: Settings | None = None, db: Database | None = None,
               routes_history.router, routes_inbox.router, routes_settings.router, routes_governance.router):
         api.include_router(r)
     api.include_router(routes_reports.router)   # 週報（Phase 10）；另起一行，不併入上面的清單
+    api.include_router(routes_feedback.router)  # 完成回報（Phase 9）
+    api.include_router(routes_meta.router)
     app.include_router(api)
     return app
 

@@ -33,8 +33,8 @@ export function CandidateCard({ candidate: c, onDecided }: Props) {
       api<DecideResult>(`/candidates/${c.id}/${action}`, { body: body ?? {}, idempotencyKey: newIdempotencyKey() }),
     onSuccess: (r) => {
       qc.invalidateQueries({ queryKey: queryRoots.candidates });
-      // 確認會改任務、時間管理統計（未註記數）與專案摘要（open_candidates）
-      for (const root of [queryRoots.tasks, queryRoots.timeManagement, queryRoots.projects]) {
+      // 確認會改任務、時間管理統計（未註記數）、專案摘要（open_candidates）、甘特與歷程
+      for (const root of [queryRoots.tasks, queryRoots.timeManagement, queryRoots.projects, queryRoots.gantt, queryRoots.events]) {
         qc.invalidateQueries({ queryKey: root });
       }
       onDecided(r);
