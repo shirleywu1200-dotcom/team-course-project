@@ -13,7 +13,8 @@
     格式：節點 Output 驗證通過（client 不丟例外）。
     id 合法：每一項的 task_id 在 payload、goal_id 在 payload 或為 null。
     覆蓋：每個任務剛好一項（不漏、不重複）。
-    準確：goal_id 等於案例標註的 expected（以任務計，跨案例加總）。
+    準確：goal_id 等於案例標註的 expected（以任務計，跨案例加總；expected 為陣列時任一皆算對）。
+    困難案例：--cases ../scripts/eval_data/ai03_hard_cases.json
 """
 
 import argparse
@@ -55,9 +56,11 @@ def covered(items: list[dict], payload: dict) -> bool:
     return len(got) == len(set(got)) and set(got) == {t["task_id"] for t in payload["tasks"]}
 
 
-def correct_count(items: list[dict], expected: dict[str, int | None]) -> int:
+def correct_count(items: list[dict], expected: dict[str, int | None | list[int]]) -> int:
+    # expected 為陣列時表示兩者皆可（例：一個任務同時沾到兩個目標）
     got = {str(i["task_id"]): i["goal_id"] for i in items}
-    return sum(1 for tid, gid in expected.items() if tid in got and got[tid] == gid)
+    return sum(1 for tid, gid in expected.items()
+               if tid in got and (got[tid] in gid if isinstance(gid, list) else got[tid] == gid))
 
 
 def main() -> int:
