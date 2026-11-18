@@ -535,3 +535,27 @@ class PendingFeedbackOut(Out):
 
 class TodayOut(Out):
     today: date = Field(description="伺服器的今天（台北時區）")
+
+
+# ---------- 目標（Phase 9，Dev-A；spec 5.13）----------
+
+class GoalOut(Out):
+    id: int
+    type: Literal["growth", "time", "expectation"]
+    title: str
+    period: str
+    definition: str
+    target: int = Field(description="growth：件數；time：分鐘／週；expectation：不用，固定 0")
+    energy_plan: Literal["high", "mid", "low"]
+    project_id: int | None = Field(description="只有 expectation 有值")
+    created_at: datetime
+    archived_at: datetime | None
+
+
+class GoalListOut(Out):
+    items: list[GoalOut]
+
+
+class GoalPatchOut(Out):
+    goal: GoalOut
+    changes: list[EventOut]

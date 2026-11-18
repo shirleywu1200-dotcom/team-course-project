@@ -36,6 +36,9 @@ export const mutationInvalidations = {
   "POST /reports/weekly/draft": ["weeklyReports"],
   "PUT /reports/weekly/{report_id}/manual": ["weeklyReports"],
   "PUT /tasks/{task_id}/feedback": ["timeManagement", "events"],
+  "POST /goals": ["goals", "events"],
+  "PATCH /goals/{goal_id}": ["goals", "events"],
+  "POST /goals/{goal_id}/archive": ["goals", "events"],
 } as const satisfies Record<string, readonly (keyof typeof queryRoots)[]>;
 
 export type MutationAction = keyof typeof mutationInvalidations;

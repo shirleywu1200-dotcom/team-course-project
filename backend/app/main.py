@@ -12,6 +12,7 @@ from app.api import (
     error_handlers,
     routes_events,
     routes_feedback,
+    routes_goals,
     routes_governance,
     routes_history,
     routes_import,
@@ -56,6 +57,7 @@ def create_app(settings: Settings | None = None, db: Database | None = None,
     api.include_router(routes_reports.router)   # 週報（Phase 10）；另起一行，不併入上面的清單
     api.include_router(routes_feedback.router)  # 完成回報（Phase 9）
     api.include_router(routes_meta.router)
+    api.include_router(routes_goals.router)     # 目標（Phase 9）
     app.include_router(api)
     return app
 

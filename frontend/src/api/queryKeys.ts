@@ -44,6 +44,7 @@ export const queryRoots = {
   reasons: ["meta", "reasons"], health: ["meta", "health"],
   candidates: ["candidates"], settings: ["settings"], rubrics: ["rubrics"],
   weeklyReports: ["reports", "weekly"],
+  goals: ["goals"],
 } as const;
 
 const projectTasks = (id: number) => [...queryRoots.tasks, "project", id] as const;

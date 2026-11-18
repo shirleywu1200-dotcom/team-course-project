@@ -37,3 +37,9 @@ def pending_feedback_out(r: dict) -> dict:
             "done_date": r["done_date"], "orig_due": r["orig_due"], "overdue_days": r["overdue_days"],
             "expected_stars": r["expected_stars"], "star_source": r["star_source"]}
 
+
+def goal_out(g: dict) -> dict:
+    """goals 列（spec 5.13 GoalOut）。"""
+    return {k: g[k] for k in (
+        "id", "type", "title", "period", "definition", "target", "energy_plan", "project_id", "created_at",
+        "archived_at")}

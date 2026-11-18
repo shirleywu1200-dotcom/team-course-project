@@ -121,3 +121,28 @@ class FeedbackSave(Strict):
     energy: Literal["high", "mid", "low"]
     invest_vs_expected: Literal["less", "as_expected", "more"] | None = None
     rubric_id: int = Field(strict=True)
+
+
+# ---------- 目標（Phase 9，Dev-A；spec 5.13）----------
+
+GoalType = Literal["growth", "time", "expectation"]
+Energy = Literal["high", "mid", "low"]
+
+
+class GoalCreate(Strict):
+    type: GoalType
+    title: str
+    period: str
+    energy_plan: Energy
+    definition: str = ""
+    target: int = Field(0, ge=0)
+    project_id: int | None = None
+
+
+class GoalPatch(Strict):
+    """type、project_id 建立後不可改，送了也忽略。"""
+    title: str | None = None
+    period: str | None = None
+    definition: str | None = None
+    target: int | None = Field(None, ge=0)
+    energy_plan: Energy | None = None

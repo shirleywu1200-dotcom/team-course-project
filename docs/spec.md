@@ -1015,14 +1015,25 @@ CREATE TABLE idempotency_keys (
 
 | Method | Path | 說明 |
 | --- | --- | --- |
-| GET / POST | `/goals` | 列表、建立 |
+| GET / POST | `/goals` | 列表（`?include_archived=false` 預設不含封存）、建立 |
 | GET / PATCH | `/goals/{id}` | 取得、編輯 |
+| POST | `/goals/{id}/archive` | 封存（停用即封存，不刪除；#47 B7） |
 | GET | `/goals/{id}/stats` | 統計與判讀 |
 | GET | `/goals/matrix` | 目標 × 精力矩陣 |
 | GET | `/goal-links/pending` | 已完成回報但未關聯目標的事件，含 AI-03 建議 |
 | POST | `/goal-links` | 你確認關聯（`{ task_id, goal_id }`，`goal_id=null` 表示不關聯；2026-11-18 裁定統一端點，#47 B1） |
 | POST | `/goals/{id}/report/draft` | AI-04 草稿 |
 | PUT | `/goals/{id}/report/manual` | 儲存人工版 |
+
+目標的建立、編輯、封存（9.5；比照專案 FR-PRJ-01～03，#47 B4、B7 與第二片提案）：
+- `GoalOut`＝`{ id, type, title, period, definition, target, energy_plan, project_id, created_at, archived_at }`；列表輸出 `{ "items": [GoalOut] }`，依 id 排序。
+- `POST /goals` 輸入：`{ "type": "growth", "title": "學會 SQL 視窗函式", "period": "2026Q4", "definition": "", "target": 3, "energy_plan": "high", "project_id": null }`，回 201 `GoalOut`。
+  - `type`（`growth`／`time`／`expectation`）、`title`、`period`、`energy_plan`（`high`／`mid`／`low`）必填；`title`、`period` 去頭尾空白後不可為空。`definition` 預設空字串；`target` 為 0 以上整數，預設 0。
+  - `expectation` 必須帶存在的 `project_id`，`target` 忽略、存 0（B4）；其他類型 `project_id` 必須為 null。違反時回 `VALIDATION_ERROR`（`details.fields` 指出欄位）。
+- `PATCH /goals/{id}` 可改 `title`、`period`、`definition`、`target`、`energy_plan`；`type`、`project_id` 建立後不可改（送了也忽略）；`expectation` 的 `target` 忽略。只有實際變更的欄位寫事件，沒有變更回原值、不寫事件。輸出 `{ "goal": GoalOut, "changes": [EventOut] }`。
+- `POST /goals/{id}/archive` 寫 `archived_at`；已封存再送回原值、不寫事件。封存的目標照常可讀、可查統計，不可新增關聯（422，B7）。
+- 歷程（FR-HIS-01）：建立、每個變更欄位、封存各寫一筆事件，`kind='goal'`、`task_id` 為 null、`task_title` 為空字串，`field` 為 `created`／欄位名／`archived_at`，`extra`＝`{ "goal_id": id }`，`project_id` 為目標的 `project_id`。和關聯事件（`field='goal_id'`、帶 `task_id`）以 `task_id` 是否為 null 分辨。
+- 目標不存在回 `NOT_FOUND`。
 
 `GET /goals/{id}/stats` 輸出：
 
