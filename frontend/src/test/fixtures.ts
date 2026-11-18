@@ -106,3 +106,13 @@ export const adjustStartFixtures = {
   staleVersion: startError("STALE_VERSION", { ...startRequest, expected_version: 3 }),
   validationError: startError("VALIDATION_ERROR", { ...startRequest, new_start: "invalid-date" }),
 };
+
+export const dataControlFixtures = {
+  exportEmpty: {
+    exported_at: "2026-11-16T18:00:00+08:00", schema_version: "0003",
+    counts: { settings: 0, sources: 0, events: 0, ai_runs: 0 },
+    tables: { settings: [], sources: [], events: [], ai_runs: [] },
+  } satisfies components["schemas"]["ExportOut"],
+  purgedZero: { purged: 0 } satisfies components["schemas"]["PurgeOut"],
+  purgedThree: { purged: 3 } satisfies components["schemas"]["PurgeOut"],
+};

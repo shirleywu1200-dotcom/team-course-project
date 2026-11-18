@@ -61,7 +61,7 @@ test.each([
   try {
     open(path);
     expect(await screen.findByRole("heading", { name: title, level: 1 })).toBeInTheDocument();
-    if (["/import", "/inbox", "/setup", "/settings"].includes(path)) {
+    if (["/import", "/inbox", "/setup", "/settings", "/data-control"].includes(path)) {
       expect(screen.queryByText("此功能尚未開放。")).not.toBeInTheDocument();
       expect(fetchSpy).toHaveBeenCalled();
     } else {
