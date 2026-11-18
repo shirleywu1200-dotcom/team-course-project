@@ -269,10 +269,10 @@ Dev-A 註（2026-11-13）：Dev-A 範圍內標 `[~]` 的項目，表示已實作
 **對外契約**：`PUT /tasks/{id}/feedback`、`/goals*`、`/goal-links*`。
 **獨立測試**：SQL 種子已完成任務與量表版本。
 
-- [ ] 9.1 完成回報儲存：必填檢查、`overdue_days` 伺服器計算、記錄 `rubric_id`　`FR-FBK-02–04`　`AC-43–45`
-- [ ] 9.2 稍後補與待補清單 `GET /feedback/pending`　`FR-FBK-05`
+- [~] 9.1 完成回報儲存：必填檢查、`overdue_days` 伺服器計算、記錄 `rubric_id`　`FR-FBK-02–04`　`AC-43–45`
+- [~] 9.2 稍後補與待補清單 `GET /feedback/pending`　`FR-FBK-05`
 - [ ] 9.3 回報修改（新增更正事件，統計取最新）⛔ D-05　`FR-FBK-06`
-- [ ] 9.4 確認：**精力與實際星數由使用者填，無任何 AI 預填欄位**的測試　`FR-FBK-07`、`FR-AI-06`
+- [~] 9.4 確認：**精力與實際星數由使用者填，無任何 AI 預填欄位**的測試　`FR-FBK-07`、`FR-AI-06`
 - [ ] 9.5 目標 CRUD 與預期精力　`FR-GOL-01、02`
 - [ ] 9.6 關聯確認端點；`ai_feedback`（accepted／changed）— M　`FR-GOL-03`　`AC-47`
 - [ ] 9.7 AI-03 關聯建議與退路（不提議）— M　`FR-GOL-03`
