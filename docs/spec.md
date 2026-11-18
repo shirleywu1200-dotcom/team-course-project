@@ -712,7 +712,7 @@ CREATE TABLE idempotency_keys (
   - 待關聯超過 20 筆時，送完成日最新的 20 筆；其餘再按一次。
   - 明確不送：完成回報的星數與精力（FR-AI-06）、目標的 `definition`、`energy_plan`、任務負責人、原句。
 - 輸出：`{ "items": [{ "task_id": 7, "goal_id": 2, "reason": "任務內容與 SQL 學習相關" }] }`
-  - `goal_id` 可為 null，表示沒有合適的目標。每個任務最多一項；`task_id` 或 `goal_id` 不在 payload 的項目整項丟棄（不算錯誤）。
+  - `goal_id` 可為 null，表示沒有合適的目標。每個任務最多一項：同一個 `task_id` 出現多次時保留第一項、其餘丟棄；`task_id` 或 `goal_id` 不在 payload 的項目整項丟棄（兩者都不算錯誤，#73 Dev-B 提問、Dev-A 定）。
   - `reason` 不超過 200 字、不含 NUL，否則算 `invalid_output`。`reason` 只說明內容相關，不評價任務或人（FR-AI-06）。
 - 記錄：比照 AI-01 存 `raw_output`（清除與匯出依 6.7：清除時設 NULL，匯出不帶）。重試比照 AI-01。
 
