@@ -49,7 +49,7 @@ test.each([
   ["/tasks", "任務"],
   ["/tasks/new", "新增任務"],
   ["/history", "歷程"],
-  ["/projects/1/history", "專案歷程"],
+  ["/projects/1/history", "範例專案歷程"],
   ["/import", "匯入專案"],
   ["/inbox", "收件匣"],
   ["/today", "今日"],
@@ -69,7 +69,7 @@ test.each([
       expect(await screen.findByText(timeManagementFixtures.insufficient.judgement_note)).toBeInTheDocument();
       expect(screen.queryByText("此功能尚未開放。")).not.toBeInTheDocument();
       expect(fetchSpy).toHaveBeenCalled();
-    } else if (["/import", "/inbox", "/setup", "/settings", "/reports", "/data-control"].includes(path)) {
+    } else if (["/import", "/inbox", "/setup", "/settings", "/reports", "/data-control", "/history", "/projects/1/history"].includes(path)) {
       expect(screen.queryByText("此功能尚未開放。")).not.toBeInTheDocument();
       expect(fetchSpy).toHaveBeenCalled();
     } else {
