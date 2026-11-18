@@ -111,3 +111,13 @@ class WeeklyDraft(Strict):
 
 class ManualText(Strict):
     manual_text: str | None
+
+
+# ---------- 完成回報（Phase 9，Dev-A；spec 5.12）----------
+
+class FeedbackSave(Strict):
+    """不收 goal_id（關聯走 POST /goal-links，#47 A6）；overdue_days 等伺服器欄位送了也忽略。"""
+    actual_stars: int = Field(ge=1, le=5, strict=True)   # strict：true、"4" 不會被轉成整數
+    energy: Literal["high", "mid", "low"]
+    invest_vs_expected: Literal["less", "as_expected", "more"] | None = None
+    rubric_id: int = Field(strict=True)

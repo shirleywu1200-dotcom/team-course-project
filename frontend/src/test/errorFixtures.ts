@@ -8,6 +8,7 @@ export const errorDefinitions = [
   { status: 409, code: "STALE_VERSION" },
   { status: 409, code: "CONFIRMATION_INVALID" },
   { status: 409, code: "CANDIDATE_NOT_OPEN" },
+  { status: 409, code: "FEEDBACK_EXISTS" },
   { status: 413, code: "PAYLOAD_TOO_LARGE" },
   { status: 422, code: "VALIDATION_ERROR" },
   { status: 422, code: "NO_CHANGE" },

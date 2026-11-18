@@ -496,3 +496,42 @@ class ExportOut(Out):
     schema_version: str | None
     counts: dict[str, int]
     tables: dict[str, list[dict]]
+
+
+# ---------- 完成回報（Phase 9，Dev-A；spec 5.12）----------
+
+class FeedbackOut(Out):
+    id: int
+    task_id: int
+    actual_stars: int
+    energy: Literal["high", "mid", "low"]
+    invest_vs_expected: Literal["less", "as_expected", "more"] | None
+    overdue_days: int = Field(description="伺服器計算：max(0, done_date − orig_due)")
+    rubric_id: int
+    created_at: datetime
+
+
+class FeedbackSaveOut(Out):
+    feedback: FeedbackOut
+    event: EventOut
+
+
+class PendingFeedbackItem(Out):
+    task_id: int
+    title: str
+    owner: str
+    project_id: int | None
+    done_date: date
+    orig_due: date
+    overdue_days: int
+    expected_stars: int
+    star_source: Literal["self", "ai_accepted", "ai_edited", "import_default"]
+
+
+class PendingFeedbackOut(Out):
+    items: list[PendingFeedbackItem]
+    total: int
+
+
+class TodayOut(Out):
+    today: date = Field(description="伺服器的今天（台北時區）")

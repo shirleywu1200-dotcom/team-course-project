@@ -10,11 +10,11 @@ import { API, makeTask, reasons, server } from "./server";
 const spec = readFileSync(resolve("../docs/spec.md"), "utf8");
 const serializer = readFileSync(resolve("../backend/app/api/serialize.py"), "utf8");
 
-test("spec 5.2 的全部 17 個錯誤碼與狀態集中在單一資料集", () => {
+test("spec 5.2 的全部 18 個錯誤碼與狀態集中在單一資料集", () => {
   const section = spec.slice(spec.indexOf("### 5.2 "), spec.indexOf("### 5.3 "));
   const expected = [...section.matchAll(/\|\s*(\d{3})\s*\|\s*`([A-Z_]+)`/g)]
     .map(([, status, code]) => [Number(status), code]);
-  expect(expected).toHaveLength(17);
+  expect(expected).toHaveLength(18);
   expect(errorDefinitions.map(({ status, code }) => [status, code])).toEqual(expected);
   expect(getErrorFixture("INTERNAL_ERROR").review).toBe("待產品負責人複核");
 });

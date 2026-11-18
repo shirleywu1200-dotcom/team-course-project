@@ -19,12 +19,16 @@ async function clearSourceCaches(qc: QueryClient) {
   await Promise.all([
     qc.cancelQueries({ queryKey: queryRoots.candidates }),
     qc.cancelQueries({ queryKey: ["events"] }),
+    qc.cancelQueries({ queryKey: queryRoots.tasks }),
   ]);
   qc.removeQueries({ queryKey: queryRoots.candidates });
   qc.removeQueries({ queryKey: ["events"] });
+  // 任務詳情內嵌歷程（含原文），存在 tasks 根底下
+  qc.removeQueries({ queryKey: queryRoots.tasks });
   await Promise.all([
     qc.refetchQueries({ queryKey: queryRoots.candidates, type: "active" }),
     qc.refetchQueries({ queryKey: ["events"], type: "active" }),
+    qc.refetchQueries({ queryKey: queryRoots.tasks, type: "active" }),
   ]);
 }
 
@@ -119,8 +123,6 @@ function PurgeSection() {
     mutationFn: () => api<PurgeOut>("/sources/purge", { method: "POST", body: { confirm: true } satisfies PurgeIn }),
     onSuccess: async () => {
       await clearSourceCaches(qc);
-      // 任務詳情內嵌歷程（含原文），存在 tasks 根底下
-      void qc.invalidateQueries({ queryKey: queryRoots.tasks });
       setConfirming(false);
       setAcknowledged(false);
     },

@@ -35,6 +35,7 @@ export const mutationInvalidations = {
   // 12.13 週報：H2 使用本次寫入回應替換快取，其他週報鍵只標 stale。
   "POST /reports/weekly/draft": ["weeklyReports"],
   "PUT /reports/weekly/{report_id}/manual": ["weeklyReports"],
+  "PUT /tasks/{task_id}/feedback": ["timeManagement", "events"],
 } as const satisfies Record<string, readonly (keyof typeof queryRoots)[]>;
 
 export type MutationAction = keyof typeof mutationInvalidations;
