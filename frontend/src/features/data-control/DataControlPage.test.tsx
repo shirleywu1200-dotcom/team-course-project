@@ -148,3 +148,15 @@ test.each([404, 401])("L1：真實 App 守門下 settings GET %s 至多兩次", 
     window.history.replaceState({}, "", "/");
   }
 });
+
+test("刪除來源原文後失效任務查詢（任務詳情內嵌的歷程帶原文）", async () => {
+  const user = userEvent.setup();
+  server.use(http.post(`${API}/sources/purge`, () => HttpResponse.json({ purged: 1 })));
+  const { client } = open();
+  client.setQueryData(keys.task(4), { task: { id: 4 }, events: [{ source: { quote: "待清原文" } }] });
+  await user.click(screen.getByRole("button", { name: "刪除所有來源原文" }));
+  await user.click(screen.getByRole("checkbox", { name: /我確認刪除/ }));
+  await user.click(screen.getByRole("button", { name: "確認" }));
+  await screen.findByText("已清除 1 筆來源原文。");
+  expect(client.getQueryState(keys.task(4))?.isInvalidated).toBe(true);
+});

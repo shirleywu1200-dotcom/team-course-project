@@ -3,6 +3,7 @@
 import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
+import { vi } from "vitest";
 
 import type { ImportPreview, ImportRow } from "../../api/types";
 import { API, apiError, renderWithClient, server } from "../../test/server";
@@ -290,4 +291,20 @@ test("C1：改原文後晚回的舊 AI 預覽不污染新一輪匯入的回饋",
   await waitFor(() => expect(commits).toHaveLength(1));
   expect(commits[0].body).not.toHaveProperty("ai_run_id");
   expect(commits[0].body).not.toHaveProperty("column_map");
+});
+
+// ---------- 快取失效：甘特（12.1）與歷程（12.6）會讀到匯入的結果 ----------
+
+test("匯入成功後一併失效甘特與歷程查詢", async () => {
+  const user = userEvent.setup();
+  capture("/projects/import/preview", () => HttpResponse.json(previewOf([row(0)])));
+  capture("/projects/import/commit", imported);
+  const { client } = renderWithClient(<ImportPage />);
+  const spy = vi.spyOn(client, "invalidateQueries");
+  await pasteAndPreview(user);
+  await screen.findByText("任務 0");
+  await user.click(saveButton());
+  await screen.findByText("已建立 1 個任務、略過 0 列（專案 #9）。");
+  const roots = spy.mock.calls.map(([f]) => JSON.stringify(f?.queryKey));
+  expect(roots).toEqual(expect.arrayContaining(['["projects"]', '["tasks"]', '["gantt"]', '["events"]']));
 });

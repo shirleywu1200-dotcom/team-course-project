@@ -119,6 +119,8 @@ function PurgeSection() {
     mutationFn: () => api<PurgeOut>("/sources/purge", { method: "POST", body: { confirm: true } satisfies PurgeIn }),
     onSuccess: async () => {
       await clearSourceCaches(qc);
+      // 任務詳情內嵌歷程（含原文），存在 tasks 根底下
+      void qc.invalidateQueries({ queryKey: queryRoots.tasks });
       setConfirming(false);
       setAcknowledged(false);
     },

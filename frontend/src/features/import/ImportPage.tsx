@@ -65,6 +65,8 @@ export function ImportPage() {
       setText("");
       qc.invalidateQueries({ queryKey: queryRoots.projects });
       qc.invalidateQueries({ queryKey: queryRoots.tasks });
+      qc.invalidateQueries({ queryKey: queryRoots.gantt });
+      qc.invalidateQueries({ queryKey: queryRoots.events });
     },
     onError: (err) => {
       if (!commitErrorMessage(err)) qc.invalidateQueries({ queryKey: queryRoots.projects });
