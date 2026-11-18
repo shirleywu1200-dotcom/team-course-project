@@ -12,6 +12,7 @@ from app.db.repo import events_repo, misc_repo, projects_repo
 from app.db.repo.tasks_repo import TaskRepo
 from app.domain.due import check_date_range  # 開始日與預計完成日共用同一個允許範圍
 from app.domain.events import OWNER_ME, write_event
+from app.domain.text import required_texts
 from app.errors import DomainError
 
 
@@ -37,10 +38,8 @@ def create_task(conn: Connection, *, title: str, due: date, owner: str = OWNER_M
     origin、origin_ref、source_id 記錄建立依據（FR-HIS-04）；例如收件匣從待配對候選建立任務時，
     帶 origin="candidate"、origin_ref=候選 id、source_id=原句來源（Issue #2、FR-INB-14）。
     """
-    title = (title or "").strip()
+    title = required_texts({"title": title})["title"]
     owner = (owner or "").strip() or OWNER_ME
-    if not title:
-        raise DomainError("VALIDATION_ERROR", details={"fields": ["title"]})
     if start is not None and start > due:
         raise DomainError("VALIDATION_ERROR", "開始日不可晚於期限", {"fields": ["start"]})   # FR-TSK-08、AC-61
     if project_id is not None:

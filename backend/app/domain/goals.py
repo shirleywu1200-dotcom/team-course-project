@@ -8,16 +8,10 @@ from sqlalchemy import Connection
 from app.clock import get_clock
 from app.db.repo import goals_repo, projects_repo
 from app.domain.events import write_event
+from app.domain.text import required_texts
 from app.errors import DomainError
 
 EDITABLE = ("title", "period", "definition", "target", "energy_plan")
-
-
-def _required_text(field: str, value: str) -> str:
-    value = (value or "").strip()
-    if not value:
-        raise DomainError("VALIDATION_ERROR", details={"fields": [field]})
-    return value
 
 
 def _check_project(goal_type: str, project_id: int | None, conn: Connection) -> None:
@@ -26,9 +20,11 @@ def _check_project(goal_type: str, project_id: int | None, conn: Connection) -> 
         if project_id is None:
             raise DomainError("VALIDATION_ERROR", "績效期待目標需要對應專案", {"fields": ["project_id"]})
         try:
-            projects_repo.get(conn, project_id)
+            project = projects_repo.get(conn, project_id)
         except DomainError:
             raise DomainError("VALIDATION_ERROR", "專案不存在", {"fields": ["project_id"]}) from None
+        if project["archived_at"] is not None:
+            raise DomainError("VALIDATION_ERROR", "專案已封存", {"fields": ["project_id"]})
     elif project_id is not None:
         raise DomainError("VALIDATION_ERROR", "只有績效期待目標可以對應專案", {"fields": ["project_id"]})
 
@@ -40,7 +36,8 @@ def _event(conn: Connection, goal: dict, field: str, from_value, to_value) -> di
 
 def create_goal(conn: Connection, *, type: str, title: str, period: str, energy_plan: str, definition: str = "",
                 target: int = 0, project_id: int | None = None) -> dict:
-    title, period = _required_text("title", title), _required_text("period", period)
+    texts = required_texts({"title": title, "period": period})
+    title, period = texts["title"], texts["period"]
     _check_project(type, project_id, conn)
     goal = goals_repo.insert(conn, {
         "type": type, "title": title, "period": period, "definition": definition,
@@ -54,10 +51,11 @@ def create_goal(conn: Connection, *, type: str, title: str, period: str, energy_
 def update_goal(conn: Connection, goal_id: int, changes: dict) -> tuple[dict, list[dict]]:
     """逐欄比較，每個實際變更的欄位各寫一筆事件；沒有變更不寫。type、project_id 不可改。"""
     goal = goals_repo.get(conn, goal_id, for_update=True)
-    changes = {k: v for k, v in changes.items() if k in EDITABLE and v is not None}
-    for field in ("title", "period"):
-        if field in changes:
-            changes[field] = _required_text(field, changes[field])
+    changes = {k: v for k, v in changes.items() if k in EDITABLE}
+    nulls = sorted(k for k, v in changes.items() if v is None)
+    if nulls:   # 明確送 null 不當成沒有變更
+        raise DomainError("VALIDATION_ERROR", details={"fields": nulls})
+    changes |= required_texts({k: changes[k] for k in ("title", "period") if k in changes})
     if goal["type"] == "expectation":
         changes.pop("target", None)
     diff = {k: v for k, v in changes.items() if v != goal[k]}

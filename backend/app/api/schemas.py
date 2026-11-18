@@ -135,7 +135,7 @@ class GoalCreate(Strict):
     period: str
     energy_plan: Energy
     definition: str = ""
-    target: int = Field(0, ge=0)
+    target: int = Field(0, ge=0, strict=True)
     project_id: int | None = None
 
 
@@ -144,5 +144,5 @@ class GoalPatch(Strict):
     title: str | None = None
     period: str | None = None
     definition: str | None = None
-    target: int | None = Field(None, ge=0)
+    target: int | None = Field(None, ge=0, strict=True)
     energy_plan: Energy | None = None

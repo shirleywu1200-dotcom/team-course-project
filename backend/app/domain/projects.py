@@ -5,16 +5,13 @@ from sqlalchemy import Connection
 from app.clock import get_clock
 from app.db.repo import events_repo, projects_repo
 from app.domain.events import write_event
-from app.errors import DomainError
+from app.domain.text import required_texts
 
 EDITABLE = ("name", "scope", "audience")
 
 
 def _clean_name(name: str) -> str:
-    name = (name or "").strip()
-    if not name:
-        raise DomainError("VALIDATION_ERROR", details={"fields": ["name"]})
-    return name
+    return required_texts({"name": name})["name"]
 
 
 def create_project(conn: Connection, *, name: str, scope: str = "work", audience: str = "manager",

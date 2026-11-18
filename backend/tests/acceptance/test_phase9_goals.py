@@ -23,9 +23,20 @@ from tests.acceptance.helpers import API, count
 TS = "'2026-11-01T09:00+08:00'"
 NOW = "2026-11-11T10:00:00+08:00"
 SEED = f"""
-INSERT INTO projects (id, name, scope, audience, created_at, updated_at) VALUES
- (1, '會員系統', 'work', 'manager', {TS}, {TS});
+INSERT INTO projects (id, name, scope, audience, created_at, updated_at, archived_at) VALUES
+ (1, '會員系統', 'work', 'manager', {TS}, {TS}, NULL),
+ (2, '舊專案', 'work', 'manager', {TS}, {TS}, '2026-11-05T09:00+08:00');
 """
+# 列表、取得、編輯、封存的前置資料直接以 SQL 種子建立（CLAUDE.md：不經上游程式碼建立）
+GOALS = f"""
+INSERT INTO goals (id, type, title, period, definition, target, energy_plan, project_id, created_at, archived_at) VALUES
+ (11, 'growth', '學會 SQL 視窗函式', '2026Q4', '完成 3 個查詢改寫', 3, 'mid', NULL, {TS}, NULL),
+ (12, 'time', '每週留 2 小時讀書', '2026Q4', '', 120, 'low', NULL, {TS}, '2026-11-08T09:00+08:00'),
+ (13, 'expectation', '會員系統準時上線', '2026Q4', '', 0, 'high', 1, {TS}, NULL);
+"""
+G11 = {"id": 11, "type": "growth", "title": "學會 SQL 視窗函式", "period": "2026Q4", "definition": "完成 3 個查詢改寫",
+       "target": 3, "energy_plan": "mid", "project_id": None, "created_at": "2026-11-01T09:00:00+08:00",
+       "archived_at": None}
 GOAL_KEYS = {"id", "type", "title", "period", "definition", "target", "energy_plan", "project_id", "created_at",
              "archived_at"}
 
@@ -91,11 +102,18 @@ def test_g2_required_fields(client, seed, query, field):
 
 @pytest.mark.parametrize("field,value", [
     ("type", "skill"), ("energy_plan", "HIGH"), ("title", "   "), ("period", ""), ("target", -1),
+    ("target", True), ("target", "3"),
 ])
 def test_g2_value_ranges(client, seed, query, field, value):
     seed(SEED)
     assert_validation(create(client, growth(**{field: value})), [field])
     assert count(query, "goals") == 0 and count(query, "events") == 0
+
+
+def test_g2_all_empty_text_fields_are_listed_together(client, seed, query):
+    seed(SEED)
+    assert_validation(create(client, growth(title="  ", period="")), ["period", "title"])
+    assert count(query, "goals") == 0
 
 
 def test_g2_title_and_period_are_trimmed(client, seed):
@@ -104,7 +122,7 @@ def test_g2_title_and_period_are_trimmed(client, seed):
     assert (goal["title"], goal["period"]) == ("學 SQL", "2026Q4")
 
 
-@pytest.mark.parametrize("project_id", [None, 999])
+@pytest.mark.parametrize("project_id", [None, 999, 2], ids=["missing", "unknown", "archived"])
 def test_g3_expectation_needs_existing_project(client, seed, query, project_id):
     seed(SEED)
     assert_validation(create(client, growth(type="expectation", project_id=project_id)), ["project_id"])
@@ -128,17 +146,16 @@ def test_g3_other_types_must_not_have_project(client, seed, query, goal_type):
 # ---------- G4、G5：列表與取得 ----------
 
 def test_g4_list_excludes_archived_by_default(client, seed):
-    seed(SEED)
-    ids = [create(client, growth(title=f"目標 {i}")).json()["id"] for i in range(3)]
-    assert client.post(f"{API}/goals/{ids[1]}/archive").status_code == 200
+    seed(SEED + GOALS)
     default = client.get(f"{API}/goals")
     assert default.status_code == 200
     assert set(default.json()) == {"items"}
-    assert [g["id"] for g in default.json()["items"]] == [ids[0], ids[2]]
+    assert [g["id"] for g in default.json()["items"]] == [11, 13]
     every = client.get(f"{API}/goals", params={"include_archived": "true"}).json()["items"]
-    assert [g["id"] for g in every] == ids
+    assert [g["id"] for g in every] == [11, 12, 13]
     for g in every:
         assert set(g) == GOAL_KEYS
+    assert every[0] == G11
 
 
 def test_g4_empty_list(client, seed):
@@ -147,10 +164,10 @@ def test_g4_empty_list(client, seed):
 
 
 def test_g5_get_goal(client, seed):
-    seed(SEED)
-    goal = create(client, growth()).json()
-    r = client.get(f"{API}/goals/{goal['id']}")
-    assert r.status_code == 200 and r.json() == goal
+    seed(SEED + GOALS)
+    r = client.get(f"{API}/goals/11")
+    assert r.status_code == 200 and r.json() == G11
+    assert client.get(f"{API}/goals/12").json()["archived_at"] is not None   # 封存仍可讀
     missing = client.get(f"{API}/goals/999")
     assert missing.status_code == 404 and missing.json()["error"]["code"] == "NOT_FOUND"
 
@@ -158,53 +175,59 @@ def test_g5_get_goal(client, seed):
 # ---------- G6：編輯 ----------
 
 def test_g6_each_changed_field_writes_one_event(client, seed, query):
-    seed(SEED)
-    goal = create(client, growth()).json()
-    r = client.patch(f"{API}/goals/{goal['id']}", json={"title": "學會 SQL", "target": 5, "energy_plan": "high",
-                                                       "period": "2026Q4"})
+    seed(SEED + GOALS)
+    r = client.patch(f"{API}/goals/11", json={"title": "學會 SQL", "target": 5, "energy_plan": "mid",
+                                              "period": "2026Q4"})
     assert r.status_code == 200, r.text
     out = r.json()
     assert set(out) == {"goal", "changes"}
     assert (out["goal"]["title"], out["goal"]["target"]) == ("學會 SQL", 5)
     changes = sorted((c["field"], c["from_value"], c["to_value"]) for c in out["changes"])
     assert changes == [("target", "3", "5"), ("title", "學會 SQL 視窗函式", "學會 SQL")]   # energy_plan、period 沒變
-    evs = goal_events(query)[1:]
-    assert len(evs) == 2 and all(e["task_id"] is None and e["extra"] == {"goal_id": goal["id"]} for e in evs)
+    evs = goal_events(query)
+    assert len(evs) == 2 and count(query, "events") == 2
+    assert all(e["task_id"] is None and e["task_title"] == "" and e["extra"] == {"goal_id": 11} for e in evs)
 
 
 def test_g6_no_change_writes_nothing(client, seed, query):
-    seed(SEED)
-    goal = create(client, growth()).json()
-    r = client.patch(f"{API}/goals/{goal['id']}", json={"title": goal["title"]})
-    assert r.status_code == 200 and r.json() == {"goal": goal, "changes": []}
-    assert count(query, "events") == 1
+    seed(SEED + GOALS)
+    r = client.patch(f"{API}/goals/11", json={"title": "學會 SQL 視窗函式"})
+    assert r.status_code == 200 and r.json() == {"goal": G11, "changes": []}
+    assert count(query, "events") == 0
 
 
 def test_g6_type_and_project_cannot_change(client, seed, query):
-    seed(SEED)
-    goal = create(client, growth()).json()
-    r = client.patch(f"{API}/goals/{goal['id']}", json={"type": "expectation", "project_id": 1})
+    seed(SEED + GOALS)
+    r = client.patch(f"{API}/goals/11", json={"type": "expectation", "project_id": 1})
     assert r.status_code == 200 and r.json()["changes"] == []
     assert (r.json()["goal"]["type"], r.json()["goal"]["project_id"]) == ("growth", None)
+    assert count(query, "events") == 0
 
 
 def test_g6_expectation_target_edit_is_ignored(client, seed, query):
-    seed(SEED)
-    goal = create(client, growth(type="expectation", project_id=1)).json()
-    r = client.patch(f"{API}/goals/{goal['id']}", json={"target": 90})
+    seed(SEED + GOALS)
+    r = client.patch(f"{API}/goals/13", json={"target": 90})
     assert r.json()["goal"]["target"] == 0 and r.json()["changes"] == []
+    assert count(query, "events") == 0
+
+
+def test_g6_archived_goal_can_still_be_edited(client, seed, query):
+    seed(SEED + GOALS)
+    r = client.patch(f"{API}/goals/12", json={"title": "每週 3 小時"})
+    assert r.status_code == 200 and [c["field"] for c in r.json()["changes"]] == ["title"]
 
 
 @pytest.mark.parametrize("body,fields", [
     ({"title": "  "}, ["title"]), ({"period": ""}, ["period"]), ({"energy_plan": "max"}, ["energy_plan"]),
-    ({"target": -2}, ["target"]),
+    ({"target": -2}, ["target"]), ({"target": True}, ["target"]),
+    ({"title": None}, ["title"]), ({"energy_plan": None}, ["energy_plan"]), ({"definition": None}, ["definition"]),
+    ({"title": "", "period": " "}, ["period", "title"]),
 ])
 def test_g6_invalid_edit_writes_nothing(client, seed, query, body, fields):
-    seed(SEED)
-    goal = create(client, growth()).json()
-    assert_validation(client.patch(f"{API}/goals/{goal['id']}", json=body), fields)
-    assert count(query, "events") == 1
-    assert client.get(f"{API}/goals/{goal['id']}").json() == goal
+    seed(SEED + GOALS)
+    assert_validation(client.patch(f"{API}/goals/11", json=body), fields)
+    assert count(query, "events") == 0
+    assert client.get(f"{API}/goals/11").json() == G11
 
 
 def test_g6_edit_unknown_goal(client, seed):
@@ -216,28 +239,28 @@ def test_g6_edit_unknown_goal(client, seed):
 # ---------- G7、G8：封存與歷程 ----------
 
 def test_g7_archive_once(client, seed, query):
-    seed(SEED)
-    goal = create(client, growth()).json()
-    r = client.post(f"{API}/goals/{goal['id']}/archive")
+    seed(SEED + GOALS)
+    r = client.post(f"{API}/goals/11/archive")
     assert r.status_code == 200 and r.json()["archived_at"] == NOW
-    again = client.post(f"{API}/goals/{goal['id']}/archive")
+    again = client.post(f"{API}/goals/11/archive")
     assert again.status_code == 200 and again.json() == r.json()
     evs = goal_events(query)
-    assert [e["field"] for e in evs] == ["created", "archived_at"]
-    assert client.get(f"{API}/goals/{goal['id']}").json()["archived_at"] == NOW   # 封存仍可讀
-    missing = client.post(f"{API}/goals/999/archive")
-    assert missing.status_code == 404
+    assert [(e["field"], e["to_value"], e["extra"]) for e in evs] == [("archived_at", NOW, {"goal_id": 11})]
+    assert client.get(f"{API}/goals/11").json()["archived_at"] == NOW
+    assert client.post(f"{API}/goals/12/archive").json()["archived_at"] == "2026-11-08T09:00:00+08:00"   # 已封存不改
+    assert len(goal_events(query)) == 1
+    assert client.post(f"{API}/goals/999/archive").status_code == 404
 
 
 def test_g8_history_only_grows(client, seed, query):
-    seed(SEED)
-    goal = create(client, growth()).json()
+    seed(SEED + GOALS)
+    client.patch(f"{API}/goals/13", json={"title": "新標題"})
     first = goal_events(query)
-    client.patch(f"{API}/goals/{goal['id']}", json={"title": "新標題"})
-    client.post(f"{API}/goals/{goal['id']}/archive")
+    client.post(f"{API}/goals/13/archive")
     evs = goal_events(query)
-    assert [e["field"] for e in evs] == ["created", "title", "archived_at"]
+    assert [e["field"] for e in evs] == ["title", "archived_at"]
     assert evs[0] == first[0]                                       # 舊事件不變
+    assert all(e["project_id"] == 1 for e in evs)                   # expectation 目標的事件帶專案
 
 
 # ---------- G9：認證 ----------

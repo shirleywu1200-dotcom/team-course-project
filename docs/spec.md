@@ -1028,9 +1028,9 @@ CREATE TABLE idempotency_keys (
 目標的建立、編輯、封存（9.5；比照專案 FR-PRJ-01～03，#47 B4、B7 與第二片提案）：
 - `GoalOut`＝`{ id, type, title, period, definition, target, energy_plan, project_id, created_at, archived_at }`；列表輸出 `{ "items": [GoalOut] }`，依 id 排序。
 - `POST /goals` 輸入：`{ "type": "growth", "title": "學會 SQL 視窗函式", "period": "2026Q4", "definition": "", "target": 3, "energy_plan": "high", "project_id": null }`，回 201 `GoalOut`。
-  - `type`（`growth`／`time`／`expectation`）、`title`、`period`、`energy_plan`（`high`／`mid`／`low`）必填；`title`、`period` 去頭尾空白後不可為空。`definition` 預設空字串；`target` 為 0 以上整數，預設 0。
-  - `expectation` 必須帶存在的 `project_id`，`target` 忽略、存 0（B4）；其他類型 `project_id` 必須為 null。違反時回 `VALIDATION_ERROR`（`details.fields` 指出欄位）。
-- `PATCH /goals/{id}` 可改 `title`、`period`、`definition`、`target`、`energy_plan`；`type`、`project_id` 建立後不可改（送了也忽略）；`expectation` 的 `target` 忽略。只有實際變更的欄位寫事件，沒有變更回原值、不寫事件。輸出 `{ "goal": GoalOut, "changes": [EventOut] }`。
+  - `type`（`growth`／`time`／`expectation`）、`title`、`period`、`energy_plan`（`high`／`mid`／`low`）必填；`title`、`period` 去頭尾空白後不可為空。`definition` 預設空字串；`target` 為 0 以上的 JSON 整數（`true`、`"3"` 回 `VALIDATION_ERROR`），預設 0；多個欄位同時不合格時一次列出。
+  - `expectation` 必須帶存在且未封存的 `project_id`；`target` 仍須符合格式，但值忽略、存 0（B4）；其他類型 `project_id` 必須為 null。違反時回 `VALIDATION_ERROR`（`details.fields` 指出欄位）。
+- `PATCH /goals/{id}` 可改 `title`、`period`、`definition`、`target`、`energy_plan`；`type`、`project_id` 建立後不可改（送了也忽略）；`expectation` 的 `target` 忽略；欄位明確送 null 回 `VALIDATION_ERROR`。封存的目標仍可編輯（比照專案）。只有實際變更的欄位寫事件，沒有變更回原值、不寫事件。輸出 `{ "goal": GoalOut, "changes": [EventOut] }`。
 - `POST /goals/{id}/archive` 寫 `archived_at`；已封存再送回原值、不寫事件。封存的目標照常可讀、可查統計，不可新增關聯（422，B7）。
 - 歷程（FR-HIS-01）：建立、每個變更欄位、封存各寫一筆事件，`kind='goal'`、`task_id` 為 null、`task_title` 為空字串，`field` 為 `created`／欄位名／`archived_at`，`extra`＝`{ "goal_id": id }`，`project_id` 為目標的 `project_id`。和關聯事件（`field='goal_id'`、帶 `task_id`）以 `task_id` 是否為 null 分辨。
 - 目標不存在回 `NOT_FOUND`。
