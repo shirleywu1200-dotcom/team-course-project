@@ -51,7 +51,7 @@
   },
   {
    "id": "period_boundary",
-   "category": "期間邊界（季末最後一天、非季別寫法 2026H2）",
+   "category": "期間邊界（季末最後一天、非季別寫法 2026H2）；不以期間排除，只看內容（#74 審查建議 1）",
    "payload": {
     "goals": [
      {"goal_id": 2, "type": "growth", "title": "學會 SQL 視窗函式", "period": "2026Q4"},
@@ -63,7 +63,7 @@
      {"task_id": 312, "title": "筆記軟體卡片分類整理", "done_date": "2026-07-15"}
     ]
    },
-   "expected": {"310": null, "311": 2, "312": 8}
+   "expected": {"310": 2, "311": 2, "312": 8}
   },
   {
    "id": "injection_id_overlap",

@@ -48,7 +48,7 @@
   },
   {
    "id": "period",
-   "category": "完成日在目標期間外",
+   "category": "完成日在目標期間外（不以期間排除，只看內容；#74 審查建議 1）",
    "payload": {
     "goals": [
      {"goal_id": 5, "type": "expectation", "title": "完成季報自動化", "period": "2026Q3"},
@@ -59,7 +59,7 @@
      {"task_id": 15, "title": "月報自動化排程設定", "done_date": "2026-11-10"}
     ]
    },
-   "expected": {"14": null, "15": 6}
+   "expected": {"14": 5, "15": 6}
   },
   {
    "id": "large",

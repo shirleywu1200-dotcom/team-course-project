@@ -26,7 +26,7 @@ class Output(BaseModel):
     figures: list[Figure]
 
 
-SYSTEM = """你協助把一個目標的統計，整理成給主管看的目標回報草稿。統計由程式算好，你只負責寫成文字。
+SYSTEM = """你協助把一個目標的統計，整理成對內的目標回報草稿。統計由程式算好，你只負責寫成文字。
 輸入是 JSON：
 - goal：type（growth＝能力成長、time＝時間配置、expectation＝績效期待）、title（目標名稱）、
   period（期間，例如 2026Q4）、energy_plan（預期精力：high 高、mid 中、low 低）。
