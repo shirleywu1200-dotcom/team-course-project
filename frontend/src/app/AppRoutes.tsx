@@ -3,6 +3,7 @@ import type { ComponentType } from "react";
 
 import { BulkShiftPage } from "../features/bulk-shift/BulkShiftPage";
 import { TaskDuePage } from "../features/due-adjust/TaskDuePage";
+import { DataControlPage } from "../features/data-control/DataControlPage";
 import { ImportPage } from "../features/import/ImportPage";
 import { InboxPage } from "../features/inbox/InboxPage";
 import { OnboardingPage } from "../features/settings/OnboardingPage";
@@ -18,6 +19,7 @@ const featurePages: Record<string, ComponentType> = {
   [ONBOARDING_PATH]: OnboardingPage,
   "/settings": SettingsPage,
   "/reports": WeeklyReportPage,
+  "/data-control": DataControlPage,
 };
 
 function Home() {

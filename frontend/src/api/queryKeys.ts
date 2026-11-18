@@ -3,9 +3,36 @@ import type { paths } from "./types.generated";
 type TaskFilter = NonNullable<paths["/api/v1/tasks"]["get"]["parameters"]["query"]>;
 type ProjectFilter = NonNullable<paths["/api/v1/projects"]["get"]["parameters"]["query"]>;
 type StatsFilter = NonNullable<paths["/api/v1/stats/time-management"]["get"]["parameters"]["query"]>;
+export type EventFilter = NonNullable<paths["/api/v1/events"]["get"]["parameters"]["query"]>;
+type EventFilterInput = URLSearchParams | EventFilter;
+
+const eventKinds = new Set(["due", "annotation", "status", "task", "feedback", "goal", "baseline", "project"]);
+
+// URL、請求參數與 query key 共用；日期保持伺服器的 YYYY-MM-DD 字串。
+export function normalizeEventFilters(input: EventFilterInput = {}): EventFilter {
+  const read = (field: keyof EventFilter) => input instanceof URLSearchParams ? input.get(field) : input[field];
+  const result: EventFilter = { limit: 100, offset: 0 };
+  const project = read("project_id");
+  if (project === "none") result.project_id = "none";
+  else if (project != null && /^\d+$/.test(String(project))) result.project_id = BigInt(String(project)).toString();
+  for (const field of ["task_id", "batch_id", "limit", "offset"] as const) {
+    const raw = read(field);
+    if (raw == null || raw === "") continue;
+    const value = Number(raw);
+    if (Number.isSafeInteger(value) && value >= 0) result[field] = value;
+  }
+  for (const field of ["from", "to"] as const) {
+    const value = read(field);
+    if (typeof value === "string" && value !== "") result[field] = value;
+  }
+  const kind = read("kind");
+  if (typeof kind === "string" && eventKinds.has(kind)) result.kind = kind as EventFilter["kind"];
+  return result;
+}
 
 export const queryRoots = {
   tasks: ["tasks"], projects: ["projects"], timeManagement: ["stats", "time-management"],
+  gantt: ["gantt"], events: ["events"],
   reasons: ["meta", "reasons"], health: ["meta", "health"],
   candidates: ["candidates"], settings: ["settings"], rubrics: ["rubrics"],
   weeklyReports: ["reports", "weekly"],
@@ -24,6 +51,8 @@ export const keys = {
     return [...queryRoots.tasks, "list", populated] as const;
   },
   project: (id: number) => [...queryRoots.projects, id] as const,
+  gantt: (projectId: number) => [...queryRoots.gantt, projectId] as const,
+  events: (filters: EventFilterInput = {}) => [...queryRoots.events, normalizeEventFilters(filters)] as const,
   projectList: (filter: ProjectFilter = {}) => [...queryRoots.projects, "list", { include_archived: filter.include_archived ?? false }] as const,
   timeManagement: (filter: StatsFilter = {}) => [...queryRoots.timeManagement, filter] as const,
   // Dev-B 12.8 收件匣、12.11 設定與量表

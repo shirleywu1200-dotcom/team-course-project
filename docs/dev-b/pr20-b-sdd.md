@@ -31,7 +31,7 @@
   架構後果：(a) 不改 DDL（Dev-A 已確認 `raw_output` 可為 NULL）(b) 每小時清除排程多一條 UPDATE，和既有清除在同一交易 (c) 和原文的保存天數一致，使用者只需要理解一個期限
 - **B2-3 AI-07 回饋讀到 NULL**：`imports.service._ai_suggestion` 讀到 `raw_output` 為 NULL 時回 None，等同未帶 `ai_run_id`：不寫回饋，匯入照常成功（現在會在 `json.loads(None)` 丟例外而回 500）。
 - **B2-4 文件**：spec 6.7 依 Dev-A 的合併文字補 B2；`CLAUDE.md` 資安規則 3 補「清除原文時一併設為 NULL（PR #20 B2）」。
-- **B2-5 測試**：到期清除只清超過期限的列；全部清除清全部；清除後匯出的 `raw_output` 為 null；AI-07 preview 之後清除、再 commit → 201 且沒有回饋列。
+- **B2-5 測試**：到期清除只清超過期限的列；全部清除清全部；清除後匯出的 `raw_output` 為 null（**〔已由 #40 取代，2026-11-17〕匯出改為一律不帶 `raw_output` 欄位，測試為 `test_spec67_export_after_purge_has_no_raw_output`，見 spec 6.7、AC-54**）；AI-07 preview 之後清除、再 commit → 201 且沒有回饋列。
 
 ## B5 候選建任務時沿用收件時的專案（FR-INB-14）
 
