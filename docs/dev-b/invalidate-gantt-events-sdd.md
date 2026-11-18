@@ -1,6 +1,6 @@
 # Dev-B 元件補齊 gantt／events 失效 SDD
 
-狀態：草稿，待 Mora 同意
+狀態：Mora 已同意（2026-11-18，Q1 含 tasks）
 分支：`dev-b/invalidate-gantt-events`（從 origin/main 27f90b4 切）
 緣由：審 PR #55 時承諾「失效表中 Dev-B 端點新增的 gantt、events，Dev-B 元件目前沒失效，會另外處理」。
 
