@@ -27,6 +27,9 @@ Node.js 26 跑前端測試時，jsdom 的 `localStorage` 會是 undefined，有 
 | `G4_PG_DUMP_CMD` | 否 | 備份指令；未設定時用 `pg_dump --format=custom --dbname=…` |
 | `VITE_API_TOKEN` | 否 | 只在前端開發時使用；正式建置不要設定，改在畫面上輸入 token |
 | `G4_ENV_FILE` | 否 | 改讀其他路徑的環境檔；預設 `env/local.env` |
+| `AI_PROVIDER` | 否 | `off`（預設）或 `anthropic`。不是 `anthropic` 時所有 AI 功能走退路，不呼叫供應商、不產生費用 |
+| `AI_MODEL` | 否 | 預設 `claude-sonnet-5-5`（13.4 評估定案）；換模型只改這裡 |
+| `ANTHROPIC_API_KEY` | `AI_PROVIDER=anthropic` 時需要 | **只放 `env/local.env`**，不放 `env/example.env`、不進 git |
 
 產生 token：`python3 -c "import secrets; print(secrets.token_urlsafe(32))"`
 
@@ -34,7 +37,11 @@ Node.js 26 跑前端測試時，jsdom 的 `localStorage` 會是 undefined，有 
 
 原文保存天數、每日確認時間等使用者設定存在資料庫的 `settings` 表，在畫面上調整，不用環境變數。
 
-AI 供應商（todo 13.4）尚未接入，目前沒有對應的環境變數。13.4 定案後補在本表；API key 一樣只放 `env/local.env`。
+AI 供應商（todo 13.4，`docs/dev-b/13-4-sdd.md` D-2～D-4）：
+- 預設關閉。要開時在 `env/local.env` 設 `AI_PROVIDER=anthropic` 與 `ANTHROPIC_API_KEY`，重啟後端。
+- 設成 `anthropic` 但沒有 key 或 key 無效時，後端照常啟動，AI 呼叫一律視為不可用、走退路（FR-AI-03）。
+- 會把收件摘錄、任務清單等送往供應商（私人範圍在送出前排除）。正式使用前，先確認 spec 8.2「供應商資料處理條件須在上線前確認」〔待決〕已定案【待複核：法規解讀】。
+- 要停用（例如 13.3 演練、key 外流時）：改回 `AI_PROVIDER=off` 或拿掉 key，重啟後端。key 外流時同時到供應商主控台撤銷該 key。
 
 ## 3. 第一次安裝
 
@@ -79,7 +86,7 @@ cd backend && uv run python -m app.main      # 只綁 G4_BIND_HOST:G4_PORT
 | 原文清除排程（todo 8.5） | 清除保存期限已過的原文 | 先跑一次，之後每小時一次；冪等，關機漏跑的部分下次會補上 |
 
 - **只啟動一個後端行程**（spec 8.2）。不要用多個 worker 或多個行程啟動，背景工作與排程沒有設計成多行程並行。
-- **AI 目前一律視為不可用**。還沒接真實供應商（todo 13.4）時，後端用 `FakeAIClient(available=False)`，收件、週報等 AI 功能走退路，其餘功能照常（AC-50）。這是預期行為，不是故障。
+- **`AI_PROVIDER` 不是 `anthropic` 時，AI 一律視為不可用**：收件、週報等 AI 功能走退路，其餘功能照常（AC-50）。這是預期行為，不是故障。開了 `anthropic` 仍走退路時，先查 key 是否正確、供應商是否可連線；AI 用戶端的 log 只記節點、HTTP 狀態碼或「連線失敗或逾時」、停止原因與 token 數，不記內容（`ai/anthropic_client.py`）。
 
 ## 5. 更新版本
 
@@ -134,4 +141,4 @@ git pull
 - 未預期的例外只記錄類型名稱，不留 traceback；資料庫例外訊息也不帶 SQL 參數值（DA-25）。除錯時請在本機用測試重現。
 - API 文件：`/docs`、`/redoc` 已關閉；OpenAPI 在 `/api/v1/openapi.json`，需要 token（DA-24）。
 - 不接任何第三方遙測或錯誤回報服務（CLAUDE.md 資安 2）。FastAPI 內建的 OpenTelemetry 已在 `create_app` 全部關閉；不要安裝 `opentelemetry-sdk` 或任何 exporter。
-- 不要開 SDK 的除錯 log：`ANTHROPIC_LOG=debug`，或把 `anthropic`、`httpx` 的 logger 調到 DEBUG，會把送出的內容、回應原文或 API key 寫進 log（todo 13.4 接入供應商後適用）。
+- 不要開 SDK 的除錯 log：`ANTHROPIC_LOG=debug`，或把 `anthropic`、`httpx` 的 logger 調到 DEBUG，會把送出的內容、回應原文或 API key 寫進 log。
