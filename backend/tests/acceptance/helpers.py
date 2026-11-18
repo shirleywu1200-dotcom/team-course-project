@@ -69,6 +69,13 @@ def ai_calls(ai, node=None):
     return out
 
 
+def columns(query, table):
+    """資料庫裡這張表目前的欄位名稱（information_schema）。"""
+    rows = query("SELECT column_name FROM information_schema.columns "
+                 "WHERE table_schema = 'public' AND table_name = :t", t=table)
+    return {r["column_name"] for r in rows}
+
+
 def table_names(query):
     return [r["tablename"] for r in query("SELECT tablename FROM pg_tables WHERE schemaname = 'public'")]
 

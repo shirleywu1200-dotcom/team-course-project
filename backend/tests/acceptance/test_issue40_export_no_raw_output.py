@@ -4,7 +4,7 @@ Dev-A 依 DA-27 暫代撰寫；只經 HTTP 與 SQL 種子操作。欄位集合�
 未來遷移新增欄位時測試不必跟著改。標記只放在 raw_output，全文檢查才不會被其他欄位誤判。
 """
 
-from tests.acceptance.helpers import API, MARK, SEED_BASE
+from tests.acceptance.helpers import API, MARK, SEED_BASE, columns
 
 TS = "'2026-11-11T09:00+08:00'"
 RUNS = f"""
@@ -15,12 +15,6 @@ INSERT INTO ai_runs (id, node_id, status, attempt, latency_ms, raw_output, error
  (4, 'AI-07', 'error',          1,  10, NULL,                                     'AITimeout',       {TS}),
  (5, 'AI-05', 'ok',             1,  30, NULL,                                     NULL,              {TS});
 """
-
-
-def columns(query, table):
-    rows = query("SELECT column_name FROM information_schema.columns "
-                 "WHERE table_schema = 'public' AND table_name = :t", t=table)
-    return {r["column_name"] for r in rows}
 
 
 def export(client):
@@ -47,13 +41,7 @@ def test_ai_runs_rows_have_no_raw_output_and_keep_other_columns(client, seed, qu
     assert MARK not in r.text
 
 
-def test_other_tables_keep_all_columns(client, seed, query):
-    seed(SEED_BASE + RUNS)
-    tables = export(client).json()["tables"]
-    for table, rows in tables.items():
-        if table == "ai_runs" or not rows:
-            continue
-        assert set(rows[0]) == columns(query, table), table
+# 其他表照帶全部欄位：改由 test_issue54_export_excluded_columns.py 的 E7 驗（種子涵蓋全部表，不會遇空表空轉；#54）
 
 
 def test_empty_ai_runs_exports_empty_list(client, seed):

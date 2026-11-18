@@ -1180,6 +1180,15 @@ CREATE TABLE idempotency_keys (
 - 修改保存期限時，尚未清除的來源一併重算 `expires_at = received_at + 新天數`（2026-11-15 裁定）。
 - 「刪除所有來源原文」清除 `sources.excerpt`，刪除 `idempotency_keys` 全部列（回應本文可能含原句；這張表是 24 小時的重送暫存，不是歷程，DA-23），並將 `ai_runs.raw_output` 全部設為 NULL（PR #20 B2）。`events`、`candidates`、`tasks` 不動，事件的原句顯示改為已刪除。
 - 匯出檔包含全部表；`sources.excerpt` 已清除者匯出為 `null`。`ai_runs` 匯出時不帶 `raw_output` 欄位（不論是否已清除），其餘欄位與筆數照常：`raw_output` 可能含收件原句，清除與匯出要同一立場，否則清了還能從匯出撈回；匯出是可外傳的快照，不帶 AI 原始輸出暫存（2026-11-17 產品負責人裁定，#40；取代 2026-11-16 PR #20 Q1 的「尚未清除的照帶」）。
+- 匯出另外不帶下列欄位（2026-11-17 產品負責人裁定，#54，併 #46）。原則：可能含收件原句或 AI 原始輸出的欄位不進可外傳的快照；權杖一律不匯出；使用者刻意寫的業務內容保留。本條只改匯出，清除範圍不變（`reports.ai_draft`、`sources.speaker` 要不要一併清除，已在 #54 請產品負責人裁定）。
+  | 表.欄位 | 理由 |
+  | --- | --- |
+  | `confirmations.token` | 基準更正的確認權杖，外流沒有正當用途 |
+  | `idempotency_keys.response` | 重送暫存的回應本文，可能含 AI 草稿、匯入對應或候選原句 |
+  | `reports.ai_draft` | 週報 AI 初稿，屬 AI 原始產出 |
+  | `sources.speaker` | 收件原句的說話者 |
+  | `sources.excerpt_hash` | 由時間、說話者與內容算出的去重雜湊；原文清除後仍可拿猜測的句子比對，只供內部去重（開發決定，#54） |
+- 匯出照帶：`reports.manual_text`（使用者自己寫給主管的人工版，屬業務資料）；`ai_feedback.detail`、`jobs.payload`（核對後只有 id、欄位索引、計數與行號，不含原文；#54 回報產品負責人）。
 
 ### 6.8 並行與一致性
 
@@ -1273,7 +1282,7 @@ CREATE TABLE idempotency_keys (
 
 - AC-52 Given 保存期限 30 天；When 清除排程執行；Then 超過期限的 `excerpt` 為 NULL，事件與候選仍在。
 - AC-53 Given 「刪除所有來源原文」；When 未帶 `confirm=true`；Then 拒絕；帶了則所有 `excerpt` 為 NULL。
-- AC-54 Given 匯出；Then 檔案為合法 JSON，含所有表，且表的筆數與資料庫一致。Given `ai_runs` 有 `raw_output`（不論是否已清除）；Then 匯出的 `ai_runs` 每列都沒有 `raw_output` 欄位，其餘欄位與筆數照常（#40）。
+- AC-54 Given 匯出；Then 檔案為合法 JSON，含所有表，且表的筆數與資料庫一致。Given `ai_runs` 有 `raw_output`（不論是否已清除）；Then 匯出的 `ai_runs` 每列都沒有 `raw_output` 欄位，其餘欄位與筆數照常（#40）。Given 6.7 列出的其他排除欄位（`confirmations.token`、`idempotency_keys.response`、`reports.ai_draft`、`sources.speaker`、`sources.excerpt_hash`）有值；Then 匯出的對應表每列都沒有這些欄位，其餘欄位與筆數照常，`reports.manual_text` 照帶（#54）。
 - AC-55 Given 500 列匯入；Then preview 在 2 秒內完成（不含 AI-07）〔假設〕。
 - AC-56 Given 1,000 個任務、10,000 筆事件；Then `GET /events`（含篩選）在 300 ms 內回應〔假設〕。
 - AC-57 Given 任一寫入端點中途丟出例外；Then 事件與任務狀態都未變（沒有只寫一半）。
