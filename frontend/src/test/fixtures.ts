@@ -1,4 +1,5 @@
 import type { AdjustDue, AdjustDueResult, StatusChange, Task } from "../api/types";
+import type { components } from "../api/types.generated";
 import type { AdjustStartFixtureRequest, AdjustStartFixtureResponse, SerializedEventFixture, SerializedTaskFixture, StatusFixtureResponse, TaskDetailFixtureResponse } from "./fixtureTypes";
 import { getErrorFixture, type ErrorFixtureCode } from "./errorFixtures";
 
@@ -30,6 +31,23 @@ export function makeSerializedEvent(over: Partial<SerializedEventFixture> = {}):
     ref_event_id: null, batch_id: null, actor: "me", extra: null, ...over,
   };
 }
+
+type HistoryItem = components["schemas"]["HistoryItemOut"];
+type HistoryList = components["schemas"]["HistoryListOut"];
+const originalDue = {
+  ...makeSerializedEvent({ id: 201, task_title: "舊任務名稱", kind: "due", field: "latest_due",
+    from_value: "2026-11-18", to_value: "2026-11-20", delta_days: 2, mark: "worse", mine: true }),
+  project_name: "範例專案", effective_mark: "none",
+  source: { label: "手動", quote: null, purged: false },
+} satisfies HistoryItem;
+export const historyFixtures = {
+  marked: { items: [originalDue], total: 1 } satisfies HistoryList,
+  unmarked: { items: [{ ...originalDue, id: 202, effective_mark: null, mark: null }], total: 1 } satisfies HistoryList,
+  otherOwner: { items: [{ ...originalDue, id: 203, mine: false, effective_mark: null }], total: 1 } satisfies HistoryList,
+  purged: { items: [{ ...originalDue, id: 204,
+    source: { label: "收件來源", quote: null, purged: true } }], total: 1 } satisfies HistoryList,
+  empty: { items: [], total: 0 } satisfies HistoryList,
+};
 
 function statusFixture(status: StatusChange["status"]) {
   return {
