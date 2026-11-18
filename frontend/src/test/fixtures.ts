@@ -49,6 +49,29 @@ export const historyFixtures = {
   empty: { items: [], total: 0 } satisfies HistoryList,
 };
 
+export const overviewFixtures = {
+  project: {
+    id: 1, name: "範例專案", scope: "work", audience: "none", line_group_id: null,
+    created_at: "2026-11-01T09:00:00+08:00", updated_at: "2026-11-02T09:00:00+08:00", archived_at: null,
+    task_count: 1, baseline_saved_at: null,
+  } satisfies components["schemas"]["ProjectDetailOut"],
+  gantt: {
+    range: { from: "2026-11-09", to: "2026-11-22" }, today: "2026-11-16",
+    summary: { done: 1, total: 3, delayed: 1, open_candidates: 2 },
+    rows: [
+      { task_id: 101, title: "範例任務甲", owner: "我", status: "doing", start: "2026-11-09",
+        orig_due: "2026-11-18", latest_due: "2026-11-20", delta_days: 2, done_date: null, blocked: true, version: 4 },
+      { task_id: 102, title: "範例任務乙", owner: "範例協作者", status: "todo", start: "2026-11-10",
+        orig_due: "2026-11-22", latest_due: "2026-11-17", delta_days: -5, done_date: null, blocked: false, version: 2 },
+      { task_id: 103, title: "範例任務丙", owner: "我", status: "done", start: "2026-11-11",
+        orig_due: "2026-11-14", latest_due: "2026-11-14", delta_days: 0, done_date: "2026-11-13", blocked: false, version: 3 },
+    ],
+  } satisfies components["schemas"]["GanttOut"],
+  empty: {
+    range: null, today: "2026-11-16", summary: { done: 0, total: 0, delayed: 0, open_candidates: 2 }, rows: [],
+  } satisfies components["schemas"]["GanttOut"],
+};
+
 function statusFixture(status: StatusChange["status"]) {
   return {
     request: { status, expected_version: 1 } satisfies StatusChange,

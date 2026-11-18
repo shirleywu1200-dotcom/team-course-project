@@ -7,6 +7,7 @@ import { DataControlPage } from "../features/data-control/DataControlPage";
 import { ImportPage } from "../features/import/ImportPage";
 import { InboxPage } from "../features/inbox/InboxPage";
 import { OnboardingPage } from "../features/settings/OnboardingPage";
+import { ProjectOverviewPage } from "../features/project-overview/ProjectOverviewPage";
 import { SettingsPage } from "../features/settings/SettingsPage";
 import { WeeklyReportPage } from "../features/weekly-report/WeeklyReportPage";
 import { ONBOARDING_PATH } from "../features/settings/OnboardingGate";
@@ -22,6 +23,7 @@ const featurePages: Record<string, ComponentType> = {
   "/time-management": TimeManagementPage,
   "/reports": WeeklyReportPage,
   "/data-control": DataControlPage,
+  "/projects/:projectId": ProjectOverviewPage,
 };
 
 function Home() {
