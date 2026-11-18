@@ -114,6 +114,39 @@ test("改期成功只由既有面板寫入，並使本專案甘特失效重讀",
   expect(screen.queryByLabelText("新的預計完成日")).not.toBeInTheDocument();
 });
 
+test("#66：改期遇 STALE_VERSION、任務重讀為新版本後，甘特與表格一併重讀", async () => {
+  const user = userEvent.setup();
+  let ganttGets = 0;
+  let taskGets = 0;
+  let adjustPosts = 0;
+  server.use(
+    http.get(`${API}/projects/1/gantt`, () => {
+      ganttGets++;
+      return HttpResponse.json(ganttGets === 1 ? overviewFixtures.gantt : {
+        ...overviewFixtures.gantt,
+        rows: overviewFixtures.gantt.rows.map(row => row.task_id === 101
+          ? { ...row, version: 5, latest_due: "2026-11-21", delta_days: 3 } : row),
+      });
+    }),
+    http.get(`${API}/tasks/101`, () => {
+      taskGets++;
+      return HttpResponse.json({ task: makeTask({ id: 101, owner: "範例協作者", version: taskGets === 1 ? 4 : 5,
+        latest_due: taskGets === 1 ? "2026-11-20" : "2026-11-21" }) });
+    }),
+    http.post(`${API}/tasks/101/adjust-due`, () => { adjustPosts++; return apiError(409, "STALE_VERSION"); }),
+  );
+  open();
+  await user.click(await screen.findByRole("button", { name: "改預計日：範例任務甲" }));
+  await user.type(await screen.findByLabelText("新的預計完成日"), "2026-11-22");
+  await screen.findByRole("option", { name: "等對方或客戶回覆（外部）" });
+  await user.selectOptions(screen.getByLabelText("原因"), "wait_external");
+  await user.click(screen.getByRole("button", { name: "確認調整" }));
+  await waitFor(() => expect(taskGets).toBe(2));
+  await waitFor(() => expect(ganttGets).toBe(2));
+  expect(screen.getByRole("row", { name: /範例任務甲/ })).toHaveTextContent("2026-11-21");
+  expect(adjustPosts).toBe(1);
+});
+
 test.each([404, 401])("L1：真實 App 守門下 Gantt GET %s 請求數 ≤2", async status => {
   let calls = 0;
   localStorage.setItem("g4.token", "test-token");

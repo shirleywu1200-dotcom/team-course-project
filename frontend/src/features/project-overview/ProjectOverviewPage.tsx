@@ -1,9 +1,10 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
 import { api } from "../../api/client";
 import { keys } from "../../api/queryKeys";
+import { fetchTask } from "../../api/queries";
 import type { components } from "../../api/types.generated";
 import { ErrorBanner } from "../../components/ErrorBanner";
 import { AdjustDuePanel } from "../due-adjust/AdjustDuePanel";
@@ -20,6 +21,16 @@ function ProjectOverviewContent({ projectId }: { projectId: number }) {
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
   const project = useQuery({ queryKey: keys.project(projectId), queryFn: () => api<ProjectDetail>(`/projects/${projectId}`) });
   const gantt = useQuery({ queryKey: keys.gantt(projectId), queryFn: () => api<GanttOut>(`/projects/${projectId}/gantt`) });
+  // 與 AdjustDuePanel 共用任務快取；STALE_VERSION 重讀任務後，畫面也要重讀甘特。
+  const selectedTask = useQuery({ queryKey: keys.task(selectedTaskId ?? 0),
+    queryFn: () => fetchTask(selectedTaskId!), enabled: selectedTaskId !== null });
+  const ganttVersion = gantt.data?.rows.find(row => row.task_id === selectedTaskId)?.version;
+  const taskVersion = selectedTask.data?.version;
+  useEffect(() => {
+    if (selectedTaskId !== null && taskVersion !== undefined && ganttVersion !== undefined && taskVersion !== ganttVersion) {
+      void qc.invalidateQueries({ queryKey: keys.gantt(projectId) });
+    }
+  }, [selectedTaskId, taskVersion, ganttVersion, projectId, qc]);
 
   if (project.error || gantt.error) return <main><h1>專案現況</h1><ErrorBanner error={project.error || gantt.error} />
     <button type="button" onClick={() => { void project.refetch(); void gantt.refetch(); }}>重試</button></main>;
