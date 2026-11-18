@@ -19,3 +19,7 @@ def list_all(conn: Connection) -> list[dict]:
 def latest(conn: Connection) -> dict | None:
     row = conn.execute(text("SELECT * FROM rubrics ORDER BY version DESC LIMIT 1")).mappings().first()
     return dict(row) if row else None
+
+
+def exists(conn: Connection, rubric_id: int) -> bool:
+    return conn.execute(text("SELECT 1 FROM rubrics WHERE id = :i"), {"i": rubric_id}).first() is not None

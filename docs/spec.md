@@ -1002,12 +1002,12 @@ CREATE TABLE idempotency_keys (
 - `actual_stars`（1–5）、`energy`（`high`／`mid`／`low`）、`rubric_id` 必填；`invest_vs_expected`（`less`／`as_expected`／`more`）選填，可為 null。
 - `rubric_id` 是前端開啟面板時讀到的量表版本（`GET /rubrics`），伺服器只檢查它存在，不存在回 `VALIDATION_ERROR`（6.5「量表在填寫期間換版本」）。
 - 不收 `goal_id`：關聯目標一律走 `POST /goal-links`（5.13），送了也忽略。`overdue_days` 由伺服器計算，前端送了也忽略（FR-FBK-03）。
-- 任務須為 `done`，否則 `VALIDATION_ERROR`；已有完成回報回 `FEEDBACK_EXISTS`（修改回報 9.3 依 D-05 不做）；任務不存在回 `NOT_FOUND`。
-- 成功回 201：`{ "feedback": FeedbackOut, "event": EventOut }`。同一交易寫入回報與一筆 `feedback` 事件（`field='completion_feedback'`，`to_value` 為回報 id，`extra` 記星數、精力、投入時間、逾期天數與量表 id）。
+- 任務須為 `done`，否則 `VALIDATION_ERROR`（`details.fields` 為 `["task_id"]`）；已有完成回報回 `FEEDBACK_EXISTS`（修改回報 9.3 依 D-05 不做）；任務不存在回 `NOT_FOUND`。`actual_stars`、`rubric_id` 只收 JSON 整數（`true`、`"4"` 回 `VALIDATION_ERROR`）。
+- 成功回 201：`{ "feedback": FeedbackOut, "event": EventOut }`。同一交易寫入回報與一筆 `feedback` 事件：`field='completion_feedback'`、`from_value` 為 null、`to_value` 為回報 id、`origin='manual'`，`extra`＝`{ actual_stars, energy, invest_vs_expected, overdue_days, rubric_id }`（`invest_vs_expected` 為 null 時鍵仍保留）。`task_title`、`mine`、`project_id` 依 `write_event` 由任務當下快照。
 
 `FeedbackOut`＝`{ id, task_id, actual_stars, energy, invest_vs_expected, overdue_days, rubric_id, created_at }`。
 
-`GET /feedback/pending` 輸出：`{ "items": [PendingItem], "total": n }`，列出已完成但還沒有完成回報的任務，工作與私人範圍都列；依 `done_date`、`task_id` 由舊到新，不分頁、不篩選。`PendingItem`＝`{ task_id, title, owner, project_id, done_date, orig_due, overdue_days, expected_stars, star_source }`，`overdue_days` 為若現在填寫時的逾期天數。
+`GET /feedback/pending` 輸出：`{ "items": [PendingItem], "total": n }`，列出已完成但還沒有完成回報的任務，工作與私人範圍都列；依 `done_date`、`task_id` 由舊到新，不分頁、不篩選。`PendingItem`＝`{ task_id, title, owner, project_id, done_date, orig_due, overdue_days, expected_stars, star_source }`，`overdue_days` 與儲存回報時的計算相同（FR-FBK-03：`max(0, done_date − orig_due)`）。
 
 `GET /meta/today` 輸出：`{ "today": "2026-11-18" }`。
 

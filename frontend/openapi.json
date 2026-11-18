@@ -2359,6 +2359,140 @@
           }
         }
       }
+    },
+    "/api/v1/tasks/{task_id}/feedback": {
+      "put": {
+        "tags": [
+          "feedback"
+        ],
+        "summary": "Save Feedback",
+        "operationId": "save_feedback_api_v1_tasks__task_id__feedback_put",
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Task Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FeedbackSave"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeedbackSaveOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "feedback"
+        ],
+        "summary": "Get Feedback",
+        "operationId": "get_feedback_api_v1_tasks__task_id__feedback_get",
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Task Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeedbackOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/feedback/pending": {
+      "get": {
+        "tags": [
+          "feedback"
+        ],
+        "summary": "Pending Feedback",
+        "operationId": "pending_feedback_api_v1_feedback_pending_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingFeedbackOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/meta/today": {
+      "get": {
+        "tags": [
+          "meta"
+        ],
+        "summary": "Today",
+        "operationId": "today_api_v1_meta_today_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TodayOut"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -3867,6 +4001,136 @@
         ],
         "title": "ExportOut"
       },
+      "FeedbackOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "task_id": {
+            "type": "integer",
+            "title": "Task Id"
+          },
+          "actual_stars": {
+            "type": "integer",
+            "title": "Actual Stars"
+          },
+          "energy": {
+            "type": "string",
+            "enum": [
+              "high",
+              "mid",
+              "low"
+            ],
+            "title": "Energy"
+          },
+          "invest_vs_expected": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "less",
+                  "as_expected",
+                  "more"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Invest Vs Expected"
+          },
+          "overdue_days": {
+            "type": "integer",
+            "title": "Overdue Days",
+            "description": "伺服器計算：max(0, done_date − orig_due)"
+          },
+          "rubric_id": {
+            "type": "integer",
+            "title": "Rubric Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "task_id",
+          "actual_stars",
+          "energy",
+          "invest_vs_expected",
+          "overdue_days",
+          "rubric_id",
+          "created_at"
+        ],
+        "title": "FeedbackOut"
+      },
+      "FeedbackSave": {
+        "properties": {
+          "actual_stars": {
+            "type": "integer",
+            "maximum": 5,
+            "minimum": 1,
+            "title": "Actual Stars"
+          },
+          "energy": {
+            "type": "string",
+            "enum": [
+              "high",
+              "mid",
+              "low"
+            ],
+            "title": "Energy"
+          },
+          "invest_vs_expected": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "less",
+                  "as_expected",
+                  "more"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Invest Vs Expected"
+          },
+          "rubric_id": {
+            "type": "integer",
+            "title": "Rubric Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "actual_stars",
+          "energy",
+          "rubric_id"
+        ],
+        "title": "FeedbackSave",
+        "description": "不收 goal_id（關聯走 POST /goal-links，#47 A6）；overdue_days 等伺服器欄位送了也忽略。"
+      },
+      "FeedbackSaveOut": {
+        "properties": {
+          "feedback": {
+            "$ref": "#/components/schemas/FeedbackOut"
+          },
+          "event": {
+            "$ref": "#/components/schemas/EventOut"
+          }
+        },
+        "type": "object",
+        "required": [
+          "feedback",
+          "event"
+        ],
+        "title": "FeedbackSaveOut"
+      },
       "FromToDate": {
         "properties": {
           "from": {
@@ -4909,6 +5173,95 @@
           "owner"
         ],
         "title": "OwnerChange"
+      },
+      "PendingFeedbackItem": {
+        "properties": {
+          "task_id": {
+            "type": "integer",
+            "title": "Task Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "owner": {
+            "type": "string",
+            "title": "Owner"
+          },
+          "project_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project Id"
+          },
+          "done_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Done Date"
+          },
+          "orig_due": {
+            "type": "string",
+            "format": "date",
+            "title": "Orig Due"
+          },
+          "overdue_days": {
+            "type": "integer",
+            "title": "Overdue Days"
+          },
+          "expected_stars": {
+            "type": "integer",
+            "title": "Expected Stars"
+          },
+          "star_source": {
+            "type": "string",
+            "enum": [
+              "self",
+              "ai_accepted",
+              "ai_edited",
+              "import_default"
+            ],
+            "title": "Star Source"
+          }
+        },
+        "type": "object",
+        "required": [
+          "task_id",
+          "title",
+          "owner",
+          "project_id",
+          "done_date",
+          "orig_due",
+          "overdue_days",
+          "expected_stars",
+          "star_source"
+        ],
+        "title": "PendingFeedbackItem"
+      },
+      "PendingFeedbackOut": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PendingFeedbackItem"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "PendingFeedbackOut"
       },
       "PreviewIn": {
         "properties": {
@@ -6204,6 +6557,21 @@
           "judgement_note"
         ],
         "title": "TimeMgmtStatsOut"
+      },
+      "TodayOut": {
+        "properties": {
+          "today": {
+            "type": "string",
+            "format": "date",
+            "title": "Today",
+            "description": "伺服器的今天（台北時區）"
+          }
+        },
+        "type": "object",
+        "required": [
+          "today"
+        ],
+        "title": "TodayOut"
       },
       "ValidationError": {
         "properties": {

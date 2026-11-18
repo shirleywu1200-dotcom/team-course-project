@@ -705,6 +705,58 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/tasks/{task_id}/feedback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Feedback */
+        get: operations["get_feedback_api_v1_tasks__task_id__feedback_get"];
+        /** Save Feedback */
+        put: operations["save_feedback_api_v1_tasks__task_id__feedback_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/feedback/pending": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Pending Feedback */
+        get: operations["pending_feedback_api_v1_feedback_pending_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/meta/today": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Today */
+        get: operations["today_api_v1_meta_today_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1206,6 +1258,56 @@ export interface components {
                 }[];
             };
         };
+        /** FeedbackOut */
+        FeedbackOut: {
+            /** Id */
+            id: number;
+            /** Task Id */
+            task_id: number;
+            /** Actual Stars */
+            actual_stars: number;
+            /**
+             * Energy
+             * @enum {string}
+             */
+            energy: "high" | "mid" | "low";
+            /** Invest Vs Expected */
+            invest_vs_expected: ("less" | "as_expected" | "more") | null;
+            /**
+             * Overdue Days
+             * @description 伺服器計算：max(0, done_date − orig_due)
+             */
+            overdue_days: number;
+            /** Rubric Id */
+            rubric_id: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /**
+         * FeedbackSave
+         * @description 不收 goal_id（關聯走 POST /goal-links，#47 A6）；overdue_days 等伺服器欄位送了也忽略。
+         */
+        FeedbackSave: {
+            /** Actual Stars */
+            actual_stars: number;
+            /**
+             * Energy
+             * @enum {string}
+             */
+            energy: "high" | "mid" | "low";
+            /** Invest Vs Expected */
+            invest_vs_expected?: ("less" | "as_expected" | "more") | null;
+            /** Rubric Id */
+            rubric_id: number;
+        };
+        /** FeedbackSaveOut */
+        FeedbackSaveOut: {
+            feedback: components["schemas"]["FeedbackOut"];
+            event: components["schemas"]["EventOut"];
+        };
         /** FromToDate */
         FromToDate: {
             /**
@@ -1564,6 +1666,43 @@ export interface components {
             expected_version: number;
             /** Owner */
             owner: string;
+        };
+        /** PendingFeedbackItem */
+        PendingFeedbackItem: {
+            /** Task Id */
+            task_id: number;
+            /** Title */
+            title: string;
+            /** Owner */
+            owner: string;
+            /** Project Id */
+            project_id: number | null;
+            /**
+             * Done Date
+             * Format: date
+             */
+            done_date: string;
+            /**
+             * Orig Due
+             * Format: date
+             */
+            orig_due: string;
+            /** Overdue Days */
+            overdue_days: number;
+            /** Expected Stars */
+            expected_stars: number;
+            /**
+             * Star Source
+             * @enum {string}
+             */
+            star_source: "self" | "ai_accepted" | "ai_edited" | "import_default";
+        };
+        /** PendingFeedbackOut */
+        PendingFeedbackOut: {
+            /** Items */
+            items: components["schemas"]["PendingFeedbackItem"][];
+            /** Total */
+            total: number;
         };
         /** PreviewIn */
         PreviewIn: {
@@ -2000,6 +2139,15 @@ export interface components {
              * @description 判讀說明：樣本不足的說明，或變好／變差次數＋精力洞察（FR-MRK-07）
              */
             judgement_note: string;
+        };
+        /** TodayOut */
+        TodayOut: {
+            /**
+             * Today
+             * Format: date
+             * @description 伺服器的今天（台北時區）
+             */
+            today: string;
         };
         /** ValidationError */
         ValidationError: {
@@ -3621,6 +3769,112 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_feedback_api_v1_tasks__task_id__feedback_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                task_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FeedbackOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    save_feedback_api_v1_tasks__task_id__feedback_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                task_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FeedbackSave"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FeedbackSaveOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    pending_feedback_api_v1_feedback_pending_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PendingFeedbackOut"];
+                };
+            };
+        };
+    };
+    today_api_v1_meta_today_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TodayOut"];
                 };
             };
         };
