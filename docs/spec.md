@@ -698,6 +698,46 @@ CREATE TABLE idempotency_keys (
 - 重試與紀錄（同 AI-01）：任何例外都算一次失敗、繼續重試，總共最多 3 次；`AIUnavailable` 與 R4 對帳失敗立刻停。最終 `ai_status` 以最後一次嘗試為準：最後一次是格式錯誤（`AIInvalidOutput`）或 R4 失敗回 `invalid_output`，其餘回 `unavailable`（#18 J3、K3）。`error` 欄的 `R4_MISMATCH` 與供應商格式錯誤的 `AIInvalidOutput` 分得開，可據以算週報對帳結果（spec 1.3）。每次嘗試寫一列 `ai_runs`（`latency_ms` 失敗也記；`error` 只放例外類別名稱，R4 失敗記 `R4_MISMATCH`）。**AI-05 不存 `raw_output`**。
   - R4 對帳（項目引用的 `task_id`、`event_id` 是否在 payload 裡）不重試、立刻停：`ai_runs` 記 `status='invalid_output'`、`error='R4_MISMATCH'`；回應 `ai_status='invalid_output'`、`validated=false`、`draft=null`、`items` 為退路清單（AC-66；2026-11-17 Dev-B 確認，#22）。
 
+**AI-03 目標關聯建議（FR-GOL-03，Phase 9；2026-11-18 #72 Dev-A、Dev-B 定案）**
+
+- 呼叫端（Dev-A）組 payload、驗證輸出、寫 `ai_feedback`；prompt 與節點（#50）由 Dev-B 負責。
+- 觸發：使用者在待關聯清單按「請 AI 建議」才呼叫，打開清單時不自動呼叫；`GET /goal-links/pending` 不呼叫 AI（視窗聚焦時會自動重抓，會重複付費）。端點暫定 `POST /goal-links/suggest`〔待決：#47 G3，產品負責人裁定〕。
+- 建議只放在該次回應，不另存；使用者確認關聯時帶 `ai_run_id`，伺服器讀該筆 `raw_output` 比對，寫 `ai_feedback`（與建議相同 `accepted`，不同或不關聯 `changed`），比照 AI-07 的 D-3。
+- payload 只含以下鍵，其餘一律不送：
+  ```json
+  { "goals": [{ "goal_id": 2, "type": "growth", "title": "學會 SQL 視窗函式", "period": "2026Q4" }],
+    "tasks": [{ "task_id": 7, "title": "報表查詢改寫", "done_date": "2026-11-12" }] }
+  ```
+  - `goals` 只送未封存的目標。`tasks` 只送工作範圍（`scope='work'`）的待關聯任務，私人任務不送、也不建議（資安規則 2、FR-GOV-05）。
+  - 待關聯超過 20 筆時，送完成日最新的 20 筆；其餘再按一次。
+  - 明確不送：完成回報的星數與精力（FR-AI-06）、目標的 `definition`、`energy_plan`、任務負責人、原句。
+- 輸出：`{ "items": [{ "task_id": 7, "goal_id": 2, "reason": "任務內容與 SQL 學習相關" }] }`
+  - `goal_id` 可為 null，表示沒有合適的目標。每個任務最多一項；`task_id` 或 `goal_id` 不在 payload 的項目整項丟棄（不算錯誤）。
+  - `reason` 不超過 200 字、不含 NUL，否則算 `invalid_output`。`reason` 只說明內容相關，不評價任務或人（FR-AI-06）。
+- 記錄：比照 AI-01 存 `raw_output`（清除與匯出依 6.7：清除時設 NULL，匯出不帶）。重試比照 AI-01。
+
+**AI-04 目標回報草稿（FR-GOL-06、07，Phase 9；2026-11-18 #72 Dev-A、Dev-B 定案）**
+
+- 呼叫端（Dev-A）組 payload、驗證輸出、R3 對帳；prompt 與節點（#50）由 Dev-B 負責。
+- payload 只含以下鍵，其餘一律不送：
+  ```json
+  { "goal":  { "type": "growth", "title": "學會 SQL 視窗函式", "period": "2026Q4", "energy_plan": "high" },
+    "stats": { "linked": 3, "avg_actual": 4.0, "avg_expected": 3.3, "overdue_count": 1,
+               "energy": { "high": 2, "mid": 1, "low": 0 }, "progress_pct": 100, "judgement": null },
+    "tasks": [{ "task_id": 7, "title": "報表查詢改寫", "done_date": "2026-11-12" }] }
+  ```
+  - `stats` 為程式算好的統計（5.13），只送彙總數字，不送逐筆的星數與精力（FR-AI-06）。
+  - `tasks` 只列工作範圍的任務；私人範圍只進統計數字、不列標題。
+- 輸出：`{ "draft": "…", "figures": [{ "key": "linked", "value": 3 }, { "key": "avg_actual", "value": 4.0 }] }`
+  - `draft` 不空白、不超過 20,000 字、不含 NUL，否則算 `invalid_output`（同 AI-05）。
+  - prompt 要求數字一律用阿拉伯數字，並把草稿用到的每個數字列進 `figures`。
+- R3 對帳（FR-GOL-07，兩點都做，任一不符即 `validated=false`、`draft=null`，前端改顯示統計表）：
+  1. `figures` 的每一項都等於 `stats` 的同名值（巢狀鍵用 `energy.high` 這類寫法）。
+  2. `draft` 裡出現的每個數字都在允許名單內：`stats` 的值，以及 payload 文字本來就有的數字（`goal.title`、`goal.period`、各任務 `title`，以及 `done_date` 拆出的年、月、日）。
+  - 比對前正規化：`4.0`＝`4`、`100%`＝`100`、全形數字轉半形。
+  - 誤判率由 Dev-B 在 #50 的評估實測；太高時調整允許名單，不放寬規則本身。
+- 重試與紀錄同 AI-05：總共最多 3 次，`AIUnavailable` 與 R3 失敗立刻停；R3 失敗記 `status='invalid_output'`、`error='R3_MISMATCH'`；不存 `raw_output`。存在 `reports` 表 `kind='goal'`，比照週報（5.14）。
+
 ### 5.4 設定與量表
 
 | Method | Path | 說明 |
