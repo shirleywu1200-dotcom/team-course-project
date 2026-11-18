@@ -3,12 +3,13 @@
 Dev-A 依 DA-27 暫代撰寫；只經 HTTP 與 SQL 種子操作，排除清單照 spec 6.7 寫死在測試裡，不讀實作。
 欄位集合以資料庫的 information_schema 為基準。每個被排除的欄位放一個專屬 ASCII 標記（不和 helpers.MARK 共用，
 也不用人名），對整份匯出本文做全文檢查；照帶欄位放另一組標記，證明全文檢查本身有效。
-允許清單是結構斷言：要逼「之後新增或改名欄位時當下決定能不能匯出」，行為測試做不到（資安規則 5、#54 作法 2）。
+允許清單是結構斷言，鎖住全部 17 張表：要逼「之後任何表新增或改名欄位、或新增表時，當下決定能不能匯出」，
+行為測試做不到（資安規則 5、#54 作法 2；匯出是排除清單實作，未列的新欄位預設會匯出）。
 """
 
 import pytest
 
-from tests.acceptance.helpers import API, SEED_BASE
+from tests.acceptance.helpers import API, SEED_BASE, columns
 
 TS = "'2026-11-11T09:00+08:00'"
 RCV = "'2026-11-11T09:00+08:00', '2026-12-11T09:00+08:00'"
@@ -75,7 +76,7 @@ EXCLUDED = {
     "sources": {"speaker", "excerpt_hash"},
 }
 
-# 允許清單：這些表之後新增或改名欄位時測試失敗，逼當下決定該欄能不能匯出（#54 作法 2）
+# 允許清單（全部表）：任何表之後新增或改名欄位時測試失敗，逼當下決定該欄能不能匯出（#54 作法 2、資安規則 5）
 ALLOWED = {
     "ai_runs": {"id", "node_id", "job_id", "status", "attempt", "latency_ms", "error", "created_at"},
     "confirmations": {"task_id", "payload", "task_version", "expires_at", "used_at"},
@@ -85,18 +86,31 @@ ALLOWED = {
     "sources": {"id", "channel", "line_group_id", "spoken_at", "excerpt", "received_at", "expires_at", "purged_at"},
     "jobs": {"id", "kind", "status", "attempts", "payload", "result", "error", "created_at", "updated_at"},
     "ai_feedback": {"id", "node_id", "target_type", "target_id", "outcome", "detail", "created_at"},
+    "batches": {"id", "project_id", "days", "reason", "note", "task_count", "created_at"},
+    "candidates": {"id", "source_id", "kind", "certainty", "task_id", "proposed", "suggest", "note", "state",
+                   "decision", "decided_at", "ai_run_id", "created_at", "project_id"},
+    "completion_feedback": {"id", "task_id", "actual_stars", "energy", "invest_vs_expected", "overdue_days",
+                            "rubric_id", "created_at"},
+    "events": {"id", "ts", "project_id", "task_id", "task_title", "kind", "field", "from_value", "to_value", "origin",
+               "origin_ref", "source_id", "reason", "note", "delta_days", "mark", "mine", "ref_event_id", "batch_id",
+               "actor", "extra"},
+    "goals": {"id", "type", "title", "period", "definition", "target", "energy_plan", "project_id", "created_at",
+              "archived_at"},
+    "line_groups": {"id", "name", "kind", "line_ref", "notified", "bound"},
+    "projects": {"id", "name", "scope", "audience", "line_group_id", "created_at", "updated_at", "archived_at"},
+    "rubrics": {"id", "version", "levels", "source", "interview", "created_at"},
+    "settings": {"id", "default_scope", "role", "report_audience", "confirm_time", "confirm_cap_min", "remind_default",
+                 "retention_days", "energy_def_high", "energy_def_mid", "energy_def_low", "goal_types_enabled",
+                 "onboarded_at"},
+    "tasks": {"id", "project_id", "title", "owner_name", "scope", "start_date", "orig_due", "latest_due", "status",
+              "blocked", "done_date", "done_when", "remind", "expected_stars", "star_source", "rubric_id", "goal_id",
+              "version", "created_at", "updated_at"},
 }
 
 # 匯出的表：新增一張表時這裡會失敗，逼當下決定新表的欄位能不能匯出（資安規則 5）
 ALL_TABLES = {"ai_feedback", "ai_runs", "batches", "candidates", "completion_feedback", "confirmations", "events",
               "goals", "idempotency_keys", "jobs", "line_groups", "projects", "reports", "rubrics", "settings",
               "sources", "tasks"}
-
-
-def columns(query, table):
-    rows = query("SELECT column_name FROM information_schema.columns "
-                 "WHERE table_schema = 'public' AND table_name = :t", t=table)
-    return {r["column_name"] for r in rows}
 
 
 def count(query, table):
@@ -177,8 +191,9 @@ def test_e5_feedback_detail_and_job_payload_are_kept(exported):
 
 # ---------- E6：允許清單鎖定 ----------
 
-def test_e6_locked_tables_export_exactly_the_allowed_columns(exported, query):
+def test_e6_every_table_exports_exactly_the_allowed_columns(exported, query):
     tables = exported.json()["tables"]
+    assert set(ALLOWED) == ALL_TABLES
     for table, allowed in ALLOWED.items():
         db_cols = columns(query, table)
         assert EXCLUDED.get(table, set()) <= db_cols, table   # 資料庫仍有這些欄，只是不匯出
@@ -193,17 +208,18 @@ def test_e6_exported_table_set_is_locked(exported):
     assert set(body["tables"]) == set(body["counts"]) == ALL_TABLES
 
 
-# ---------- E7：其他表照帶全部欄位 ----------
+# ---------- E7：沒有排除欄位的表照帶全部欄位（不過度排除） ----------
 
 def test_e7_other_tables_keep_all_columns(exported, query):
     tables = exported.json()["tables"]
-    others = ALL_TABLES - set(ALLOWED)
-    assert others == {"batches", "candidates", "completion_feedback", "events", "goals", "line_groups", "projects",
-                      "rubrics", "settings", "tasks"}
+    others = ALL_TABLES - set(EXCLUDED)
+    assert others == {"ai_feedback", "batches", "candidates", "completion_feedback", "events", "goals", "jobs",
+                      "line_groups", "projects", "rubrics", "settings", "tasks"}
     for table in others:
+        db_cols = columns(query, table)
         assert tables[table], f"{table} 沒有資料，斷言會空轉"
         for row in tables[table]:
-            assert set(row) == columns(query, table), table
+            assert set(row) == db_cols, table
 
 
 # ---------- E8：全文檢查 ----------
