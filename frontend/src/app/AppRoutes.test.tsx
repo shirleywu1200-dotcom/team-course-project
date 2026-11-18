@@ -37,7 +37,10 @@ function viewport(compact: boolean) {
   });
 }
 
-beforeEach(() => viewport(false));
+beforeEach(() => {
+  viewport(false);
+  server.use(http.get(`${API}/reports/weekly`, () => HttpResponse.json({ error: { code: "NOT_FOUND", message: "未產生", details: {} } }, { status: 404 })));
+});
 afterEach(() => vi.unstubAllGlobals());
 
 test.each([
@@ -66,7 +69,7 @@ test.each([
       expect(await screen.findByText(timeManagementFixtures.insufficient.judgement_note)).toBeInTheDocument();
       expect(screen.queryByText("此功能尚未開放。")).not.toBeInTheDocument();
       expect(fetchSpy).toHaveBeenCalled();
-    } else if (["/import", "/inbox", "/setup", "/settings"].includes(path)) {
+    } else if (["/import", "/inbox", "/setup", "/settings", "/reports", "/data-control"].includes(path)) {
       expect(screen.queryByText("此功能尚未開放。")).not.toBeInTheDocument();
       expect(fetchSpy).toHaveBeenCalled();
     } else {

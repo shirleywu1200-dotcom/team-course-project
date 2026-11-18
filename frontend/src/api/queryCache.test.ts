@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { QueryObserver } from "@tanstack/react-query";
 import { keys } from "./queries";
+import { normalizeEventFilters } from "./queryKeys";
 import { makeQueryClient } from "./queryClient";
 import { mutationInvalidations, runMutationWithInvalidation } from "./queryCache";
 
@@ -9,17 +10,17 @@ const expected = [
   ["PATCH /projects/{project_id}", ["projects"]],
   ["POST /projects/{project_id}/archive", ["projects"]],
   ["POST /projects/{project_id}/bulk-shift/preview", []],
-  ["POST /projects/{project_id}/bulk-shift/commit", ["tasks", "timeManagement"]],
-  ["POST /tasks", ["tasks", "projects"]],
-  ["PATCH /tasks/{task_id}/owner", ["tasks"]],
-  ["POST /tasks/{task_id}/status", ["tasks"]],
-  ["POST /tasks/{task_id}/block", ["tasks"]],
-  ["POST /tasks/{task_id}/adjust-start", ["tasks"]],
-  ["POST /tasks/{task_id}/complete", ["tasks", "timeManagement"]],
-  ["POST /tasks/{task_id}/adjust-due", ["tasks", "timeManagement"]],
+  ["POST /projects/{project_id}/bulk-shift/commit", ["tasks", "timeManagement", "gantt", "events"]],
+  ["POST /tasks", ["tasks", "projects", "gantt", "events"]],
+  ["PATCH /tasks/{task_id}/owner", ["tasks", "gantt", "events"]],
+  ["POST /tasks/{task_id}/status", ["tasks", "gantt", "events"]],
+  ["POST /tasks/{task_id}/block", ["tasks", "gantt", "events"]],
+  ["POST /tasks/{task_id}/adjust-start", ["tasks", "gantt", "events"]],
+  ["POST /tasks/{task_id}/complete", ["tasks", "timeManagement", "gantt", "events"]],
+  ["POST /tasks/{task_id}/adjust-due", ["tasks", "timeManagement", "gantt", "events"]],
   ["POST /tasks/{task_id}/baseline-correction/preview", []],
-  ["POST /tasks/{task_id}/baseline-correction/commit", ["tasks", "projects"]],
-  ["POST /events/{event_id}/annotations", ["tasks", "timeManagement"]],
+  ["POST /tasks/{task_id}/baseline-correction/commit", ["tasks", "projects", "gantt", "events"]],
+  ["POST /events/{event_id}/annotations", ["tasks", "timeManagement", "events"]],
 ] as const;
 
 test("OpenAPI 的全部動作都列入失效規則，11.3 的 15 個動作列入 README", () => {
@@ -42,6 +43,7 @@ for (const [action, resources] of expected) {
       ["tasks", keys.task(4)], ["tasks", keys.projectTasks(1)],
       ["tasks", keys.taskList({ owner: "我", due_before: "2026-11-20" })],
       ["projects", keys.project(1)], ["projects", keys.projectList()],
+      ["gantt", keys.gantt(1)], ["events", keys.events({ task_id: 4 })],
       ["timeManagement", keys.timeManagement()], ["reasons", keys.reasons], ["health", keys.health],
     ] as const;
     for (const [, key] of entries) client.setQueryData(key, { value: 1 });
@@ -65,6 +67,29 @@ test("失敗不失效、不重送，也不攔截 STALE_VERSION", async () => {
   expect(write).toHaveBeenCalledTimes(1);
   expect(client.getQueryState(keys.task(4))?.isInvalidated).toBe(false);
   client.clear();
+});
+
+test("S：URL、query key 與請求共用同一份歷程 filters 正規化", () => {
+  const url = new URLSearchParams("project_id=0012&task_id=4&batch_id=8&limit=25&offset=50&from=2026-11-01&to=2026-11-30&kind=due");
+  const normalized = normalizeEventFilters(url);
+  expect(normalized).toEqual({ project_id: "12", task_id: 4, batch_id: 8, limit: 25, offset: 50,
+    from: "2026-11-01", to: "2026-11-30", kind: "due" });
+  expect(keys.events(url)).toEqual(keys.events(normalized));
+  expect(keys.events({ task_id: 4 })).toEqual(["events", { task_id: 4, limit: 100, offset: 0 }]);
+  expect(normalizeEventFilters(new URLSearchParams("project_id=none&task_id=&from=")))
+    .toEqual({ project_id: "none", limit: 100, offset: 0 });
+  expect(keys.gantt(12)).toEqual(["gantt", 12]);
+});
+
+test.each([
+  "POST /projects/import/commit",
+  "POST /ingest",
+  "POST /candidates/{candidate_id}/confirm",
+  "POST /candidates/{candidate_id}/clarify",
+  "POST /candidates/{candidate_id}/create-task",
+  "POST /candidates/{candidate_id}/ignore",
+] as const)("S：%s 造成任務或待確認候選變動時使 gantt 失效", action => {
+  expect(mutationInvalidations[action]).toContain("gantt");
 });
 
 test("成功會等待使用中的查詢重新讀取；未使用的查詢只標失效", async () => {
@@ -95,4 +120,11 @@ test("QueryClient 保留既有重試與視窗焦點設定", () => {
   const client = makeQueryClient();
   expect(client.getDefaultOptions().queries).toEqual({ retry: false, refetchOnWindowFocus: false });
   client.clear();
+});
+
+test("12.13：週報鍵按週與 id 分開；產稿和儲存人工版都登記 weeklyReports 失效", () => {
+  expect(keys.weeklyReportByWeek("2026-11-09")).toEqual(["reports", "weekly", "week", "2026-11-09"]);
+  expect(keys.weeklyReport(7)).toEqual(["reports", "weekly", 7]);
+  expect(mutationInvalidations["POST /reports/weekly/draft"]).toEqual(["weeklyReports"]);
+  expect(mutationInvalidations["PUT /reports/weekly/{report_id}/manual"]).toEqual(["weeklyReports"]);
 });

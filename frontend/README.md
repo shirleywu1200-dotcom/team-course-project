@@ -64,7 +64,7 @@ A4 已補齊全部成功回應模型。`src/api/types.ts` 的既有名稱改為�
 | `/setup` | 12.11 首次啟用精靈；已啟用者由守門導回首頁 |
 | `/settings` | 12.11 設定與量表 |
 | `/goals` | 12.12 預留 |
-| `/reports` | 12.13 預留 |
+| `/reports` | 12.13 週報：按週讀取、明確產稿、人工版保存與事件退路 |
 | `/data-control` | 12.14 預留 |
 | `/tasks/new` | 12.15 預留；靜態路由優先於任務編號 |
 | 其他網址 | 找不到頁面，可返回工作總覽 |
@@ -113,34 +113,35 @@ code／message 必須是非空字串，details 必須是非陣列物件。
 | `PATCH /projects/{project_id}` | projects | FR-PRJ-02 |
 | `POST /projects/{project_id}/archive` | projects | FR-PRJ-03 |
 | `POST /projects/{project_id}/bulk-shift/preview` | 無 | FR-BLK-01，預覽不寫入 |
-| `POST /projects/{project_id}/bulk-shift/commit` | tasks、timeManagement | FR-BLK-06、07；FR-MRK-06 |
-| `POST /tasks` | tasks、projects | FR-TSK-01、02；ProjectDetailOut.task_count |
-| `PATCH /tasks/{task_id}/owner` | tasks | FR-TSK-06，舊事件 mine 不變 |
-| `POST /tasks/{task_id}/status` | tasks | FR-TSK-04、DA-08 |
-| `POST /tasks/{task_id}/block` | tasks | FR-TSK-04、07 |
-| `POST /tasks/{task_id}/adjust-start` | tasks | FR-TSK-09、AC-62，不進時間管理統計 |
-| `POST /tasks/{task_id}/complete` | tasks、timeManagement | FR-TSK-04；FR-MRK-07 完成時精力分布 |
-| `POST /tasks/{task_id}/adjust-due` | tasks、timeManagement | FR-DUE-02、04；FR-MRK-06 |
+| `POST /projects/{project_id}/bulk-shift/commit` | tasks、timeManagement、gantt、events | FR-BLK-06、07；FR-MRK-06；正式任務與歷程變動 |
+| `POST /tasks` | tasks、projects、gantt、events | FR-TSK-01、02；ProjectDetailOut.task_count |
+| `PATCH /tasks/{task_id}/owner` | tasks、gantt、events | FR-TSK-06，舊事件 mine 不變 |
+| `POST /tasks/{task_id}/status` | tasks、gantt、events | FR-TSK-04、DA-08 |
+| `POST /tasks/{task_id}/block` | tasks、gantt、events | FR-TSK-04、07 |
+| `POST /tasks/{task_id}/adjust-start` | tasks、gantt、events | FR-TSK-09、AC-62，不進時間管理統計 |
+| `POST /tasks/{task_id}/complete` | tasks、timeManagement、gantt、events | FR-TSK-04；FR-MRK-07 完成時精力分布 |
+| `POST /tasks/{task_id}/adjust-due` | tasks、timeManagement、gantt、events | FR-DUE-02、04；FR-MRK-06 |
 | `POST /tasks/{task_id}/baseline-correction/preview` | 無 | FR-BAS-03；DA-21 僅確認憑證，非正式查詢資料 |
-| `POST /tasks/{task_id}/baseline-correction/commit` | tasks、projects | FR-BAS-06、07；ProjectDetailOut.baseline_saved_at |
-| `POST /events/{event_id}/annotations` | tasks、timeManagement | FR-MRK-04–06，任務詳情含 events |
+| `POST /tasks/{task_id}/baseline-correction/commit` | tasks、projects、gantt、events | FR-BAS-06、07；ProjectDetailOut.baseline_saved_at |
+| `POST /events/{event_id}/annotations` | tasks、timeManagement、events | FR-MRK-04–06，任務歷程與有效註記 |
 | `POST /projects/import/preview` | 無 | FR-IMP-01，預覽不寫入 |
-| `POST /projects/import/commit` | projects、tasks | FR-IMP-06、07，建立專案與任務 |
-| `POST /ingest` | candidates | FR-INB-01、05，只新增候選 |
-| `POST /candidates/{candidate_id}/confirm` | candidates、tasks、timeManagement、projects | FR-INB-09–12；ProjectDetailOut.open_candidates |
-| `POST /candidates/{candidate_id}/clarify` | candidates、tasks、timeManagement、projects | FR-INB-13（12.8 四個動作共用同一套失效） |
-| `POST /candidates/{candidate_id}/create-task` | candidates、tasks、timeManagement、projects | FR-INB-14 |
-| `POST /candidates/{candidate_id}/ignore` | candidates、tasks、timeManagement、projects | FR-INB-09、13、14 |
+| `POST /projects/import/commit` | projects、tasks、gantt、events | FR-IMP-06、07，建立專案與任務 |
+| `POST /ingest` | candidates、gantt | FR-INB-01、05；待確認候選數可能變動 |
+| `POST /candidates/{candidate_id}/confirm` | candidates、tasks、timeManagement、projects、gantt、events | FR-INB-09–12；ProjectDetailOut.open_candidates |
+| `POST /candidates/{candidate_id}/clarify` | candidates、tasks、timeManagement、projects、gantt、events | FR-INB-13（12.8 四個動作共用同一套失效） |
+| `POST /candidates/{candidate_id}/create-task` | candidates、tasks、timeManagement、projects、gantt、events | FR-INB-14 |
+| `POST /candidates/{candidate_id}/ignore` | candidates、tasks、timeManagement、projects、gantt、events | FR-INB-09、13、14 |
 | `PUT /settings` | settings | FR-SET-02、03 |
 | `POST /settings/onboarding/complete` | settings | FR-SET-01，啟用精靈完成 |
 | `POST /rubrics/interview` | 無 | FR-RUB-02、03，只回草稿 |
 | `POST /rubrics` | rubrics | FR-RUB-03，確認後成立新版本 |
-| `POST /sources/purge` | candidates、tasks | FR-GOV-03；候選與任務歷程的原句由 `sources.excerpt` 帶出，清除後變空 |
+| `POST /sources/purge` | candidates、tasks、events | FR-GOV-03；候選與任務歷程的原句由 `sources.excerpt` 帶出，清除後變空 |
 | `POST /export` | 無 | FR-GOV-02，只讀 |
-| `POST /reports/weekly/draft` | 無 | FR-RPT-02、03；前端尚無週報查詢，12.9 建立後改寫（Dev-A 登記，待 Dev-C 確認） |
-| `PUT /reports/weekly/{report_id}/manual` | 無 | FR-RPT-04；同上 |
+| `POST /reports/weekly/draft` | weeklyReports | FR-RPT-02、03；本次回應先替換快取，其他週報鍵標 stale 不立即重讀，保留 H2 降級提示 |
+| `PUT /reports/weekly/{report_id}/manual` | weeklyReports | FR-RPT-04；人工版保存後更新對應週與 id 快取 |
 
 資源前綴涵蓋全部列表、詳情及篩選查詢。原因、健康不受上述寫入影響。
+`gantt` 與 `events` 由共用查詢鍵管理。歷程 filters 以 `normalizeEventFilters` 為單一來源，URL、請求與 query key 共用；空值省略，limit/offset 預設 100/0。
 `runMutationWithInvalidation` 只在成功後失效，等待使用中的查詢重讀，未使用的查詢留待下次讀取。
 失敗原樣交回呼叫者，不重送；STALE_VERSION 沿用既有頁面重讀流程。
 此共用包裝供後續頁面使用，未改動 Dev-A 功能頁既有的 onSuccess／onError 行為。

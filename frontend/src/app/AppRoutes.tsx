@@ -3,10 +3,12 @@ import type { ComponentType } from "react";
 
 import { BulkShiftPage } from "../features/bulk-shift/BulkShiftPage";
 import { TaskDuePage } from "../features/due-adjust/TaskDuePage";
+import { DataControlPage } from "../features/data-control/DataControlPage";
 import { ImportPage } from "../features/import/ImportPage";
 import { InboxPage } from "../features/inbox/InboxPage";
 import { OnboardingPage } from "../features/settings/OnboardingPage";
 import { SettingsPage } from "../features/settings/SettingsPage";
+import { WeeklyReportPage } from "../features/weekly-report/WeeklyReportPage";
 import { ONBOARDING_PATH } from "../features/settings/OnboardingGate";
 import { TimeManagementPage } from "../features/time-management/TimeManagementPage";
 import { AppLayout } from "./AppLayout";
@@ -18,6 +20,8 @@ const featurePages: Record<string, ComponentType> = {
   [ONBOARDING_PATH]: OnboardingPage,
   "/settings": SettingsPage,
   "/time-management": TimeManagementPage,
+  "/reports": WeeklyReportPage,
+  "/data-control": DataControlPage,
 };
 
 function Home() {
