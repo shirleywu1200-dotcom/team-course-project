@@ -64,7 +64,7 @@ A4 已補齊全部成功回應模型。`src/api/types.ts` 的既有名稱改為�
 | `/setup` | 12.11 首次啟用精靈；已啟用者由守門導回首頁 |
 | `/settings` | 12.11 設定與量表 |
 | `/goals` | 12.12 預留 |
-| `/reports` | 12.13 預留 |
+| `/reports` | 12.13 週報：按週讀取、明確產稿、人工版保存與事件退路 |
 | `/data-control` | 12.14 預留 |
 | `/tasks/new` | 12.15 預留；靜態路由優先於任務編號 |
 | 其他網址 | 找不到頁面，可返回工作總覽 |
@@ -137,8 +137,8 @@ code／message 必須是非空字串，details 必須是非陣列物件。
 | `POST /rubrics` | rubrics | FR-RUB-03，確認後成立新版本 |
 | `POST /sources/purge` | candidates、tasks、events | FR-GOV-03；候選與任務歷程的原句由 `sources.excerpt` 帶出，清除後變空 |
 | `POST /export` | 無 | FR-GOV-02，只讀 |
-| `POST /reports/weekly/draft` | 無 | FR-RPT-02、03；前端尚無週報查詢，12.9 建立後改寫（Dev-A 登記，待 Dev-C 確認） |
-| `PUT /reports/weekly/{report_id}/manual` | 無 | FR-RPT-04；同上 |
+| `POST /reports/weekly/draft` | weeklyReports | FR-RPT-02、03；本次回應先替換快取，其他週報鍵標 stale 不立即重讀，保留 H2 降級提示 |
+| `PUT /reports/weekly/{report_id}/manual` | weeklyReports | FR-RPT-04；人工版保存後更新對應週與 id 快取 |
 
 資源前綴涵蓋全部列表、詳情及篩選查詢。原因、健康不受上述寫入影響。
 `gantt` 與 `events` 由共用查詢鍵管理。歷程 filters 以 `normalizeEventFilters` 為單一來源，URL、請求與 query key 共用；空值省略，limit/offset 預設 100/0。

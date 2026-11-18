@@ -121,3 +121,10 @@ test("QueryClient 保留既有重試與視窗焦點設定", () => {
   expect(client.getDefaultOptions().queries).toEqual({ retry: false, refetchOnWindowFocus: false });
   client.clear();
 });
+
+test("12.13：週報鍵按週與 id 分開；產稿和儲存人工版都登記 weeklyReports 失效", () => {
+  expect(keys.weeklyReportByWeek("2026-11-09")).toEqual(["reports", "weekly", "week", "2026-11-09"]);
+  expect(keys.weeklyReport(7)).toEqual(["reports", "weekly", 7]);
+  expect(mutationInvalidations["POST /reports/weekly/draft"]).toEqual(["weeklyReports"]);
+  expect(mutationInvalidations["PUT /reports/weekly/{report_id}/manual"]).toEqual(["weeklyReports"]);
+});

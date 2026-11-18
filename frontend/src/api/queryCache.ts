@@ -32,9 +32,9 @@ export const mutationInvalidations = {
   "POST /rubrics": ["rubrics"],
   "POST /sources/purge": ["candidates", "tasks", "events"],
   "POST /export": [],
-  // Dev-A（Phase 10 週報後端）：前端尚無讀週報的查詢，先登記為無；12.9 建立週報查詢鍵時由 Dev-C 改寫
-  "POST /reports/weekly/draft": [],
-  "PUT /reports/weekly/{report_id}/manual": [],
+  // 12.13 週報：H2 使用本次寫入回應替換快取，其他週報鍵只標 stale。
+  "POST /reports/weekly/draft": ["weeklyReports"],
+  "PUT /reports/weekly/{report_id}/manual": ["weeklyReports"],
 } as const satisfies Record<string, readonly (keyof typeof queryRoots)[]>;
 
 export type MutationAction = keyof typeof mutationInvalidations;

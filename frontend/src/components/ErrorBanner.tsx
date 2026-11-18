@@ -22,11 +22,11 @@ export function errorMessage(err: unknown): string {
   return "發生未預期的錯誤，請稍後再試。";
 }
 
-export function ErrorBanner({ error }: { error: unknown }) {
+export function ErrorBanner({ error, message }: { error: unknown; message?: string }) {
   if (!error) return null;
   return (
     <div className="banner banner-error" role="alert">
-      {errorMessage(error)}
+      {message ?? errorMessage(error)}
     </div>
   );
 }

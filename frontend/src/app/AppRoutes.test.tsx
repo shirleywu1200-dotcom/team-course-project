@@ -36,7 +36,10 @@ function viewport(compact: boolean) {
   });
 }
 
-beforeEach(() => viewport(false));
+beforeEach(() => {
+  viewport(false);
+  server.use(http.get(`${API}/reports/weekly`, () => HttpResponse.json({ error: { code: "NOT_FOUND", message: "未產生", details: {} } }, { status: 404 })));
+});
 afterEach(() => vi.unstubAllGlobals());
 
 test.each([
@@ -56,12 +59,12 @@ test.each([
   ["/goals", "目標與精力"],
   ["/reports", "週報"],
   ["/data-control", "資料控制"],
-])("路由 %s 可直接開啟；Dev-B 實作頁讀取資料，其餘仍預留", async (path, title) => {
+])("路由 %s 可直接開啟；已實作頁讀取資料，其餘仍預留", async (path, title) => {
   const fetchSpy = vi.spyOn(globalThis, "fetch");
   try {
     open(path);
     expect(await screen.findByRole("heading", { name: title, level: 1 })).toBeInTheDocument();
-    if (["/import", "/inbox", "/setup", "/settings", "/data-control"].includes(path)) {
+    if (["/import", "/inbox", "/setup", "/settings", "/reports", "/data-control"].includes(path)) {
       expect(screen.queryByText("此功能尚未開放。")).not.toBeInTheDocument();
       expect(fetchSpy).toHaveBeenCalled();
     } else {
