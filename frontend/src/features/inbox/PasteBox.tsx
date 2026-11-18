@@ -51,6 +51,7 @@ export function PasteBox({ pollMs, pollLimitMs }: Props) {
       else {
         setJobId(null);
         qc.invalidateQueries({ queryKey: queryRoots.candidates });
+        qc.invalidateQueries({ queryKey: queryRoots.gantt });
       }
     },
   });
@@ -70,7 +71,9 @@ export function PasteBox({ pollMs, pollLimitMs }: Props) {
 
   const jobDone = finished(job.data);
   useEffect(() => {
-    if (jobDone) qc.invalidateQueries({ queryKey: queryRoots.candidates });
+    if (!jobDone) return;
+    qc.invalidateQueries({ queryKey: queryRoots.candidates });
+    qc.invalidateQueries({ queryKey: queryRoots.gantt });
   }, [jobDone, qc]);
 
   const polling = jobId !== null && !jobDone && !timedOut;
