@@ -629,6 +629,7 @@ CREATE TABLE idempotency_keys (
 | 409 | `STALE_VERSION` | `expected_version` 與目前不符 |
 | 409 | `CONFIRMATION_INVALID` | 基準更正憑證過期、已使用或任務已變動 |
 | 409 | `CANDIDATE_NOT_OPEN` | 候選已處理 |
+| 409 | `FEEDBACK_EXISTS` | 任務已有完成回報（修改回報 9.3 未開放；2026-11-18 產品負責人裁定，#47 A1） |
 | 413 | `PAYLOAD_TOO_LARGE` | 貼上文字超過 20,000 字，或匯入超過 500 列或 50,000 字元 |
 | 422 | `VALIDATION_ERROR` | 欄位缺漏或格式錯誤（`details` 列出欄位） |
 | 422 | `NO_CHANGE` | 新值等於目前值 |
@@ -991,9 +992,24 @@ CREATE TABLE idempotency_keys (
 | Method | Path | 說明 |
 | --- | --- | --- |
 | PUT | `/tasks/{id}/feedback` | 儲存完成回報 |
+| GET | `/tasks/{id}/feedback` | 讀取完成回報；還沒填回 `NOT_FOUND` |
 | GET | `/feedback/pending` | 待補完成回報的任務 |
+| GET | `/meta/today` | 伺服器的今天（台北時區），供前端判斷日期 |
 
-`PUT /tasks/{id}/feedback` 輸入：`{ "actual_stars": 4, "energy": "mid", "invest_vs_expected": "as_expected", "goal_id": 3 }`。任務須為 `done`，否則 `VALIDATION_ERROR`。輸出：回報（含伺服器算出的 `overdue_days`、`rubric_id`）；寫 `feedback` 事件；有 `goal_id` 時另寫 `goal` 事件。
+（2026-11-18 產品負責人裁定，#47：A1～A6 依 Dev-A 提案。）
+
+`PUT /tasks/{id}/feedback` 輸入：`{ "actual_stars": 4, "energy": "mid", "invest_vs_expected": "as_expected", "rubric_id": 5 }`。
+- `actual_stars`（1–5）、`energy`（`high`／`mid`／`low`）、`rubric_id` 必填；`invest_vs_expected`（`less`／`as_expected`／`more`）選填，可為 null。
+- `rubric_id` 是前端開啟面板時讀到的量表版本（`GET /rubrics`），伺服器只檢查它存在，不存在回 `VALIDATION_ERROR`（6.5「量表在填寫期間換版本」）。
+- 不收 `goal_id`：關聯目標一律走 `POST /goal-links`（5.13），送了也忽略。`overdue_days` 由伺服器計算，前端送了也忽略（FR-FBK-03）。
+- 任務須為 `done`，否則 `VALIDATION_ERROR`；已有完成回報回 `FEEDBACK_EXISTS`（修改回報 9.3 依 D-05 不做）；任務不存在回 `NOT_FOUND`。
+- 成功回 201：`{ "feedback": FeedbackOut, "event": EventOut }`。同一交易寫入回報與一筆 `feedback` 事件（`field='completion_feedback'`，`to_value` 為回報 id，`extra` 記星數、精力、投入時間、逾期天數與量表 id）。
+
+`FeedbackOut`＝`{ id, task_id, actual_stars, energy, invest_vs_expected, overdue_days, rubric_id, created_at }`。
+
+`GET /feedback/pending` 輸出：`{ "items": [PendingItem], "total": n }`，列出已完成但還沒有完成回報的任務，工作與私人範圍都列；依 `done_date`、`task_id` 由舊到新，不分頁、不篩選。`PendingItem`＝`{ task_id, title, owner, project_id, done_date, orig_due, overdue_days, expected_stars, star_source }`，`overdue_days` 為若現在填寫時的逾期天數。
+
+`GET /meta/today` 輸出：`{ "today": "2026-11-18" }`。
 
 ### 5.13 目標
 
@@ -1161,6 +1177,7 @@ CREATE TABLE idempotency_keys (
 | 稍後補 | 任務維持 `done`，進入待補清單；統計不計入該任務的完成回報 |
 | 量表在填寫期間換版本 | 使用開啟面板時的版本；寫入該版本 id |
 | 對非完成任務送回報 | `VALIDATION_ERROR` |
+| 已有完成回報再送 | `FEEDBACK_EXISTS`（修改回報 9.3 未開放，#47 A1） |
 
 ### 6.6 AI 失敗時的退路
 
