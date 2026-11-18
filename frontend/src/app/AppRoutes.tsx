@@ -10,6 +10,7 @@ import { OnboardingPage } from "../features/settings/OnboardingPage";
 import { SettingsPage } from "../features/settings/SettingsPage";
 import { WeeklyReportPage } from "../features/weekly-report/WeeklyReportPage";
 import { ONBOARDING_PATH } from "../features/settings/OnboardingGate";
+import { TimeManagementPage } from "../features/time-management/TimeManagementPage";
 import { AppLayout } from "./AppLayout";
 import { navigationRoutes, pageRoutes } from "./routeDefinitions";
 
@@ -18,6 +19,7 @@ const featurePages: Record<string, ComponentType> = {
   "/inbox": InboxPage,
   [ONBOARDING_PATH]: OnboardingPage,
   "/settings": SettingsPage,
+  "/time-management": TimeManagementPage,
   "/reports": WeeklyReportPage,
   "/data-control": DataControlPage,
 };

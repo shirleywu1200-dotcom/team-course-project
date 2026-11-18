@@ -6,6 +6,7 @@ import { vi } from "vitest";
 
 import { API, makeTask, renderWithClient, server } from "../test/server";
 import { AppRoutes } from "./AppRoutes";
+import { timeManagementFixtures } from "../test/fixtures";
 
 function LocationProbe() {
   const location = useLocation();
@@ -64,7 +65,11 @@ test.each([
   try {
     open(path);
     expect(await screen.findByRole("heading", { name: title, level: 1 })).toBeInTheDocument();
-    if (["/import", "/inbox", "/setup", "/settings", "/reports", "/data-control"].includes(path)) {
+    if (path === "/time-management") {
+      expect(await screen.findByText(timeManagementFixtures.insufficient.judgement_note)).toBeInTheDocument();
+      expect(screen.queryByText("此功能尚未開放。")).not.toBeInTheDocument();
+      expect(fetchSpy).toHaveBeenCalled();
+    } else if (["/import", "/inbox", "/setup", "/settings", "/reports", "/data-control"].includes(path)) {
       expect(screen.queryByText("此功能尚未開放。")).not.toBeInTheDocument();
       expect(fetchSpy).toHaveBeenCalled();
     } else {

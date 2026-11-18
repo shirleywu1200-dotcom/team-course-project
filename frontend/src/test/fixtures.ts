@@ -1,5 +1,5 @@
 import type { AdjustDue, AdjustDueResult, StatusChange, Task } from "../api/types";
-import type { components } from "../api/types.generated";
+import type { components, paths } from "../api/types.generated";
 import type { AdjustStartFixtureRequest, AdjustStartFixtureResponse, SerializedEventFixture, SerializedTaskFixture, StatusFixtureResponse, TaskDetailFixtureResponse } from "./fixtureTypes";
 import { getErrorFixture, type ErrorFixtureCode } from "./errorFixtures";
 
@@ -106,6 +106,51 @@ export const adjustStartFixtures = {
   staleVersion: startError("STALE_VERSION", { ...startRequest, expected_version: 3 }),
   validationError: startError("VALIDATION_ERROR", { ...startRequest, new_start: "invalid-date" }),
 };
+
+// 12.10 定稿 §5：固定伺服器回應，不在 MSW 重算判讀；只引用生成型別。
+type TimeMgmtStatsOut = paths["/api/v1/stats/time-management"]["get"]["responses"][200]["content"]["application/json"];
+export const timeManagementFixtures = {
+  insufficient: {
+    better: { count: 1, days: 1 }, worse: { count: 3, days: 6 }, none: 1, unmarked: 1,
+    worse_by_energy: { high: 0, mid: 1, low: 1, not_done: 1 }, min_sample: 5,
+    judgement: null, judgement_note: "樣本 4 筆，不到 5 筆，只顯示不下結論",
+  },
+  better: {
+    better: { count: 4, days: 8 }, worse: { count: 2, days: 3 }, none: 1, unmarked: 0,
+    worse_by_energy: { high: 1, mid: 1, low: 0, not_done: 0 }, min_sample: 5,
+    judgement: "時間管理偏向變好", judgement_note: "變好 4 次、變差 2 次。",
+  },
+  worseLowEnergy: {
+    better: { count: 2, days: 3 }, worse: { count: 3, days: 9 }, none: 0, unmarked: 1,
+    worse_by_energy: { high: 0, mid: 0, low: 2, not_done: 1 }, min_sample: 5,
+    judgement: "偏向變差，建議檢視", judgement_note: "變好 2 次、變差 3 次。變差多集中在低精力任務。",
+  },
+  half: {
+    better: { count: 1, days: 2 }, worse: { count: 4, days: 8 }, none: 0, unmarked: 0,
+    worse_by_energy: { high: 0, mid: 2, low: 2, not_done: 0 }, min_sample: 5,
+    judgement: "偏向變差，建議檢視", judgement_note: "變好 1 次、變差 4 次。",
+  },
+  balanced: {
+    better: { count: 3, days: 6 }, worse: { count: 3, days: 7 }, none: 1, unmarked: 0,
+    worse_by_energy: { high: 1, mid: 1, low: 0, not_done: 1 }, min_sample: 5,
+    judgement: "持平", judgement_note: "變好 3 次、變差 3 次。",
+  },
+  notDone: {
+    better: { count: 1, days: 1 }, worse: { count: 4, days: 8 }, none: 0, unmarked: 0,
+    worse_by_energy: { high: 0, mid: 0, low: 0, not_done: 4 }, min_sample: 5,
+    judgement: "偏向變差，建議檢視", judgement_note: "變好 1 次、變差 4 次。",
+  },
+  empty: {
+    better: { count: 0, days: 0 }, worse: { count: 0, days: 0 }, none: 0, unmarked: 0,
+    worse_by_energy: { high: 0, mid: 0, low: 0, not_done: 0 }, min_sample: 5,
+    judgement: null, judgement_note: "樣本 0 筆，不到 5 筆，只顯示不下結論",
+  },
+  ac13: {
+    better: { count: 1, days: 1 }, worse: { count: 1, days: 2 }, none: 1, unmarked: 1,
+    worse_by_energy: { high: 0, mid: 0, low: 0, not_done: 1 }, min_sample: 5,
+    judgement: null, judgement_note: "樣本 2 筆，不到 5 筆，只顯示不下結論",
+  },
+} satisfies Record<string, TimeMgmtStatsOut>;
 
 export const dataControlFixtures = {
   exportEmpty: {

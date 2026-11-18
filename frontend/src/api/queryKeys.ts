@@ -2,11 +2,19 @@ import type { paths } from "./types.generated";
 
 type TaskFilter = NonNullable<paths["/api/v1/tasks"]["get"]["parameters"]["query"]>;
 type ProjectFilter = NonNullable<paths["/api/v1/projects"]["get"]["parameters"]["query"]>;
-type StatsFilter = NonNullable<paths["/api/v1/stats/time-management"]["get"]["parameters"]["query"]>;
+export type StatsFilter = NonNullable<paths["/api/v1/stats/time-management"]["get"]["parameters"]["query"]>;
 export type EventFilter = NonNullable<paths["/api/v1/events"]["get"]["parameters"]["query"]>;
 type EventFilterInput = URLSearchParams | EventFilter;
 
 const eventKinds = new Set(["due", "annotation", "status", "task", "feedback", "goal", "baseline", "project"]);
+
+// 12.10：URL、請求與 query key 共用；空值省略，日期不轉換時區。
+export function normalizeTimeManagementFilter(filter: StatsFilter = {}) {
+  return {
+    ...(filter.from ? { from: filter.from } : {}),
+    ...(filter.to ? { to: filter.to } : {}),
+  };
+}
 
 // URL、請求參數與 query key 共用；日期保持伺服器的 YYYY-MM-DD 字串。
 export function normalizeEventFilters(input: EventFilterInput = {}): EventFilter {
@@ -54,7 +62,7 @@ export const keys = {
   gantt: (projectId: number) => [...queryRoots.gantt, projectId] as const,
   events: (filters: EventFilterInput = {}) => [...queryRoots.events, normalizeEventFilters(filters)] as const,
   projectList: (filter: ProjectFilter = {}) => [...queryRoots.projects, "list", { include_archived: filter.include_archived ?? false }] as const,
-  timeManagement: (filter: StatsFilter = {}) => [...queryRoots.timeManagement, filter] as const,
+  timeManagement: (filter: StatsFilter = {}) => [...queryRoots.timeManagement, normalizeTimeManagementFilter(filter)] as const,
   // Dev-B 12.8 收件匣、12.11 設定與量表
   candidates: (state: "open" | "confirmed" | "ignored") => [...queryRoots.candidates, state] as const,
   ingestJob: (id: number) => ["ingest", "jobs", id] as const,
