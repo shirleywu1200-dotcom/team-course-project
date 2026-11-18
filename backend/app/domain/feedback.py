@@ -10,7 +10,7 @@ from sqlalchemy import Connection
 from app.clock import get_clock
 from app.db.repo import feedback_repo, rubrics_repo
 from app.db.repo.tasks_repo import TaskRepo
-from app.domain.events import write_event
+from app.domain.events import is_mine, write_event
 from app.errors import DomainError
 
 
@@ -32,8 +32,9 @@ def save(conn: Connection, task_id: int, *, actual_stars: int, energy: str, inve
     saved = feedback_repo.insert_if_absent(conn, {"task_id": task_id, "created_at": get_clock().now()} | values)
     if saved is None:
         raise DomainError("FEEDBACK_EXISTS", details={"task_id": task_id})
-    event = write_event(conn, task_id=task_id, kind="feedback", field="completion_feedback", from_value=None,
-                        to_value=str(saved["id"]), origin="manual", extra=values)
+    event = write_event(conn, task_id=task_id, task_title=task["title"], mine=is_mine(task),
+                        project_id=task["project_id"], kind="feedback", field="completion_feedback",
+                        from_value=None, to_value=str(saved["id"]), origin="manual", extra=values)
     return saved, event
 
 

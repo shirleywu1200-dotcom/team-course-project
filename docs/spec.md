@@ -226,11 +226,11 @@
 ### 3.12 FR-FBK 完成回報（P2）
 
 - FR-FBK-01 任務完成（今日頁按完成，或確認完成候選）後開啟完成回報。
-- FR-FBK-02 必填：實際達成星數（1–5）、自評精力（高／中／低）。選填：投入時間相對預期（少於／如期／多於）、關聯目標。
+- FR-FBK-02 必填：實際達成星數（1–5）、自評精力（高／中／低）。選填：投入時間相對預期（少於／如期／多於）。關聯目標另以 `POST /goal-links` 確認（FR-GOL-03；#47 A6）。
 - FR-FBK-03 逾期天數 `overdue_days = max(0, 完成日 − 原訂日)` **由伺服器計算**，前端送來的值忽略。以原訂日為基準。
 - FR-FBK-04 儲存時記錄當時 `rubric_id`；顯示事前預設與其來源。
 - FR-FBK-05 可「稍後補」：任務保持完成狀態，列入今日頁「待補完成回報」，直到填寫。
-- FR-FBK-06 一個任務最多一筆完成回報；之後修改以新增一筆 `feedback` 更正事件，統計取最新一筆。〔待決：是否允許修改〕
+- FR-FBK-06 一個任務最多一筆完成回報。修改回報（以新增一筆 `feedback` 更正事件、統計取最新一筆）本期不做（D-05、todo 9.3）：已有回報再送回 `FEEDBACK_EXISTS`（2026-11-18 產品負責人裁定，#47 A1）。
 - FR-FBK-07 精力永遠由你自評，**AI 不估、不代填**。
 
 ### 3.13 FR-GOL 目標與精力（P2–P3，AI-03、AI-04）
@@ -992,7 +992,7 @@ CREATE TABLE idempotency_keys (
 | Method | Path | 說明 |
 | --- | --- | --- |
 | PUT | `/tasks/{id}/feedback` | 儲存完成回報 |
-| GET | `/tasks/{id}/feedback` | 讀取完成回報；還沒填回 `NOT_FOUND` |
+| GET | `/tasks/{id}/feedback` | 讀取完成回報；還沒填回 `NOT_FOUND`（任務存在時代表尚未填寫，是正常狀態） |
 | GET | `/feedback/pending` | 待補完成回報的任務 |
 | GET | `/meta/today` | 伺服器的今天（台北時區），供前端判斷日期 |
 
@@ -1020,7 +1020,7 @@ CREATE TABLE idempotency_keys (
 | GET | `/goals/{id}/stats` | 統計與判讀 |
 | GET | `/goals/matrix` | 目標 × 精力矩陣 |
 | GET | `/goal-links/pending` | 已完成回報但未關聯目標的事件，含 AI-03 建議 |
-| POST | `/tasks/{id}/goal-link` | 你確認關聯（或 `goal_id=null` 表示不關聯） |
+| POST | `/goal-links` | 你確認關聯（`{ task_id, goal_id }`，`goal_id=null` 表示不關聯；2026-11-18 裁定統一端點，#47 B1） |
 | POST | `/goals/{id}/report/draft` | AI-04 草稿 |
 | PUT | `/goals/{id}/report/manual` | 儲存人工版 |
 

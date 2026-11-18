@@ -3793,6 +3793,13 @@ export interface operations {
                     "application/json": components["schemas"]["FeedbackOut"];
                 };
             };
+            /** @description 任務存在時代表尚未填寫（正常狀態）；或任務不存在（NOT_FOUND） */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Validation Error */
             422: {
                 headers: {
@@ -3827,6 +3834,20 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["FeedbackSaveOut"];
                 };
+            };
+            /** @description 任務不存在（NOT_FOUND） */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 任務已有完成回報（FEEDBACK_EXISTS；修改回報 9.3 未開放） */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

@@ -2399,6 +2399,12 @@
               }
             }
           },
+          "404": {
+            "description": "任務不存在（NOT_FOUND）"
+          },
+          "409": {
+            "description": "任務已有完成回報（FEEDBACK_EXISTS；修改回報 9.3 未開放）"
+          },
           "422": {
             "description": "Validation Error",
             "content": {
@@ -2438,6 +2444,9 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "任務存在時代表尚未填寫（正常狀態）；或任務不存在（NOT_FOUND）"
           },
           "422": {
             "description": "Validation Error",

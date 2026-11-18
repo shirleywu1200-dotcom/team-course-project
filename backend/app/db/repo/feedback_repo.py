@@ -2,8 +2,6 @@
 
 from sqlalchemy import Connection, text
 
-COLUMNS = {"task_id", "actual_stars", "energy", "invest_vs_expected", "overdue_days", "rubric_id", "created_at"}
-
 
 def insert_if_absent(conn: Connection, fields: dict) -> dict | None:
     """新增一筆；該任務已有回報時不寫入、回 None。task_id 有唯一限制，同時送出也不會變成 500。"""
