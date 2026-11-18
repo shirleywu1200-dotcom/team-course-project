@@ -19,6 +19,12 @@ def event_out(e: dict) -> dict:
         "ref_event_id", "batch_id", "actor", "extra")}
 
 
+def project_out(p: dict) -> dict:
+    keys = ("id", "name", "scope", "audience", "line_group_id", "created_at", "updated_at", "archived_at",
+            "task_count", "baseline_saved_at")
+    return {k: p[k] for k in keys if k in p}
+
+
 def feedback_out(f: dict) -> dict:
     """completion_feedback 列（spec 5.12 FeedbackOut）。"""
     return {k: f[k] for k in (
@@ -31,8 +37,3 @@ def pending_feedback_out(r: dict) -> dict:
             "done_date": r["done_date"], "orig_due": r["orig_due"], "overdue_days": r["overdue_days"],
             "expected_stars": r["expected_stars"], "star_source": r["star_source"]}
 
-
-def project_out(p: dict) -> dict:
-    keys = ("id", "name", "scope", "audience", "line_group_id", "created_at", "updated_at", "archived_at",
-            "task_count", "baseline_saved_at")
-    return {k: p[k] for k in keys if k in p}
