@@ -6,7 +6,7 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { vi } from "vitest";
 
 import { ErrorBanner } from "../components/standin/ErrorBanner";
-import { TaskDuePage } from "../features/due-adjust/TaskDuePage";
+import { TaskDetailPage } from "../features/task-detail/TaskDetailPage";
 import { API, makeTask, renderWithClient, server } from "../test/server";
 import { api, ApiError, getToken, setToken } from "./client";
 import type { AdjustDue } from "./types";
@@ -163,9 +163,10 @@ test("STALE_VERSION 實際重讀任務，不自動重送；使用者重做才帶
   );
   const user = userEvent.setup();
   renderWithClient(<MemoryRouter initialEntries={["/tasks/4"]} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-    <Routes><Route path="/tasks/:taskId" element={<TaskDuePage />} /></Routes>
+    <Routes><Route path="/tasks/:taskId" element={<TaskDetailPage />} /></Routes>
   </MemoryRouter>);
   await screen.findByRole("heading", { name: "確認驗收條件", level: 1 });
+  await user.click(screen.getByRole("button", { name: "改預計日" }));
   fireEvent.change(screen.getByLabelText("新的預計完成日"), { target: { value: "2026-11-21" } });
   await screen.findByRole("option", { name: "估計不準（我低估）" });
   await user.selectOptions(screen.getByLabelText("原因"), "underestimated");
@@ -187,7 +188,7 @@ test("STALE_VERSION 實際重讀任務，不自動重送；使用者重做才帶
   await user.selectOptions(screen.getByLabelText("原因"), "underestimated");
   await user.click(screen.getByRole("radio", { name: "不計入" }));
   await user.click(screen.getByRole("button", { name: "確認調整" }));
-  await screen.findByRole("status");
+  await waitFor(() => expect(screen.queryByLabelText("新的預計完成日")).not.toBeInTheDocument());
   expect(bodies).toHaveLength(2);
   expect(bodies[1].expected_version).toBe(2);
 });
