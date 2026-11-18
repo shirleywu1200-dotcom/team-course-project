@@ -1,0 +1,90 @@
+{
+ "note": "AI-04 評估案例；全部虛構，Dev-B 自擬（docs/dev-b/ai-03-04-sdd.md 第 5 節）。payload 形狀照 spec 5.3a。",
+ "cases": [
+  {
+   "id": "null_judgement",
+   "category": "樣本不足 judgement=null（SDD Q4：不得寫門檻數字）",
+   "payload": {
+    "goal": {"type": "growth", "title": "學會 SQL 視窗函式", "period": "2026Q4", "energy_plan": "high"},
+    "stats": {"linked": 3, "avg_actual": 4.0, "avg_expected": 3.3, "overdue_count": 1,
+              "energy": {"high": 2, "mid": 1, "low": 0}, "progress_pct": 100, "judgement": null},
+    "tasks": [
+     {"task_id": 7, "title": "報表查詢改寫", "done_date": "2026-11-12"},
+     {"task_id": 8, "title": "排名查詢練習", "done_date": "2026-11-05"},
+     {"task_id": 9, "title": "移動平均查詢", "done_date": "2026-10-28"}
+    ]
+   }
+  },
+  {
+   "id": "consistent",
+   "category": "判讀「一致」",
+   "payload": {
+    "goal": {"type": "expectation", "title": "完成月報自動化", "period": "2026Q4", "energy_plan": "high"},
+    "stats": {"linked": 6, "avg_actual": 4.2, "avg_expected": 4.0, "overdue_count": 0,
+              "energy": {"high": 4, "mid": 2, "low": 0}, "progress_pct": 75, "judgement": "一致"},
+    "tasks": [
+     {"task_id": 103, "title": "月報資料來源盤點", "done_date": "2026-10-08"},
+     {"task_id": 108, "title": "月報排程腳本撰寫", "done_date": "2026-10-20"},
+     {"task_id": 113, "title": "月報自動寄送設定", "done_date": "2026-11-02"},
+     {"task_id": 118, "title": "月報錯誤通知機制", "done_date": "2026-11-13"},
+     {"task_id": 121, "title": "月報格式統一", "done_date": "2026-11-14"},
+     {"task_id": 122, "title": "月報使用說明", "done_date": "2026-11-16"}
+    ]
+   }
+  },
+  {
+   "id": "review",
+   "category": "判讀「建議檢視」（預期高、實際多為低）",
+   "payload": {
+    "goal": {"type": "growth", "title": "提升簡報表達能力", "period": "2026Q4", "energy_plan": "high"},
+    "stats": {"linked": 6, "avg_actual": 2.8, "avg_expected": 3.5, "overdue_count": 2,
+              "energy": {"high": 1, "mid": 1, "low": 4}, "progress_pct": 60, "judgement": "建議檢視"},
+    "tasks": [
+     {"task_id": 104, "title": "部門會議簡報試講", "done_date": "2026-10-10"},
+     {"task_id": 109, "title": "簡報課程第一堂", "done_date": "2026-10-22"},
+     {"task_id": 114, "title": "季度成果簡報上台報告", "done_date": "2026-11-04"},
+     {"task_id": 119, "title": "錄影檢討簡報手勢", "done_date": "2026-11-16"}
+    ]
+   }
+  },
+  {
+   "id": "title_number",
+   "category": "目標與任務標題含數字",
+   "payload": {
+    "goal": {"type": "growth", "title": "讀完 3 本資料工程書", "period": "2026Q4", "energy_plan": "mid"},
+    "stats": {"linked": 2, "avg_actual": 4.5, "avg_expected": 4.0, "overdue_count": 0,
+              "energy": {"high": 0, "mid": 2, "low": 0}, "progress_pct": 67, "judgement": null},
+    "tasks": [
+     {"task_id": 201, "title": "讀完第 1 本：資料管線設計", "done_date": "2026-10-19"},
+     {"task_id": 202, "title": "讀完第 2 本：串流處理入門", "done_date": "2026-11-15"}
+    ]
+   }
+  },
+  {
+   "id": "decimals_zeros",
+   "category": "小數與 0 值",
+   "payload": {
+    "goal": {"type": "time", "title": "每週留時間拜訪客戶", "period": "2026Q4", "energy_plan": "low"},
+    "stats": {"linked": 5, "avg_actual": 3.6, "avg_expected": 3.3, "overdue_count": 0,
+              "energy": {"high": 0, "mid": 1, "low": 4}, "progress_pct": 42, "judgement": "一致"},
+    "tasks": [
+     {"task_id": 102, "title": "拜訪信義區客戶", "done_date": "2026-10-06"},
+     {"task_id": 107, "title": "拜訪板橋經銷商", "done_date": "2026-10-17"},
+     {"task_id": 112, "title": "電話回訪三家舊客戶並約拜訪", "done_date": "2026-10-29"},
+     {"task_id": 117, "title": "拜訪新竹科學園區客戶", "done_date": "2026-11-11"},
+     {"task_id": 123, "title": "拜訪台中客戶", "done_date": "2026-11-17"}
+    ]
+   }
+  },
+  {
+   "id": "private_only",
+   "category": "tasks 為空（全部是私人任務，只有統計）",
+   "payload": {
+    "goal": {"type": "growth", "title": "養成運動習慣", "period": "2026Q4", "energy_plan": "mid"},
+    "stats": {"linked": 2, "avg_actual": 4.0, "avg_expected": 3.0, "overdue_count": 0,
+              "energy": {"high": 0, "mid": 1, "low": 1}, "progress_pct": 20, "judgement": null},
+    "tasks": []
+   }
+  }
+ ]
+}
