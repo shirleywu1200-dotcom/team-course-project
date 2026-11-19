@@ -66,9 +66,12 @@ def link(conn: Connection, task_id: int, goal_id: int | None, expected_version: 
         raise DomainError("VALIDATION_ERROR", "只有已完成且已填完成回報的任務可以關聯目標", {"fields": ["task_id"]})
     _check_goal(conn, goal_id)
     suggested = _suggested_goal(conn, ai_run_id, task_id)
+    decided = goal_links_repo.has_decision(conn, task_id)
     # 第一次選「不關聯」時新舊值都是 null，仍要記下這個決定（spec 5.13）
-    if goal_id == task["goal_id"] and goal_links_repo.has_decision(conn, task_id):
+    if goal_id == task["goal_id"] and decided:
         raise DomainError("NO_CHANGE", details={"task_id": task_id})
+    if decided:                    # 回饋只記第一次決定：之後改選不是對建議的回應（spec 5.13）
+        suggested = _NO_SUGGESTION
     event = write_event(conn, task_id=task_id, kind="goal", field="goal_id",
                         from_value=_text(task["goal_id"]), to_value=_text(goal_id), origin="manual")
     if suggested is not _NO_SUGGESTION:

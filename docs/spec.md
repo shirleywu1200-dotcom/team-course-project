@@ -1139,7 +1139,8 @@ CREATE TABLE idempotency_keys (
 - 帶 `Idempotency-Key` 時依 5.1 冪等規則：同一個鍵重送回首次結果，不再呼叫 AI。
 - 建議不存檔。使用者確認關聯時，`POST /goal-links` 可帶 `ai_run_id`（該次 AI-03 的 `ai_runs.id`；JSON 整數，null 等於沒帶），伺服器讀該筆 `raw_output` 比對，寫 `ai_feedback`（與建議相同 `accepted`，不同或選不關聯 `changed`），比照 AI-07 的匯入回饋（5.6）。`POST /goal-links` 的其他欄位與規則見上方「目標關聯」。
   - 檢查順序：在目標檢查之後、`NO_CHANGE` 之前檢查 `ai_run_id`；不存在、不是 AI-03、或 `status` 不是 `ok`，回 `VALIDATION_ERROR`（`["ai_run_id"]`），不關聯、不寫回饋。
-  - 不寫回饋的情況（關聯照常完成）：該筆 `raw_output` 已清除（6.7）；建議裡沒有這個任務（例如任務是私人範圍，或建議之後才完成）；同一 `ai_run_id`＋同一任務已寫過回饋。不同的 `ai_run_id` 各寫一筆。AI-03 不寫 `ignored`。
+  - 回饋只記任務的**第一次**關聯決定；之後改選即使帶 `ai_run_id` 也不寫，因為那已不是對建議的回應。
+  - 不寫回饋的情況（關聯照常完成）：該筆 `raw_output` 已清除（6.7）；建議裡沒有這個任務（例如任務是私人範圍，或建議之後才完成）；這個任務已做過關聯決定。AI-03 不寫 `ignored`。
   - 回饋列：`node_id='AI-03'`、`target_type='goal_link'`、`target_id` 為這次寫入的 `goal` 事件 id；`detail`＝`{ ai_run_id, task_id, ai, final }`，只含整數或 null，不含 `reason` 或任何標題。與事件、任務更新在同一交易。
 
 ### 5.14 週報

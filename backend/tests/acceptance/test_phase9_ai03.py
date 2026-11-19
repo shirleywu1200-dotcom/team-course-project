@@ -372,6 +372,13 @@ def test_f9_one_feedback_per_run_and_task(client, run_id, ai, query):
     assert [f["detail"]["task_id"] for f in feedback_rows(query)] == [21, 23]
 
 
+def test_f9_feedback_only_for_first_decision(client, run_id, query):
+    # code-review：改選時才帶 ai_run_id（或帶舊的 run）不算對建議的回應，不寫回饋（spec 5.13）
+    assert link(client, 21, 12, 2).status_code == 200                           # 第一次決定沒帶 ai_run_id
+    assert link(client, 21, 11, 3, ai_run_id=run_id).status_code == 200      # 改選才帶：不寫
+    assert feedback_rows(query) == []
+
+
 @pytest.mark.parametrize("args, code", [
     ((21, 11, 1), "STALE_VERSION"),
     ((21, 14, 2), "VALIDATION_ERROR"),                 # 封存目標

@@ -16,7 +16,11 @@ from app.domain import ai03
 
 log = logging.getLogger("g4")
 MAX_ATTEMPTS = 3   # 任何失敗都算一次、最多 3 次；AI 不可用立刻停（spec 5.3a「重試比照 AI-01」）
-NOTHING = {"ai_status": "unavailable", "ai_run_id": None, "items": []}
+
+
+def _fallback(ai_status: str = "unavailable") -> dict:
+    """退路回應：沒有建議，由使用者自己選（AC-50）。每次產生新的 dict。"""
+    return {"ai_status": ai_status, "ai_run_id": None, "items": []}
 
 
 def _collect(conn) -> dict:
@@ -28,7 +32,7 @@ def _collect(conn) -> dict:
 def suggest(db: Database, ai: AIClient) -> dict:
     payload = db.run(_collect)
     if not payload["goals"] or not payload["tasks"]:
-        return dict(NOTHING)          # 依規則刻意不呼叫（spec 5.3），不寫 ai_runs
+        return _fallback()            # 依規則刻意不呼叫（spec 5.3），不寫 ai_runs
     for attempt in range(1, MAX_ATTEMPTS + 1):
         started = time.monotonic()
         output, items, error = None, None, None
@@ -51,4 +55,4 @@ def suggest(db: Database, ai: AIClient) -> dict:
             break
     # 最終狀態以最後一次嘗試為準：格式不合為 invalid_output，其餘為 unavailable（比照 AI-05）
     last_invalid = isinstance(error, AIInvalidOutput)
-    return NOTHING | {"ai_status": "invalid_output" if last_invalid else "unavailable"}
+    return _fallback("invalid_output" if last_invalid else "unavailable")
