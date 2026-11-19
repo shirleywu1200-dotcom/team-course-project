@@ -146,3 +146,10 @@ class GoalPatch(Strict):
     definition: str | None = None
     target: int | None = Field(None, ge=0, strict=True)
     energy_plan: Energy | None = None
+
+
+class GoalLinkIn(Strict):
+    """POST /goal-links（spec 5.13、#47 G1）；goal_id 必填，null 表示不關聯。只收 JSON 整數。"""
+    task_id: int = Field(strict=True)
+    goal_id: int | None = Field(strict=True)
+    expected_version: int = Field(strict=True)

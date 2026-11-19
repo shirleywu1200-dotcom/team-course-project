@@ -559,3 +559,53 @@ class GoalListOut(Out):
 class GoalPatchOut(Out):
     goal: GoalOut
     changes: list[EventOut]
+
+
+class PendingLinkItem(Out):
+    task_id: int
+    title: str
+    project_id: int | None
+    scope: Literal["work", "private"]
+    done_date: date
+    version: int = Field(description="送 POST /goal-links 的 expected_version 用")
+
+
+class PendingLinkOut(Out):
+    items: list[PendingLinkItem]
+    total: int
+
+
+class EnergyDistribution(Out):
+    high: int
+    mid: int
+    low: int
+
+
+class GoalProgress(Out):
+    text: str
+    pct: int | None = Field(description="0～100；分母為 0 時為 null")
+
+
+class GoalStatsOut(Out):
+    progress: GoalProgress | None = Field(description="time 類型為 null（只顯示統計）")
+    linked: int
+    avg_actual: float | None
+    avg_expected: float | None
+    overdue_count: int
+    energy: EnergyDistribution
+    energy_plan: Literal["high", "mid", "low"]
+    min_sample: int
+    judgement: Literal["一致", "建議檢視"] | None = Field(description="樣本不足時為 null（程式規則，非 AI）")
+    judgement_note: str
+
+
+class GoalMatrixItem(Out):
+    goal_id: int
+    title: str
+    energy_plan: Literal["high", "mid", "low"]
+    energy: EnergyDistribution
+    linked: int
+
+
+class GoalMatrixOut(Out):
+    items: list[GoalMatrixItem]

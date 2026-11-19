@@ -2585,6 +2585,72 @@
         }
       }
     },
+    "/api/v1/goals/matrix": {
+      "get": {
+        "tags": [
+          "goals"
+        ],
+        "summary": "Goal Matrix",
+        "operationId": "goal_matrix_api_v1_goals_matrix_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GoalMatrixOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/goals/{goal_id}/stats": {
+      "get": {
+        "tags": [
+          "goals"
+        ],
+        "summary": "Goal Stats Of",
+        "operationId": "goal_stats_of_api_v1_goals__goal_id__stats_get",
+        "parameters": [
+          {
+            "name": "goal_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Goal Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GoalStatsOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "目標不存在（NOT_FOUND）"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/goals/{goal_id}": {
       "get": {
         "tags": [
@@ -2715,6 +2781,67 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/api/v1/goal-links/pending": {
+      "get": {
+        "tags": [
+          "goals"
+        ],
+        "summary": "Pending Links",
+        "operationId": "pending_links_api_v1_goal_links_pending_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingLinkOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/goal-links": {
+      "post": {
+        "tags": [
+          "goals"
+        ],
+        "summary": "Link Goal",
+        "operationId": "link_goal_api_v1_goal_links_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GoalLinkIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskEventOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "任務不存在（NOT_FOUND）"
+          },
+          "409": {
+            "description": "版本不符（STALE_VERSION）"
+          },
+          "422": {
+            "description": "任務未完成或沒有回報、目標不存在或已封存（VALIDATION_ERROR）；與目前關聯相同（NO_CHANGE）"
           }
         }
       }
@@ -3923,34 +4050,6 @@
         ],
         "title": "DueReasonOut"
       },
-      "EnergyDistribution": {
-        "properties": {
-          "high": {
-            "type": "integer",
-            "title": "High"
-          },
-          "mid": {
-            "type": "integer",
-            "title": "Mid"
-          },
-          "low": {
-            "type": "integer",
-            "title": "Low"
-          },
-          "not_done": {
-            "type": "integer",
-            "title": "Not Done"
-          }
-        },
-        "type": "object",
-        "required": [
-          "high",
-          "mid",
-          "low",
-          "not_done"
-        ],
-        "title": "EnergyDistribution"
-      },
       "EventOut": {
         "properties": {
           "id": {
@@ -4599,6 +4698,37 @@
         ],
         "title": "GoalCreate"
       },
+      "GoalLinkIn": {
+        "properties": {
+          "task_id": {
+            "type": "integer",
+            "title": "Task Id"
+          },
+          "goal_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Goal Id"
+          },
+          "expected_version": {
+            "type": "integer",
+            "title": "Expected Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "task_id",
+          "goal_id",
+          "expected_version"
+        ],
+        "title": "GoalLinkIn",
+        "description": "POST /goal-links（spec 5.13、#47 G1）；goal_id 必填，null 表示不關聯。只收 JSON 整數。"
+      },
       "GoalListOut": {
         "properties": {
           "items": {
@@ -4614,6 +4744,59 @@
           "items"
         ],
         "title": "GoalListOut"
+      },
+      "GoalMatrixItem": {
+        "properties": {
+          "goal_id": {
+            "type": "integer",
+            "title": "Goal Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "energy_plan": {
+            "type": "string",
+            "enum": [
+              "high",
+              "mid",
+              "low"
+            ],
+            "title": "Energy Plan"
+          },
+          "energy": {
+            "$ref": "#/components/schemas/app__api__responses__EnergyDistribution__2"
+          },
+          "linked": {
+            "type": "integer",
+            "title": "Linked"
+          }
+        },
+        "type": "object",
+        "required": [
+          "goal_id",
+          "title",
+          "energy_plan",
+          "energy",
+          "linked"
+        ],
+        "title": "GoalMatrixItem"
+      },
+      "GoalMatrixOut": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/GoalMatrixItem"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "GoalMatrixOut"
       },
       "GoalOut": {
         "properties": {
@@ -4788,6 +4971,127 @@
           "changes"
         ],
         "title": "GoalPatchOut"
+      },
+      "GoalProgress": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "pct": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pct",
+            "description": "0～100；分母為 0 時為 null"
+          }
+        },
+        "type": "object",
+        "required": [
+          "text",
+          "pct"
+        ],
+        "title": "GoalProgress"
+      },
+      "GoalStatsOut": {
+        "properties": {
+          "progress": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GoalProgress"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "time 類型為 null（只顯示統計）"
+          },
+          "linked": {
+            "type": "integer",
+            "title": "Linked"
+          },
+          "avg_actual": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Actual"
+          },
+          "avg_expected": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Expected"
+          },
+          "overdue_count": {
+            "type": "integer",
+            "title": "Overdue Count"
+          },
+          "energy": {
+            "$ref": "#/components/schemas/app__api__responses__EnergyDistribution__2"
+          },
+          "energy_plan": {
+            "type": "string",
+            "enum": [
+              "high",
+              "mid",
+              "low"
+            ],
+            "title": "Energy Plan"
+          },
+          "min_sample": {
+            "type": "integer",
+            "title": "Min Sample"
+          },
+          "judgement": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "一致",
+                  "建議檢視"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Judgement",
+            "description": "樣本不足時為 null（程式規則，非 AI）"
+          },
+          "judgement_note": {
+            "type": "string",
+            "title": "Judgement Note"
+          }
+        },
+        "type": "object",
+        "required": [
+          "progress",
+          "linked",
+          "avg_actual",
+          "avg_expected",
+          "overdue_count",
+          "energy",
+          "energy_plan",
+          "min_sample",
+          "judgement",
+          "judgement_note"
+        ],
+        "title": "GoalStatsOut"
       },
       "HTTPValidationError": {
         "properties": {
@@ -5737,6 +6041,78 @@
           "total"
         ],
         "title": "PendingFeedbackOut"
+      },
+      "PendingLinkItem": {
+        "properties": {
+          "task_id": {
+            "type": "integer",
+            "title": "Task Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "project_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project Id"
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "work",
+              "private"
+            ],
+            "title": "Scope"
+          },
+          "done_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Done Date"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version",
+            "description": "送 POST /goal-links 的 expected_version 用"
+          }
+        },
+        "type": "object",
+        "required": [
+          "task_id",
+          "title",
+          "project_id",
+          "scope",
+          "done_date",
+          "version"
+        ],
+        "title": "PendingLinkItem"
+      },
+      "PendingLinkOut": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PendingLinkItem"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "PendingLinkOut"
       },
       "PreviewIn": {
         "properties": {
@@ -6996,7 +7372,7 @@
             "title": "Unmarked"
           },
           "worse_by_energy": {
-            "$ref": "#/components/schemas/EnergyDistribution"
+            "$ref": "#/components/schemas/app__api__responses__EnergyDistribution__1"
           },
           "min_sample": {
             "type": "integer",
@@ -7372,6 +7748,57 @@
           "updated_at"
         ],
         "title": "WeeklyReportOut"
+      },
+      "app__api__responses__EnergyDistribution__1": {
+        "properties": {
+          "high": {
+            "type": "integer",
+            "title": "High"
+          },
+          "mid": {
+            "type": "integer",
+            "title": "Mid"
+          },
+          "low": {
+            "type": "integer",
+            "title": "Low"
+          },
+          "not_done": {
+            "type": "integer",
+            "title": "Not Done"
+          }
+        },
+        "type": "object",
+        "required": [
+          "high",
+          "mid",
+          "low",
+          "not_done"
+        ],
+        "title": "EnergyDistribution"
+      },
+      "app__api__responses__EnergyDistribution__2": {
+        "properties": {
+          "high": {
+            "type": "integer",
+            "title": "High"
+          },
+          "mid": {
+            "type": "integer",
+            "title": "Mid"
+          },
+          "low": {
+            "type": "integer",
+            "title": "Low"
+          }
+        },
+        "type": "object",
+        "required": [
+          "high",
+          "mid",
+          "low"
+        ],
+        "title": "EnergyDistribution"
       }
     }
   }

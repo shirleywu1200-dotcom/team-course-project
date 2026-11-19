@@ -775,6 +775,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/goals/matrix": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Goal Matrix */
+        get: operations["goal_matrix_api_v1_goals_matrix_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/goals/{goal_id}/stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Goal Stats Of */
+        get: operations["goal_stats_of_api_v1_goals__goal_id__stats_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/goals/{goal_id}": {
         parameters: {
             query?: never;
@@ -804,6 +838,40 @@ export interface paths {
         put?: never;
         /** Archive Goal */
         post: operations["archive_goal_api_v1_goals__goal_id__archive_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/goal-links/pending": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Pending Links */
+        get: operations["pending_links_api_v1_goal_links_pending_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/goal-links": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Link Goal */
+        post: operations["link_goal_api_v1_goal_links_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1224,17 +1292,6 @@ export interface components {
             /** External */
             external: boolean;
         };
-        /** EnergyDistribution */
-        EnergyDistribution: {
-            /** High */
-            high: number;
-            /** Mid */
-            mid: number;
-            /** Low */
-            low: number;
-            /** Not Done */
-            not_done: number;
-        };
         /** EventOut */
         EventOut: {
             /** Id */
@@ -1471,10 +1528,42 @@ export interface components {
             /** Project Id */
             project_id?: number | null;
         };
+        /**
+         * GoalLinkIn
+         * @description POST /goal-links（spec 5.13、#47 G1）；goal_id 必填，null 表示不關聯。只收 JSON 整數。
+         */
+        GoalLinkIn: {
+            /** Task Id */
+            task_id: number;
+            /** Goal Id */
+            goal_id: number | null;
+            /** Expected Version */
+            expected_version: number;
+        };
         /** GoalListOut */
         GoalListOut: {
             /** Items */
             items: components["schemas"]["GoalOut"][];
+        };
+        /** GoalMatrixItem */
+        GoalMatrixItem: {
+            /** Goal Id */
+            goal_id: number;
+            /** Title */
+            title: string;
+            /**
+             * Energy Plan
+             * @enum {string}
+             */
+            energy_plan: "high" | "mid" | "low";
+            energy: components["schemas"]["app__api__responses__EnergyDistribution__2"];
+            /** Linked */
+            linked: number;
+        };
+        /** GoalMatrixOut */
+        GoalMatrixOut: {
+            /** Items */
+            items: components["schemas"]["GoalMatrixItem"][];
         };
         /** GoalOut */
         GoalOut: {
@@ -1535,6 +1624,44 @@ export interface components {
             goal: components["schemas"]["GoalOut"];
             /** Changes */
             changes: components["schemas"]["EventOut"][];
+        };
+        /** GoalProgress */
+        GoalProgress: {
+            /** Text */
+            text: string;
+            /**
+             * Pct
+             * @description 0～100；分母為 0 時為 null
+             */
+            pct: number | null;
+        };
+        /** GoalStatsOut */
+        GoalStatsOut: {
+            /** @description time 類型為 null（只顯示統計） */
+            progress: components["schemas"]["GoalProgress"] | null;
+            /** Linked */
+            linked: number;
+            /** Avg Actual */
+            avg_actual: number | null;
+            /** Avg Expected */
+            avg_expected: number | null;
+            /** Overdue Count */
+            overdue_count: number;
+            energy: components["schemas"]["app__api__responses__EnergyDistribution__2"];
+            /**
+             * Energy Plan
+             * @enum {string}
+             */
+            energy_plan: "high" | "mid" | "low";
+            /** Min Sample */
+            min_sample: number;
+            /**
+             * Judgement
+             * @description 樣本不足時為 null（程式規則，非 AI）
+             */
+            judgement: ("一致" | "建議檢視") | null;
+            /** Judgement Note */
+            judgement_note: string;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -1848,6 +1975,37 @@ export interface components {
         PendingFeedbackOut: {
             /** Items */
             items: components["schemas"]["PendingFeedbackItem"][];
+            /** Total */
+            total: number;
+        };
+        /** PendingLinkItem */
+        PendingLinkItem: {
+            /** Task Id */
+            task_id: number;
+            /** Title */
+            title: string;
+            /** Project Id */
+            project_id: number | null;
+            /**
+             * Scope
+             * @enum {string}
+             */
+            scope: "work" | "private";
+            /**
+             * Done Date
+             * Format: date
+             */
+            done_date: string;
+            /**
+             * Version
+             * @description 送 POST /goal-links 的 expected_version 用
+             */
+            version: number;
+        };
+        /** PendingLinkOut */
+        PendingLinkOut: {
+            /** Items */
+            items: components["schemas"]["PendingLinkItem"][];
             /** Total */
             total: number;
         };
@@ -2273,7 +2431,7 @@ export interface components {
             none: number;
             /** Unmarked */
             unmarked: number;
-            worse_by_energy: components["schemas"]["EnergyDistribution"];
+            worse_by_energy: components["schemas"]["app__api__responses__EnergyDistribution__1"];
             /** Min Sample */
             min_sample: number;
             /**
@@ -2415,6 +2573,26 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+        };
+        /** EnergyDistribution */
+        app__api__responses__EnergyDistribution__1: {
+            /** High */
+            high: number;
+            /** Mid */
+            mid: number;
+            /** Low */
+            low: number;
+            /** Not Done */
+            not_done: number;
+        };
+        /** EnergyDistribution */
+        app__api__responses__EnergyDistribution__2: {
+            /** High */
+            high: number;
+            /** Mid */
+            mid: number;
+            /** Low */
+            low: number;
         };
     };
     responses: never;
@@ -4111,6 +4289,64 @@ export interface operations {
             };
         };
     };
+    goal_matrix_api_v1_goals_matrix_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoalMatrixOut"];
+                };
+            };
+        };
+    };
+    goal_stats_of_api_v1_goals__goal_id__stats_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                goal_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoalStatsOut"];
+                };
+            };
+            /** @description 目標不存在（NOT_FOUND） */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_goal_api_v1_goals__goal_id__get: {
         parameters: {
             query?: never;
@@ -4205,6 +4441,71 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
+            };
+        };
+    };
+    pending_links_api_v1_goal_links_pending_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PendingLinkOut"];
+                };
+            };
+        };
+    };
+    link_goal_api_v1_goal_links_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GoalLinkIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskEventOut"];
+                };
+            };
+            /** @description 任務不存在（NOT_FOUND） */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 版本不符（STALE_VERSION） */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 任務未完成或沒有回報、目標不存在或已封存（VALIDATION_ERROR）；與目前關聯相同（NO_CHANGE） */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
