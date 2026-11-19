@@ -701,7 +701,7 @@ CREATE TABLE idempotency_keys (
 **AI-03 目標關聯建議（FR-GOL-03，Phase 9；2026-11-18 #72 Dev-A、Dev-B 定案）**
 
 - 呼叫端（Dev-A）組 payload、驗證輸出、寫 `ai_feedback`；prompt 與節點（#50）由 Dev-B 負責。
-- 觸發：使用者在待關聯清單按「請 AI 建議」才呼叫，打開清單時不自動呼叫；`GET /goal-links/pending` 不呼叫 AI（視窗聚焦時會自動重抓，會重複付費）。端點暫定 `POST /goal-links/suggest`〔待決：#47 G3，產品負責人裁定〕。
+- 觸發：使用者在待關聯清單按「請 AI 建議」才呼叫，打開清單時不自動呼叫；`GET /goal-links/pending` 不呼叫 AI（視窗聚焦時會自動重抓，會重複付費）。端點為 `POST /goal-links/suggest`（2026-11-19 產品負責人裁定，#47 G3；輸入輸出見 5.13）。
 - 建議只放在該次回應，不另存；使用者確認關聯時帶 `ai_run_id`，伺服器讀該筆 `raw_output` 比對，寫 `ai_feedback`（與建議相同 `accepted`，不同或不關聯 `changed`），比照 AI-07 的 D-3。
 - payload 只含以下鍵，其餘一律不送：
   ```json
@@ -1059,7 +1059,8 @@ CREATE TABLE idempotency_keys (
 | GET / PATCH | `/goals/{id}` | 取得、編輯 |
 | GET | `/goals/{id}/stats` | 統計與判讀 |
 | GET | `/goals/matrix` | 目標 × 精力矩陣 |
-| GET | `/goal-links/pending` | 已完成回報但未關聯目標的事件，含 AI-03 建議 |
+| GET | `/goal-links/pending` | 已完成回報但未關聯目標的事件；不含 AI 建議、不呼叫 AI（#47 G3） |
+| POST | `/goal-links/suggest` | AI-03 關聯建議；使用者按「請 AI 建議」才呼叫（#47 G3） |
 | POST | `/goal-links` | 你確認關聯（`{ task_id, goal_id }`，`goal_id=null` 表示不關聯；2026-11-18 裁定統一端點，#47 B1） |
 | POST | `/goals/{id}/report/draft` | AI-04 草稿 |
 | PUT | `/goals/{id}/report/manual` | 儲存人工版 |
@@ -1078,7 +1079,13 @@ CREATE TABLE idempotency_keys (
 }
 ```
 
-`POST /goal-links` 的 AI-03 建議由 `GET /goal-links/pending` 回傳 `suggestion: { goal_id, reason }`；使用者確認或改選時，伺服器寫 `ai_feedback`（`accepted` 或 `changed`）。
+`POST /goal-links/suggest`（AI-03，payload 與驗證見 5.3a；2026-11-19 裁定，#47 G3）：
+- 不帶 body。伺服器依 5.3a 組 payload：未封存的目標，以及工作範圍、完成日最新的 20 筆待關聯任務。
+- 輸出：`{ "ai_status": "ok", "ai_run_id": 12, "items": [{ "task_id": 7, "goal_id": 2, "reason": "任務內容與 SQL 學習相關" }] }`
+  - `items` 是通過 5.3a 驗證的建議（重複項與不在 payload 的項目已丟棄）；AI 沒有建議的任務不列。`goal_id=null` 表示 AI 認為沒有合適的目標。
+  - AI 不可用或輸出不合格式時照樣回 200：`ai_status` 為 `unavailable` 或 `invalid_output`，`ai_run_id=null`、`items=[]`，由使用者自己選（AC-50）。
+  - 沒有未封存的目標，或沒有可送的工作範圍任務時，不呼叫 AI、不寫 `ai_runs`，回 `ai_status="unavailable"`、`ai_run_id=null`、`items=[]`（5.3「依規則刻意不呼叫」）。
+- 建議不存檔。使用者確認關聯時，`POST /goal-links` 可帶 `ai_run_id`（該次 AI-03 的 `ai_runs.id`），伺服器讀該筆 `raw_output` 比對，寫 `ai_feedback`（與建議相同 `accepted`，不同或選不關聯 `changed`），比照 AI-07 的匯入回饋（5.6）。`POST /goal-links` 其餘輸入欄位依 #47 G1 定案後寫入。
 
 ### 5.14 週報
 
