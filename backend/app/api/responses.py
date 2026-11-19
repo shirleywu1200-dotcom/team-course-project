@@ -535,3 +535,77 @@ class PendingFeedbackOut(Out):
 
 class TodayOut(Out):
     today: date = Field(description="伺服器的今天（台北時區）")
+
+
+# ---------- 目標（Phase 9，Dev-A；spec 5.13）----------
+
+class GoalOut(Out):
+    id: int
+    type: Literal["growth", "time", "expectation"]
+    title: str
+    period: str
+    definition: str
+    target: int = Field(description="growth：件數；time：分鐘／週；expectation：不用，固定 0")
+    energy_plan: Literal["high", "mid", "low"]
+    project_id: int | None = Field(description="只有 expectation 有值")
+    created_at: datetime
+    archived_at: datetime | None
+
+
+class GoalListOut(Out):
+    items: list[GoalOut]
+
+
+class GoalPatchOut(Out):
+    goal: GoalOut
+    changes: list[EventOut]
+
+
+class PendingLinkItem(Out):
+    task_id: int
+    title: str
+    project_id: int | None
+    scope: Literal["work", "private"]
+    done_date: date
+    version: int = Field(description="送 POST /goal-links 的 expected_version 用")
+
+
+class PendingLinkOut(Out):
+    items: list[PendingLinkItem]
+    total: int
+
+
+class EnergyDistribution(Out):
+    high: int
+    mid: int
+    low: int
+
+
+class GoalProgress(Out):
+    text: str
+    pct: int | None = Field(description="0～100；分母為 0 時為 null")
+
+
+class GoalStatsOut(Out):
+    progress: GoalProgress | None = Field(description="time 類型為 null（只顯示統計）")
+    linked: int
+    avg_actual: float | None
+    avg_expected: float | None
+    overdue_count: int
+    energy: EnergyDistribution
+    energy_plan: Literal["high", "mid", "low"]
+    min_sample: int
+    judgement: Literal["一致", "建議檢視"] | None = Field(description="樣本不足時為 null（程式規則，非 AI）")
+    judgement_note: str
+
+
+class GoalMatrixItem(Out):
+    goal_id: int
+    title: str
+    energy_plan: Literal["high", "mid", "low"]
+    energy: EnergyDistribution
+    linked: int
+
+
+class GoalMatrixOut(Out):
+    items: list[GoalMatrixItem]

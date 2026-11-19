@@ -139,7 +139,11 @@ code／message 必須是非空字串，details 必須是非陣列物件。
 | `POST /export` | 無 | FR-GOV-02，只讀 |
 | `POST /reports/weekly/draft` | weeklyReports | FR-RPT-02、03；本次回應先替換快取，其他週報鍵標 stale 不立即重讀，保留 H2 降級提示 |
 | `PUT /reports/weekly/{report_id}/manual` | weeklyReports | FR-RPT-04；人工版保存後更新對應週與 id 快取 |
-| `PUT /tasks/{task_id}/feedback` | tasks、timeManagement、events、feedbackPending | FR-FBK-02～05；儲存後刷新任務、統計、歷程與待補清單 |
+| `PUT /tasks/{task_id}/feedback` | tasks、timeManagement、events、feedbackPending、goals、goalLinks | FR-FBK-02～05；儲存後刷新任務、統計、歷程與待補清單；任務會進待關聯清單、影響目標統計（FR-GOL-04） |
+| `POST /goals` | goals、events | FR-GOL-01、02；建立寫一筆 `goal` 事件 |
+| `PATCH /goals/{goal_id}` | goals、events | FR-GOL-01；每個變更欄位一筆事件 |
+| `POST /goals/{goal_id}/archive` | goals、events | #47 B7 停用＝封存 |
+| `POST /goal-links` | tasks、goals、goalLinks、gantt、events | FR-GOL-03、#47 G1；更新 `tasks.goal_id` 與版本，統計、矩陣、待關聯清單與甘特（帶 version）都要重讀 |
 
 資源前綴涵蓋全部列表、詳情及篩選查詢。原因、健康不受上述寫入影響。
 `gantt` 與 `events` 由共用查詢鍵管理。歷程 filters 以 `normalizeEventFilters` 為單一來源，URL、請求與 query key 共用；空值省略，limit/offset 預設 100/0。
