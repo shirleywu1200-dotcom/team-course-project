@@ -45,7 +45,7 @@ afterEach(() => vi.unstubAllGlobals());
 
 test.each([
   ["/projects", "專案現況"],
-  ["/projects/1", "專案現況"],
+  ["/projects/1", "範例專案"],
   ["/tasks", "任務"],
   ["/tasks/new", "新增任務"],
   ["/history", "歷程"],
@@ -69,7 +69,7 @@ test.each([
       expect(await screen.findByText(timeManagementFixtures.insufficient.judgement_note)).toBeInTheDocument();
       expect(screen.queryByText("此功能尚未開放。")).not.toBeInTheDocument();
       expect(fetchSpy).toHaveBeenCalled();
-    } else if (["/import", "/inbox", "/setup", "/settings", "/reports", "/data-control", "/history", "/projects/1/history"].includes(path)) {
+    } else if (["/import", "/inbox", "/setup", "/settings", "/reports", "/data-control", "/projects/1", "/history", "/projects/1/history"].includes(path)) {
       expect(screen.queryByText("此功能尚未開放。")).not.toBeInTheDocument();
       expect(fetchSpy).toHaveBeenCalled();
     } else {
