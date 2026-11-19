@@ -32,6 +32,37 @@ export function makeSerializedEvent(over: Partial<SerializedEventFixture> = {}):
   };
 }
 
+// 12.9：日期與計數沿用伺服器快照；測試不以瀏覽器日期或本地公式產生。
+export const todayFixtures = {
+  today: { today: "2026-11-19" } satisfies components["schemas"]["TodayOut"],
+  tasks: {
+    items: [
+      makeTask({ id: 101, title: "逾期範例", status: "todo", latest_due: "2026-11-18", version: 3, expected_stars: 4 }),
+      makeTask({ id: 102, title: "今日範例", status: "doing", latest_due: "2026-11-19", version: 2 }),
+      makeTask({ id: 103, title: "已完成範例", status: "done", latest_due: "2026-11-19", done_date: "2026-11-19" }),
+    ], total: 3,
+  } satisfies components["schemas"]["TaskListOut"],
+  pending: { items: [{ task_id: 103, title: "已完成範例", owner: "我", project_id: 1,
+    done_date: "2026-11-19", orig_due: "2026-11-17", overdue_days: 2,
+    expected_stars: 3, star_source: "self" }], total: 1 } satisfies components["schemas"]["PendingFeedbackOut"],
+  emptyPending: { items: [], total: 0 } satisfies components["schemas"]["PendingFeedbackOut"],
+  completed: {
+    task: makeTask({ id: 101, title: "逾期範例", status: "done", done_date: "2026-11-19", version: 4 }),
+    event: makeSerializedEvent({ id: 501, task_id: 101, task_title: "逾期範例", kind: "status", field: "status", to_value: "done" }),
+    feedback_required: true,
+  } satisfies components["schemas"]["CompleteOut"],
+  feedback: {
+    id: 701, task_id: 103, actual_stars: 4, energy: "mid", invest_vs_expected: null,
+    overdue_days: 2, rubric_id: 1, created_at: "2026-11-19T10:00:00+08:00",
+  } satisfies components["schemas"]["FeedbackOut"],
+  savedFeedback: {
+    feedback: { id: 702, task_id: 103, actual_stars: 5, energy: "low", invest_vs_expected: "less",
+      overdue_days: 7, rubric_id: 1, created_at: "2026-11-19T10:00:00+08:00" },
+    event: makeSerializedEvent({ id: 702, task_id: 103, kind: "feedback", field: "completion_feedback",
+      from_value: null, to_value: "702", extra: null }),
+  } satisfies components["schemas"]["FeedbackSaveOut"],
+};
+
 type HistoryItem = components["schemas"]["HistoryItemOut"];
 type HistoryList = components["schemas"]["HistoryListOut"];
 const originalDue = {
