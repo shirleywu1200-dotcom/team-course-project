@@ -16,7 +16,7 @@ const expected = [
   ["POST /tasks/{task_id}/status", ["tasks", "gantt", "events"]],
   ["POST /tasks/{task_id}/block", ["tasks", "gantt", "events"]],
   ["POST /tasks/{task_id}/adjust-start", ["tasks", "gantt", "events"]],
-  ["POST /tasks/{task_id}/complete", ["tasks", "timeManagement", "gantt", "events"]],
+  ["POST /tasks/{task_id}/complete", ["tasks", "timeManagement", "gantt", "events", "feedbackPending"]],
   ["POST /tasks/{task_id}/adjust-due", ["tasks", "timeManagement", "gantt", "events"]],
   ["POST /tasks/{task_id}/baseline-correction/preview", []],
   ["POST /tasks/{task_id}/baseline-correction/commit", ["tasks", "projects", "gantt", "events"]],
@@ -67,6 +67,21 @@ test("失敗不失效、不重送，也不攔截 STALE_VERSION", async () => {
   expect(write).toHaveBeenCalledTimes(1);
   expect(client.getQueryState(keys.task(4))?.isInvalidated).toBe(false);
   client.clear();
+});
+
+test("12.9：完成與保存回報使待補清單失效，保存回報也刷新任務與統計", async () => {
+  expect(keys.feedbackPending()).toEqual(["feedback", "pending"]);
+  expect(mutationInvalidations["POST /tasks/{task_id}/complete"]).toContain("feedbackPending");
+  expect(mutationInvalidations["PUT /tasks/{task_id}/feedback"]).toEqual(expect.arrayContaining([
+    "tasks", "timeManagement", "feedbackPending",
+  ]));
+  for (const action of ["POST /tasks/{task_id}/complete", "PUT /tasks/{task_id}/feedback"] as const) {
+    const client = makeQueryClient();
+    client.setQueryData(keys.feedbackPending(), { items: [], total: 0 });
+    await runMutationWithInvalidation(client, action, async () => undefined);
+    expect(client.getQueryState(keys.feedbackPending())?.isInvalidated).toBe(true);
+    client.clear();
+  }
 });
 
 test("S：URL、query key 與請求共用同一份歷程 filters 正規化", () => {

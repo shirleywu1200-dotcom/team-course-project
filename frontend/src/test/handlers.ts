@@ -1,6 +1,6 @@
 import { http, HttpResponse } from "msw";
 import { getErrorFixture, type ErrorFixtureCode } from "./errorFixtures";
-import { adjustStartFixtures, dueFixtures, historyFixtures, makeSerializedTask, makeTaskDetailFixture, overviewFixtures, statusFixtures, timeManagementFixtures } from "./fixtures";
+import { adjustStartFixtures, dueFixtures, historyFixtures, makeSerializedTask, makeTaskDetailFixture, overviewFixtures, statusFixtures, timeManagementFixtures, todayFixtures } from "./fixtures";
 import { reasons } from "./reasons";
 
 export const API = "http://localhost:3000/api/v1";
@@ -31,8 +31,11 @@ export function adjustStartHandler(scenario: keyof typeof adjustStartFixtures = 
 export const handlers = [
   http.get(`${API}/stats/time-management`, () => HttpResponse.json(timeManagementFixtures.insufficient)),
   http.get(`${API}/meta/reasons`, () => HttpResponse.json(reasons)),
+  http.get(`${API}/meta/today`, () => HttpResponse.json(todayFixtures.today)),
   http.get(`${API}/tasks`, () => HttpResponse.json({ items: [makeSerializedTask()], total: 1 })),
   http.get(`${API}/tasks/4`, () => HttpResponse.json(makeTaskDetailFixture())),
+  http.get(`${API}/tasks/4/feedback`, () => HttpResponse.json({ error: { code: "NOT_FOUND", message: "NOT_FOUND", details: {} } }, { status: 404 })),
+  http.get(`${API}/feedback/pending`, () => HttpResponse.json(todayFixtures.pending)),
   http.get(`${API}/events`, () => HttpResponse.json(historyFixtures.marked)),
   http.get(`${API}/projects/1`, () => HttpResponse.json(overviewFixtures.project)),
   http.get(`${API}/projects/1/gantt`, () => HttpResponse.json(overviewFixtures.gantt)),

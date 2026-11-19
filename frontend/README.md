@@ -119,7 +119,7 @@ code／message 必須是非空字串，details 必須是非陣列物件。
 | `POST /tasks/{task_id}/status` | tasks、gantt、events | FR-TSK-04、DA-08 |
 | `POST /tasks/{task_id}/block` | tasks、gantt、events | FR-TSK-04、07 |
 | `POST /tasks/{task_id}/adjust-start` | tasks、gantt、events | FR-TSK-09、AC-62，不進時間管理統計 |
-| `POST /tasks/{task_id}/complete` | tasks、timeManagement、gantt、events | FR-TSK-04；FR-MRK-07 完成時精力分布 |
+| `POST /tasks/{task_id}/complete` | tasks、timeManagement、gantt、events、feedbackPending | FR-TSK-04；FR-FBK-05 完成後待補清單須刷新 |
 | `POST /tasks/{task_id}/adjust-due` | tasks、timeManagement、gantt、events | FR-DUE-02、04；FR-MRK-06 |
 | `POST /tasks/{task_id}/baseline-correction/preview` | 無 | FR-BAS-03；DA-21 僅確認憑證，非正式查詢資料 |
 | `POST /tasks/{task_id}/baseline-correction/commit` | tasks、projects、gantt、events | FR-BAS-06、07；ProjectDetailOut.baseline_saved_at |
@@ -139,7 +139,7 @@ code／message 必須是非空字串，details 必須是非陣列物件。
 | `POST /export` | 無 | FR-GOV-02，只讀 |
 | `POST /reports/weekly/draft` | weeklyReports | FR-RPT-02、03；本次回應先替換快取，其他週報鍵標 stale 不立即重讀，保留 H2 降級提示 |
 | `PUT /reports/weekly/{report_id}/manual` | weeklyReports | FR-RPT-04；人工版保存後更新對應週與 id 快取 |
-| `PUT /tasks/{task_id}/feedback` | timeManagement、events | FR-FBK-02～05；新增 `feedback` 事件，精力進入時間管理統計的精力分布（FR-MRK-07）。待補清單的快取根由 12.9 補上 |
+| `PUT /tasks/{task_id}/feedback` | tasks、timeManagement、events、feedbackPending | FR-FBK-02～05；儲存後刷新任務、統計、歷程與待補清單 |
 
 資源前綴涵蓋全部列表、詳情及篩選查詢。原因、健康不受上述寫入影響。
 `gantt` 與 `events` 由共用查詢鍵管理。歷程 filters 以 `normalizeEventFilters` 為單一來源，URL、請求與 query key 共用；空值省略，limit/offset 預設 100/0。

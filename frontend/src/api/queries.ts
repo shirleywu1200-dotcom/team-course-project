@@ -24,7 +24,8 @@ export const fetchIngestJob = (id: number) => api<IngestJob>(`/ingest/jobs/${id}
 // 回傳 API 原形：快取鍵 keys.projectList() 與其他頁共用，形狀必須一致
 export const fetchProjects = () => api<Paged<Project>>("/projects");
 
-export const fetchActiveRubric = async () => (await api<Paged<Rubric>>("/rubrics?active=true")).items[0];
+export const fetchActiveRubric = async () => (await api<Paged<Rubric>>("/rubrics?active=true")).items
+  .reduce<Rubric | null>((latest, item) => !latest || item.version > latest.version ? item : latest, null);
 
 export type TimeManagementStats = paths["/api/v1/stats/time-management"]["get"]["responses"][200]["content"]["application/json"];
 
