@@ -116,6 +116,25 @@ def test_g2_all_empty_text_fields_are_listed_together(client, seed, query):
     assert count(query, "goals") == 0
 
 
+@pytest.mark.parametrize("payload, fields", [
+    (growth(type="expectation", title="", project_id=None), ["project_id", "title"]),
+    (growth(type="growth", title=" ", period="", project_id=1), ["period", "project_id", "title"]),
+    (growth(type="expectation", title="", project_id=2), ["project_id", "title"]),   # 封存專案
+], ids=["expectation-no-project", "growth-with-project", "archived-project"])
+def test_g2_text_and_project_errors_are_listed_together(client, seed, query, payload, fields):
+    # #84 Dev-B 審查第 1 點：文字與專案的錯誤要一次列出（spec 5.13）
+    seed(SEED)
+    assert_validation(create(client, payload), fields)
+    assert count(query, "goals") == 0 and count(query, "events") == 0
+
+
+def test_g2_type_errors_are_reported_first(client, seed, query):
+    # 型別或格式錯誤（例如 target 送字串）由請求格式檢查先回，不再檢查其他欄位的內容（spec 5.13）
+    seed(SEED)
+    assert_validation(create(client, growth(title="", target="3")), ["target"])
+    assert count(query, "goals") == 0
+
+
 def test_g2_title_and_period_are_trimmed(client, seed):
     seed(SEED)
     goal = create(client, growth(title="  學 SQL  ", period=" 2026Q4 ")).json()
@@ -224,6 +243,18 @@ def test_g6_archived_goal_can_still_be_edited(client, seed, query):
     ({"title": "", "period": " "}, ["period", "title"]),
 ])
 def test_g6_invalid_edit_writes_nothing(client, seed, query, body, fields):
+    seed(SEED + GOALS)
+    assert_validation(client.patch(f"{API}/goals/11", json=body), fields)
+    assert count(query, "events") == 0
+    assert client.get(f"{API}/goals/11").json() == G11
+
+
+@pytest.mark.parametrize("body,fields", [
+    ({"title": None, "period": "  "}, ["period", "title"]),
+    ({"definition": None, "title": ""}, ["definition", "title"]),
+], ids=["null-and-blank", "null-other-and-blank"])
+def test_g6_null_and_blank_errors_are_listed_together(client, seed, query, body, fields):
+    # #84 Dev-B 審查第 2 點：送 null 與只有空白要一次列出（spec 5.13）
     seed(SEED + GOALS)
     assert_validation(client.patch(f"{API}/goals/11", json=body), fields)
     assert count(query, "events") == 0
