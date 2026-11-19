@@ -1,7 +1,7 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 
 import { App } from "../../App";
 import { todayFixtures, makeTask } from "../../test/fixtures";
@@ -23,8 +23,11 @@ beforeEach(() => server.use(
 test("US-14：依伺服器今天查 due_before，分逾期與今日並排除 done", async () => {
   const searches: string[] = [];
   server.use(http.get(`${API}/tasks`, ({ request }) => {
-    searches.push(new URL(request.url).search);
-    return HttpResponse.json(todayFixtures.tasks);
+    const url = new URL(request.url);
+    searches.push(url.search);
+    const boundary = url.searchParams.get("due_before");
+    const items = todayFixtures.tasks.items.filter(task => !boundary || task.latest_due < boundary);
+    return HttpResponse.json({ items, total: items.length });
   }));
   open();
   const overdue = await screen.findByRole("region", { name: "逾期任務" });
@@ -33,10 +36,41 @@ test("US-14：依伺服器今天查 due_before，分逾期與今日並排除 don
   expect(within(today).getByRole("link", { name: "今日範例" })).toBeInTheDocument();
   expect(within(overdue).queryByText("已完成範例")).not.toBeInTheDocument();
   expect(within(today).queryByText("已完成範例")).not.toBeInTheDocument();
-  expect(searches[0]).toContain("due_before=2026-11-19");
+  expect(searches[0]).toContain("due_before=2026-11-20");
   expect(searches[0]).not.toContain("status=");
+  expect(within(overdue).getByText(/狀態：待辦/)).toBeInTheDocument();
+  expect(within(today).getByText(/狀態：進行中/)).toBeInTheDocument();
+  expect(within(overdue).getByRole("heading", { name: "逾期", level: 3 })).toBeInTheDocument();
+  expect(within(today).getByRole("heading", { name: "今日", level: 3 })).toBeInTheDocument();
   expect(screen.getByRole("link", { name: "補填已完成範例回報" })).toHaveAttribute("href", "/tasks/103/feedback");
   expect(screen.getByText(/逾期 2 天/)).toBeInTheDocument();
+});
+
+test.each([["2026-12-31", "2027-01-01"], ["2028-02-29", "2028-03-01"]])(
+  "伺服器今天 %s 的嚴格小於邊界為 %s", async (serverToday, expectedBoundary) => {
+    const searches: string[] = [];
+    server.use(http.get(`${API}/meta/today`, () => HttpResponse.json({ today: serverToday })),
+      http.get(`${API}/tasks`, ({ request }) => {
+        searches.push(new URL(request.url).search);
+        return HttpResponse.json({ items: [], total: 0 });
+      }));
+    open();
+    await screen.findByText("今日沒有待處理任務。");
+    expect(searches[0]).toContain(`due_before=${expectedBoundary}`);
+  },
+);
+
+test("回到今日後只顯示一次儲存成功訊息，隨即清除 history state", async () => {
+  function StateProbe() {
+    const location = useLocation();
+    return <output data-testid="history-state">{JSON.stringify(location.state)}</output>;
+  }
+  renderWithClient(<MemoryRouter initialEntries={[{ pathname: "/today", state: { feedbackSaved: todayFixtures.feedback } }]}
+    future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+    <TodayPage /><StateProbe />
+  </MemoryRouter>);
+  expect(screen.getByText(/完成回報已儲存/)).toBeInTheDocument();
+  await waitFor(() => expect(screen.getByTestId("history-state").textContent).toBe("null"));
 });
 
 test("今日任務與待補清單各自有 loading、error、empty，不把錯誤當空清單", async () => {

@@ -12,12 +12,15 @@ import { FeedbackForm } from "./FeedbackForm";
 
 type Task = components["schemas"]["TaskOut"];
 type FeedbackOut = components["schemas"]["FeedbackOut"];
+const starSourceLabels = {
+  self: "自行設定", ai_accepted: "採用 AI 建議", ai_edited: "調整 AI 建議", import_default: "匯入預設",
+};
 
 function FeedbackTaskContext({ task }: { task: Task }) {
   return <section className="card" aria-label="事前預設脈絡">
     <h2>事前預設</h2>
     <p>事前預設星數：{task.expected_stars}</p>
-    <p>星數來源：{task.star_source}</p>
+    <p>星數來源：{starSourceLabels[task.star_source]}</p>
     <p>事前量表版本：{task.rubric_id ?? "未設定"}</p>
     <p className="muted">這是建立任務時的預設脈絡；完成回報使用開啟表單時的有效量表。</p>
   </section>;

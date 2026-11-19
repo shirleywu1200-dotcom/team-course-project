@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
 import { api } from "../../api/client";
 import { keys } from "../../api/queryKeys";
@@ -15,13 +15,29 @@ type PendingFeedbackOut = components["schemas"]["PendingFeedbackOut"];
 type CompleteOut = components["schemas"]["CompleteOut"];
 type FeedbackOut = components["schemas"]["FeedbackOut"];
 
+// 只對伺服器 YYYY-MM-DD 做曆日加一；不讀本機時鐘，也不換算時區。
+function nextCalendarDay(value: string) {
+  const [year, month, day] = value.split("-").map(Number);
+  const leap = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+  const days = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  const nextDay = day < days[month - 1] ? day + 1 : 1;
+  const nextMonth = nextDay === 1 ? (month === 12 ? 1 : month + 1) : month;
+  const nextYear = month === 12 && nextDay === 1 ? year + 1 : year;
+  return `${nextYear.toString().padStart(4, "0")}-${String(nextMonth).padStart(2, "0")}-${String(nextDay).padStart(2, "0")}`;
+}
+
 export function TodayPage() {
   const location = useLocation();
-  const savedFeedback = (location.state as { feedbackSaved?: FeedbackOut } | null)?.feedbackSaved;
+  const navigate = useNavigate();
+  const [savedFeedback] = useState(() => (location.state as { feedbackSaved?: FeedbackOut } | null)?.feedbackSaved);
   const [completed, setCompleted] = useState<CompleteOut | null>(null);
+  useEffect(() => {
+    if (savedFeedback) navigate(".", { replace: true, state: null });
+  }, [navigate, savedFeedback]);
   const today = useQuery({ queryKey: keys.today, queryFn: () => api<TodayOut>("/meta/today") });
-  const tasks = useQuery({ queryKey: keys.taskList({ due_before: today.data?.today }),
-    queryFn: () => api<TaskListOut>(`/tasks?due_before=${today.data!.today}`), enabled: Boolean(today.data) });
+  const dueBefore = today.data ? nextCalendarDay(today.data.today) : undefined;
+  const tasks = useQuery({ queryKey: keys.taskList({ due_before: dueBefore }),
+    queryFn: () => api<TaskListOut>(`/tasks?due_before=${dueBefore}`), enabled: Boolean(dueBefore) });
   const pending = useQuery({ queryKey: keys.feedbackPending(), queryFn: () => api<PendingFeedbackOut>("/feedback/pending") });
 
   return <main className="wide">

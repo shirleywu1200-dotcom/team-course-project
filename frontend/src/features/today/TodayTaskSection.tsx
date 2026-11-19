@@ -12,6 +12,7 @@ import { ErrorBanner } from "../../components/ErrorBanner";
 type Task = components["schemas"]["TaskOut"];
 type Complete = components["schemas"]["Complete"];
 type CompleteOut = components["schemas"]["CompleteOut"];
+const statusLabels = { todo: "待辦", doing: "進行中", done: "已完成" };
 
 function CompleteTaskAction({ task, onComplete }: { task: Task; onComplete: (result: CompleteOut) => void }) {
   const qc = useQueryClient();
@@ -45,7 +46,7 @@ function CompleteTaskAction({ task, onComplete }: { task: Task; onComplete: (res
 function TodayTaskRow({ task, onComplete }: { task: Task; onComplete: (result: CompleteOut) => void }) {
   return <li className="card">
     <Link to={`/tasks/${task.id}`}>{task.title}</Link>
-    <p>預計完成日：{task.latest_due} · 狀態：{task.status} · 事前預設星數：{task.expected_stars}</p>
+    <p>預計完成日：{task.latest_due} · 狀態：{statusLabels[task.status]} · 事前預設星數：{task.expected_stars}</p>
     <CompleteTaskAction task={task} onComplete={onComplete} />
   </li>;
 }
@@ -58,11 +59,11 @@ export function TodayTaskSection({ tasks, today, onComplete }: {
   const dueToday = actionable.filter(task => task.latest_due === today);
   return <>
     {actionable.length === 0 && <p>今日沒有待處理任務。</p>}
-    <section aria-label="逾期任務"><h2>逾期</h2>
+    <section aria-label="逾期任務"><h3>逾期</h3>
       {overdue.length === 0 ? <p>沒有逾期任務。</p> : <ul>{overdue.map(task =>
         <TodayTaskRow key={task.id} task={task} onComplete={onComplete} />)}</ul>}
     </section>
-    <section aria-label="今日任務"><h2>今日</h2>
+    <section aria-label="今日任務"><h3>今日</h3>
       {dueToday.length === 0 ? <p>今天沒有到期任務。</p> : <ul>{dueToday.map(task =>
         <TodayTaskRow key={task.id} task={task} onComplete={onComplete} />)}</ul>}
     </section>

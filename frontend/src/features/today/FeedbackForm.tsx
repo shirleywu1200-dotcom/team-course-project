@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { api } from "../../api/client";
+import { api, ApiError } from "../../api/client";
 import { runMutationWithInvalidation } from "../../api/queryCache";
 import { keys } from "../../api/queryKeys";
 import type { components } from "../../api/types.generated";
@@ -30,6 +30,10 @@ export function FeedbackForm({ taskId, rubricId }: { taskId: number; rubricId: n
   }, onSuccess: result => {
     qc.setQueryData(keys.feedback(taskId), result.feedback);
     navigate("/today", { state: { feedbackSaved: result.feedback } });
+  }, onError: error => {
+    if (error instanceof ApiError && error.code === "FEEDBACK_EXISTS") {
+      void qc.invalidateQueries({ queryKey: keys.feedback(taskId) });
+    }
   } });
 
   return <form className="card" aria-label="完成回報表單" onSubmit={event => {

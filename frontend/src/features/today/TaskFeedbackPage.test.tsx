@@ -96,6 +96,29 @@ test("已有回報只顯示唯讀目前回報與修改未開放，不提供第�
   expect(screen.getByText("修改功能尚未開放")).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: "儲存完成回報" })).not.toBeInTheDocument();
   expect(puts).toBe(0);
+  expect(within(card).getByText("2026-11-19 10:00:00 +08:00")).toBeInTheDocument();
+});
+
+test("FEEDBACK_EXISTS：另一分頁先存後重讀目前回報，切換唯讀卡", async () => {
+  const user = userEvent.setup();
+  let feedbackGets = 0;
+  server.use(http.get(`${API}/tasks/103/feedback`, () => {
+    feedbackGets++;
+    return feedbackGets === 1 ? apiError(404, "NOT_FOUND") : HttpResponse.json(todayFixtures.feedback);
+  }), http.put(`${API}/tasks/103/feedback`, () => apiError(409, "FEEDBACK_EXISTS")));
+  open();
+  await user.selectOptions(await screen.findByLabelText("實際達成星數"), "4");
+  await user.selectOptions(screen.getByLabelText("自評精力"), "mid");
+  await user.click(screen.getByRole("button", { name: "儲存完成回報" }));
+  expect(await screen.findByRole("region", { name: "目前回報" })).toBeInTheDocument();
+  expect(feedbackGets).toBeGreaterThanOrEqual(2);
+  expect(screen.queryByRole("button", { name: "儲存完成回報" })).not.toBeInTheDocument();
+});
+
+test("事前星數來源顯示繁中，不直接露出原始代碼", async () => {
+  open();
+  expect(await screen.findByText("星數來源：自行設定")).toBeInTheDocument();
+  expect(screen.queryByText("星數來源：self")).not.toBeInTheDocument();
 });
 
 test("稍後補只返回今日頁，不送空白 PUT、不改已完成任務", async () => {
