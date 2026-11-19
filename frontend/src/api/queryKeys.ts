@@ -42,6 +42,7 @@ export const queryRoots = {
   tasks: ["tasks"], projects: ["projects"], timeManagement: ["stats", "time-management"],
   gantt: ["gantt"], events: ["events"],
   reasons: ["meta", "reasons"], health: ["meta", "health"],
+  today: ["meta", "today"], feedbackPending: ["feedback", "pending"],
   candidates: ["candidates"], settings: ["settings"], rubrics: ["rubrics"],
   weeklyReports: ["reports", "weekly"],
 } as const;
@@ -50,6 +51,9 @@ const projectTasks = (id: number) => [...queryRoots.tasks, "project", id] as con
 export const keys = {
   reasons: queryRoots.reasons,
   health: queryRoots.health,
+  today: queryRoots.today,
+  feedbackPending: () => queryRoots.feedbackPending,
+  feedback: (taskId: number) => ["feedback", "task", taskId] as const,
   task: (id: number) => [...queryRoots.tasks, id] as const,
   projectTasks,
   taskList: (filter: TaskFilter = {}) => {

@@ -13,7 +13,7 @@ export const mutationInvalidations = {
   "POST /tasks/{task_id}/status": ["tasks", "gantt", "events"],
   "POST /tasks/{task_id}/block": ["tasks", "gantt", "events"],
   "POST /tasks/{task_id}/adjust-start": ["tasks", "gantt", "events"],
-  "POST /tasks/{task_id}/complete": ["tasks", "timeManagement", "gantt", "events"],
+  "POST /tasks/{task_id}/complete": ["tasks", "timeManagement", "gantt", "events", "feedbackPending"],
   "POST /tasks/{task_id}/adjust-due": ["tasks", "timeManagement", "gantt", "events"],
   "POST /tasks/{task_id}/baseline-correction/preview": [],
   "POST /tasks/{task_id}/baseline-correction/commit": ["tasks", "projects", "gantt", "events"],
@@ -35,7 +35,7 @@ export const mutationInvalidations = {
   // 12.13 週報：H2 使用本次寫入回應替換快取，其他週報鍵只標 stale。
   "POST /reports/weekly/draft": ["weeklyReports"],
   "PUT /reports/weekly/{report_id}/manual": ["weeklyReports"],
-  "PUT /tasks/{task_id}/feedback": ["timeManagement", "events"],
+  "PUT /tasks/{task_id}/feedback": ["tasks", "timeManagement", "events", "feedbackPending"],
 } as const satisfies Record<string, readonly (keyof typeof queryRoots)[]>;
 
 export type MutationAction = keyof typeof mutationInvalidations;
