@@ -14,15 +14,13 @@ LEVELS = ("high", "mid", "low")                  # 並列時依此順序列出
 LABEL = {"high": "高", "mid": "中", "low": "低"}
 
 
-def _round(value: float, places: int) -> float | int:
-    """四捨五入（不用 Python round 的銀行家捨入）。"""
-    q = Decimal(1) if places == 0 else Decimal(1).scaleb(-places)
-    d = Decimal(str(value)).quantize(q, rounding=ROUND_HALF_UP)
-    return int(d) if places == 0 else float(d)
+def _ratio(numerator: int, denominator: int, places: int) -> Decimal:
+    """以 Decimal 相除後四捨五入（不經浮點數，也不用 Python round 的銀行家捨入）。"""
+    return (Decimal(numerator) / Decimal(denominator)).quantize(Decimal(1).scaleb(-places), rounding=ROUND_HALF_UP)
 
 
 def _avg(values: list[int]) -> float | None:
-    return _round(sum(values) / len(values), 1) if values else None
+    return float(_ratio(sum(values), len(values), 1)) if values else None
 
 
 def energy_distribution(rows: list[dict]) -> dict:
@@ -43,7 +41,7 @@ def judge(energy: dict, energy_plan: str, linked: int) -> tuple[str | None, str]
 
 
 def _pct(numerator: int, denominator: int) -> int | None:
-    return None if denominator == 0 else min(100, _round(numerator / denominator * 100, 0))
+    return None if denominator == 0 else min(100, int(_ratio(numerator * 100, denominator, 0)))
 
 
 def progress(goal: dict, linked: int, project_counts: tuple[int, int] | None) -> dict | None:

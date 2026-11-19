@@ -21,11 +21,6 @@ def has_decision(conn: Connection, task_id: int) -> bool:
     ), {"t": task_id}).scalar_one()
 
 
-def has_feedback(conn: Connection, task_id: int) -> bool:
-    return conn.execute(text("SELECT EXISTS (SELECT 1 FROM completion_feedback WHERE task_id = :t)"),
-                        {"t": task_id}).scalar_one()
-
-
 def pending(conn: Connection) -> list[dict]:
     """已完成、有回報、從未做過關聯決定的任務；依完成日、任務 id 由新到舊，不篩選範圍或專案。"""
     return [dict(r) for r in conn.execute(text("""

@@ -5,7 +5,7 @@
 
 from sqlalchemy import Connection
 
-from app.db.repo import goal_links_repo, goals_repo
+from app.db.repo import feedback_repo, goal_links_repo, goals_repo
 from app.db.repo.tasks_repo import TaskRepo
 from app.domain.events import write_event
 from app.errors import DomainError
@@ -27,7 +27,7 @@ def link(conn: Connection, task_id: int, goal_id: int | None, expected_version: 
     """確認關聯；回傳 (任務, 事件)。檢查順序依 spec 5.13。"""
     repo = TaskRepo(conn)
     task = repo.get_for_update(task_id, expected_version)       # NOT_FOUND、STALE_VERSION
-    if task["status"] != "done" or not goal_links_repo.has_feedback(conn, task_id):
+    if task["status"] != "done" or feedback_repo.get_by_task(conn, task_id) is None:
         raise DomainError("VALIDATION_ERROR", "只有已完成且已填完成回報的任務可以關聯目標", {"fields": ["task_id"]})
     _check_goal(conn, goal_id)
     # 第一次選「不關聯」時新舊值都是 null，仍要記下這個決定（spec 5.13）
