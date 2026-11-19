@@ -1,0 +1,101 @@
+{
+ "note": "AI-03 評估案例；全部虛構，Dev-B 自擬（docs/dev-b/ai-03-04-sdd.md 第 5 節）。expected：task_id → 預期 goal_id（null＝沒有合適目標）。",
+ "cases": [
+  {
+   "id": "clear",
+   "category": "明確對應",
+   "payload": {
+    "goals": [
+     {"goal_id": 2, "type": "growth", "title": "學會 SQL 視窗函式", "period": "2026Q4"},
+     {"goal_id": 3, "type": "time", "title": "每週留時間拜訪客戶", "period": "2026Q4"}
+    ],
+    "tasks": [
+     {"task_id": 7, "title": "報表查詢改寫成視窗函式", "done_date": "2026-11-12"},
+     {"task_id": 8, "title": "拜訪大安區三家客戶", "done_date": "2026-11-13"}
+    ]
+   },
+   "expected": {"7": 2, "8": 3}
+  },
+  {
+   "id": "none",
+   "category": "沒有合適目標",
+   "payload": {
+    "goals": [
+     {"goal_id": 2, "type": "growth", "title": "學會 SQL 視窗函式", "period": "2026Q4"}
+    ],
+    "tasks": [
+     {"task_id": 9, "title": "辦公室搬遷打包", "done_date": "2026-11-10"},
+     {"task_id": 10, "title": "整理會議室借用表", "done_date": "2026-11-11"}
+    ]
+   },
+   "expected": {"9": null, "10": null}
+  },
+  {
+   "id": "similar",
+   "category": "兩個目標都像（相似標題）",
+   "payload": {
+    "goals": [
+     {"goal_id": 2, "type": "growth", "title": "學會 SQL 視窗函式", "period": "2026Q4"},
+     {"goal_id": 4, "type": "growth", "title": "學會 Python 資料清理", "period": "2026Q4"}
+    ],
+    "tasks": [
+     {"task_id": 11, "title": "用 pandas 清理銷售資料", "done_date": "2026-11-05"},
+     {"task_id": 12, "title": "SQL 排名查詢練習", "done_date": "2026-11-06"},
+     {"task_id": 13, "title": "Python 腳本改用 SQL 視窗函式算累計值", "done_date": "2026-11-07"}
+    ]
+   },
+   "expected": {"11": 4, "12": 2, "13": 2}
+  },
+  {
+   "id": "period",
+   "category": "完成日在目標期間外（不以期間排除，只看內容；#74 審查建議 1）",
+   "payload": {
+    "goals": [
+     {"goal_id": 5, "type": "expectation", "title": "完成季報自動化", "period": "2026Q3"},
+     {"goal_id": 6, "type": "expectation", "title": "完成月報自動化", "period": "2026Q4"}
+    ],
+    "tasks": [
+     {"task_id": 14, "title": "季報自動化腳本上線", "done_date": "2026-11-05"},
+     {"task_id": 15, "title": "月報自動化排程設定", "done_date": "2026-11-10"}
+    ]
+   },
+   "expected": {"14": 5, "15": 6}
+  },
+  {
+   "id": "large",
+   "category": "20 筆上限（20 個任務、4 個目標，看延遲）",
+   "payload": {
+    "goals": [
+     {"goal_id": 2, "type": "growth", "title": "學會 SQL 視窗函式", "period": "2026Q4"},
+     {"goal_id": 3, "type": "time", "title": "每週留時間拜訪客戶", "period": "2026Q4"},
+     {"goal_id": 6, "type": "expectation", "title": "完成月報自動化", "period": "2026Q4"},
+     {"goal_id": 7, "type": "growth", "title": "提升簡報表達能力", "period": "2026Q4"}
+    ],
+    "tasks": [
+     {"task_id": 101, "title": "視窗函式計算移動平均", "done_date": "2026-10-03"},
+     {"task_id": 102, "title": "拜訪信義區客戶", "done_date": "2026-10-06"},
+     {"task_id": 103, "title": "月報資料來源盤點", "done_date": "2026-10-08"},
+     {"task_id": 104, "title": "部門會議簡報試講", "done_date": "2026-10-10"},
+     {"task_id": 105, "title": "更換筆電", "done_date": "2026-10-13"},
+     {"task_id": 106, "title": "SQL LAG 與 LEAD 練習", "done_date": "2026-10-15"},
+     {"task_id": 107, "title": "拜訪板橋經銷商", "done_date": "2026-10-17"},
+     {"task_id": 108, "title": "月報排程腳本撰寫", "done_date": "2026-10-20"},
+     {"task_id": 109, "title": "簡報課程第一堂", "done_date": "2026-10-22"},
+     {"task_id": 110, "title": "報帳單據整理", "done_date": "2026-10-24"},
+     {"task_id": 111, "title": "視窗函式改寫留存率查詢", "done_date": "2026-10-27"},
+     {"task_id": 112, "title": "電話回訪三家舊客戶並約拜訪", "done_date": "2026-10-29"},
+     {"task_id": 113, "title": "月報自動寄送設定", "done_date": "2026-11-02"},
+     {"task_id": 114, "title": "季度成果簡報上台報告", "done_date": "2026-11-04"},
+     {"task_id": 115, "title": "辦公室盆栽換盆", "done_date": "2026-11-06"},
+     {"task_id": 116, "title": "SQL 視窗函式讀書會分享", "done_date": "2026-11-09"},
+     {"task_id": 117, "title": "拜訪新竹科學園區客戶", "done_date": "2026-11-11"},
+     {"task_id": 118, "title": "月報錯誤通知機制", "done_date": "2026-11-13"},
+     {"task_id": 119, "title": "錄影檢討簡報手勢", "done_date": "2026-11-16"},
+     {"task_id": 120, "title": "年度健康檢查", "done_date": "2026-11-17"}
+    ]
+   },
+   "expected": {"101": 2, "102": 3, "103": 6, "104": 7, "105": null, "106": 2, "107": 3, "108": 6, "109": 7, "110": null,
+                "111": 2, "112": 3, "113": 6, "114": 7, "115": null, "116": 2, "117": 3, "118": 6, "119": 7, "120": null}
+  }
+ ]
+}

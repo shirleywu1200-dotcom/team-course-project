@@ -110,7 +110,10 @@
 ### 3.2 FR-RUB 星數量表（P1，AI-06）
 
 - FR-RUB-01 量表由 5 句描述組成，依序對應 1–5 星，版本號遞增，**已確認的版本不可修改**。
-- FR-RUB-02 量表訪談為三個選擇題：什麼程度算符合預設、什麼情況給 5 顆星、不同類型任務是否用不同標準。
+- FR-RUB-02 量表訪談為三個選擇題（選項 2026-11-19 裁定照用，#13）：
+  - q1 什麼程度算「符合預設」（3 星）：交付完成且品質達標／按時交付即可／對方確認收下即可。
+  - q2 什麼情況給 5 顆星：超出範圍或品質明顯突出／提前完成且品質達標／成果被拿去當範例。
+  - q3 不同類型任務是否用不同標準：否，同一套標準／是，依類型分開（本版只記錄，仍共用一套）。
 - FR-RUB-03 AI 依三個回答產生量表草稿；草稿逐句可改；你確認後才成為新版本。不確認則沿用目前版本。
 - FR-RUB-04 「依任務類型分開量表」本版只記錄回答，不實作（所有任務共用同一套）。
 - FR-RUB-05 每筆完成回報記錄當時使用的 `rubric_id`；跨版本的星數不直接合併比較。
@@ -264,7 +267,7 @@
 - FR-GOV-02 匯出：產生包含所有表的 JSON 檔供下載。
 - FR-GOV-03 刪除所有來源原文：二次確認；刪除後任務、事件仍保留，原句顯示為已刪除。`idempotency_keys` 存的回應本文可能含原句，一併刪除（屬於暫存，不是歷程，DA-23）。
 - FR-GOV-04 LINE 群組解除綁定即停止處理該群組，不追溯刪除已確認的紀錄。
-- FR-GOV-05 送進 AI 的內容只含必要摘錄；是否遮蔽姓名〔待決〕。
+- FR-GOV-05 送進 AI 的內容只含必要摘錄；不遮蔽姓名（D-03，2026-11-19 裁定；此專案單一使用者、範例資料，接真實客戶資料時再評估遮蔽）。
 
 ### 3.16 FR-AI AI 節點通則
 
@@ -690,13 +693,53 @@ CREATE TABLE idempotency_keys (
   ```
   - 只送工作範圍（`scope='work'`）的任務；私人任務在組 payload 前排除，只計數。
   - 明確不送：事件的 `note`、`reason`、`extra`、註記（`mark`）、完成回報的星數與精力（FR-AI-06）、`done_when`、原句、專案名稱。
-  - `title` 用任務現值；`owner` 照 AI-01 送名字，D-03（姓名遮蔽）裁定後兩節點一起改。
+  - `title` 用任務現值；`owner` 照 AI-01 送名字（D-03 2026-11-19 裁定：不遮蔽）。
 - 輸出：`{ "draft": "本週（11/09–11/15）工作進度…", "items": [{ "section": "done", "task_id": 3, "event_id": 41 }, { "section": "next", "task_id": 5, "event_id": null }] }`
   - `draft` 為字串、`items` 為陣列；`section` 為 `done`、`delay`、`next`。`done`、`delay` 的 `event_id` 必填，`next` 必須為 null。
   - 缺欄位、型別不對、`section` 不在值域內，算 `invalid_output`。`draft` 空白、超過 20,000 字或含 NUL 字元也算 `invalid_output`（#18 K8）。
   - 每一項只讀 `section`、`task_id`、`event_id`，其他鍵丟棄，不算錯誤（#22）。
 - 重試與紀錄（同 AI-01）：任何例外都算一次失敗、繼續重試，總共最多 3 次；`AIUnavailable` 與 R4 對帳失敗立刻停。最終 `ai_status` 以最後一次嘗試為準：最後一次是格式錯誤（`AIInvalidOutput`）或 R4 失敗回 `invalid_output`，其餘回 `unavailable`（#18 J3、K3）。`error` 欄的 `R4_MISMATCH` 與供應商格式錯誤的 `AIInvalidOutput` 分得開，可據以算週報對帳結果（spec 1.3）。每次嘗試寫一列 `ai_runs`（`latency_ms` 失敗也記；`error` 只放例外類別名稱，R4 失敗記 `R4_MISMATCH`）。**AI-05 不存 `raw_output`**。
   - R4 對帳（項目引用的 `task_id`、`event_id` 是否在 payload 裡）不重試、立刻停：`ai_runs` 記 `status='invalid_output'`、`error='R4_MISMATCH'`；回應 `ai_status='invalid_output'`、`validated=false`、`draft=null`、`items` 為退路清單（AC-66；2026-11-17 Dev-B 確認，#22）。
+
+**AI-03 目標關聯建議（FR-GOL-03，Phase 9；2026-11-18 #72 Dev-A、Dev-B 定案）**
+
+- 呼叫端（Dev-A）組 payload、驗證輸出、寫 `ai_feedback`；prompt 與節點（#50）由 Dev-B 負責。
+- 觸發：使用者在待關聯清單按「請 AI 建議」才呼叫，打開清單時不自動呼叫；`GET /goal-links/pending` 不呼叫 AI（視窗聚焦時會自動重抓，會重複付費）。端點為 `POST /goal-links/suggest`（2026-11-19 產品負責人裁定，#47 G3；輸入輸出見 5.13）。
+- 建議只放在該次回應，不另存；使用者確認關聯時帶 `ai_run_id`，伺服器讀該筆 `raw_output` 比對，寫 `ai_feedback`（與建議相同 `accepted`，不同或不關聯 `changed`），比照 AI-07 的 D-3。
+- payload 只含以下鍵，其餘一律不送：
+  ```json
+  { "goals": [{ "goal_id": 2, "type": "growth", "title": "學會 SQL 視窗函式", "period": "2026Q4" }],
+    "tasks": [{ "task_id": 7, "title": "報表查詢改寫", "done_date": "2026-11-12" }] }
+  ```
+  - `goals` 只送未封存的目標。`tasks` 只送工作範圍（`scope='work'`）的待關聯任務，私人任務不送、也不建議（資安規則 2、FR-GOV-05）。
+  - 待關聯超過 20 筆時，送完成日最新的 20 筆；其餘再按一次。
+  - 明確不送：完成回報的星數與精力（FR-AI-06）、目標的 `definition`、`energy_plan`、任務負責人、原句。
+- 輸出：`{ "items": [{ "task_id": 7, "goal_id": 2, "reason": "任務內容與 SQL 學習相關" }] }`
+  - `goal_id` 可為 null，表示沒有合適的目標。每個任務最多一項：同一個 `task_id` 出現多次時保留第一項、其餘丟棄；`task_id` 或 `goal_id` 不在 payload 的項目整項丟棄（兩者都不算錯誤，#73 Dev-B 提問、Dev-A 定）。
+  - `reason` 不超過 200 字、不含 NUL，否則算 `invalid_output`。`reason` 只說明內容相關，不評價任務或人（FR-AI-06）。
+- 記錄：比照 AI-01 存 `raw_output`（清除與匯出依 6.7：清除時設 NULL，匯出不帶）。重試比照 AI-01。
+
+**AI-04 目標回報草稿（FR-GOL-06、07，Phase 9；2026-11-18 #72 Dev-A、Dev-B 定案）**
+
+- 呼叫端（Dev-A）組 payload、驗證輸出、R3 對帳；prompt 與節點（#50）由 Dev-B 負責。
+- payload 只含以下鍵，其餘一律不送：
+  ```json
+  { "goal":  { "type": "growth", "title": "學會 SQL 視窗函式", "period": "2026Q4", "energy_plan": "high" },
+    "stats": { "linked": 3, "avg_actual": 4.0, "avg_expected": 3.3, "overdue_count": 1,
+               "energy": { "high": 2, "mid": 1, "low": 0 }, "progress_pct": 100, "judgement": null },
+    "tasks": [{ "task_id": 7, "title": "報表查詢改寫", "done_date": "2026-11-12" }] }
+  ```
+  - `stats` 為程式算好的統計（5.13），只送彙總數字，不送逐筆的星數與精力（FR-AI-06）。
+  - `tasks` 只列工作範圍的任務；私人範圍只進統計數字、不列標題。
+- 輸出：`{ "draft": "…", "figures": [{ "key": "linked", "value": 3 }, { "key": "avg_actual", "value": 4.0 }] }`
+  - `draft` 不空白、不超過 20,000 字、不含 NUL，否則算 `invalid_output`（同 AI-05）。
+  - prompt 要求數字一律用阿拉伯數字，並把草稿用到的每個數字列進 `figures`。
+- R3 對帳（FR-GOL-07，兩點都做，任一不符即 `validated=false`、`draft=null`，前端改顯示統計表）：
+  1. `figures` 的每一項都等於 `stats` 的同名值（巢狀鍵用 `energy.high` 這類寫法）。
+  2. `draft` 裡出現的每個數字都在允許名單內：`stats` 的值，以及 payload 文字本來就有的數字（`goal.title`、`goal.period`、各任務 `title`，以及 `done_date` 拆出的年、月、日）。
+  - 比對前正規化：`4.0`＝`4`、`100%`＝`100`、全形數字轉半形。
+  - 誤判率由 Dev-B 在 #50 的評估實測；太高時調整允許名單，不放寬規則本身。
+- 重試與紀錄同 AI-05：總共最多 3 次，`AIUnavailable` 與 R3 失敗立刻停；R3 失敗記 `status='invalid_output'`、`error='R3_MISMATCH'`；不存 `raw_output`。存在 `reports` 表 `kind='goal'`，比照週報（5.14）。
 
 ### 5.4 設定與量表
 
@@ -787,7 +830,7 @@ CREATE TABLE idempotency_keys (
 
 | Method | Path | 說明 |
 | --- | --- | --- |
-| GET | `/tasks` | 篩選：`project_id`、`owner`、`status`、`scope`、`due_before`；`project_id=none` 為單點任務 |
+| GET | `/tasks` | 篩選：`project_id`、`owner`、`status`、`scope`、`due_before`；`project_id=none` 為單點任務；`due_before` 為嚴格小於（`latest_due < due_before`，不含當天），要含今天就送隔天 |
 | POST | `/tasks` | 建立 |
 | GET | `/tasks/{id}` | 詳情，含最近歷程 |
 | PATCH | `/tasks/{id}/owner` | 改負責人 |
@@ -1020,7 +1063,8 @@ CREATE TABLE idempotency_keys (
 | POST | `/goals/{id}/archive` | 封存（停用即封存，不刪除；#47 B7） |
 | GET | `/goals/{id}/stats` | 統計與判讀 |
 | GET | `/goals/matrix` | 目標 × 精力矩陣 |
-| GET | `/goal-links/pending` | 已完成回報但未關聯目標的事件，含 AI-03 建議 |
+| GET | `/goal-links/pending` | 已完成回報但未關聯目標的事件；不含 AI 建議、不呼叫 AI（#47 G3） |
+| POST | `/goal-links/suggest` | AI-03 關聯建議；使用者按「請 AI 建議」才呼叫（#47 G3） |
 | POST | `/goal-links` | 你確認關聯（`{ task_id, goal_id }`，`goal_id=null` 表示不關聯；2026-11-18 裁定統一端點，#47 B1） |
 | POST | `/goals/{id}/report/draft` | AI-04 草稿 |
 | PUT | `/goals/{id}/report/manual` | 儲存人工版 |
@@ -1049,7 +1093,13 @@ CREATE TABLE idempotency_keys (
 }
 ```
 
-`POST /goal-links` 的 AI-03 建議由 `GET /goal-links/pending` 回傳 `suggestion: { goal_id, reason }`；使用者確認或改選時，伺服器寫 `ai_feedback`（`accepted` 或 `changed`）。
+`POST /goal-links/suggest`（AI-03，payload 與驗證見 5.3a；2026-11-19 裁定，#47 G3）：
+- 不帶 body。伺服器依 5.3a 組 payload：未封存的目標，以及工作範圍、完成日最新的 20 筆待關聯任務。
+- 輸出：`{ "ai_status": "ok", "ai_run_id": 12, "items": [{ "task_id": 7, "goal_id": 2, "reason": "任務內容與 SQL 學習相關" }] }`
+  - `items` 是通過 5.3a 驗證的建議（重複項與不在 payload 的項目已丟棄）；AI 沒有建議的任務不列。`goal_id=null` 表示 AI 認為沒有合適的目標。
+  - AI 不可用或輸出不合格式時照樣回 200：`ai_status` 為 `unavailable` 或 `invalid_output`，`ai_run_id=null`、`items=[]`，由使用者自己選（AC-50）。
+  - 沒有未封存的目標，或沒有可送的工作範圍任務時，不呼叫 AI、不寫 `ai_runs`，回 `ai_status="unavailable"`、`ai_run_id=null`、`items=[]`（5.3「依規則刻意不呼叫」）。
+- 建議不存檔。使用者確認關聯時，`POST /goal-links` 可帶 `ai_run_id`（該次 AI-03 的 `ai_runs.id`），伺服器讀該筆 `raw_output` 比對，寫 `ai_feedback`（與建議相同 `accepted`，不同或選不關聯 `changed`），比照 AI-07 的匯入回饋（5.6）。`POST /goal-links` 其餘輸入欄位依 #47 G1 定案後寫入。
 
 ### 5.14 週報
 
@@ -1407,14 +1457,14 @@ frontend/
 
 ### 9.1 待決（需要你裁定）
 
-| 編號 | 事項 | 我的建議 |
+| 編號 | 事項 | 狀態／裁定 |
 | --- | --- | --- |
-| D-01 | AI-02 星數提議是否進 P1 | P1 先不上，或預設關閉；前 10 件由你自設星數，避免錨定 |
-| D-03 | 送進 AI 前是否遮蔽姓名 | 看你更重視隱私還是 AI-01 判斷負責人的準確度 |
-| D-04 | 週報是否由系統代發 | P1 不代發，只產生文字 |
-| D-05 | 完成回報儲存後是否允許修改 | 允許，以新增更正事件實作，統計取最新 |
-| D-06 | LINE 群組綁定是否放 P1（P1b） | 貼上入口為 P1 必要；LINE 視開發量決定 |
-| D-07 | 同一則訊息含延期與完成時的處理 | 完成優先，延期留待手動 |
+| D-01 | AI-02 星數提議是否進 P1 | ✅ 2026-11-19 裁定：**P1 不上**（避免錨定自評，與不可破原則 4 一致） |
+| D-03 | 送進 AI 前是否遮蔽姓名 | ✅ 2026-11-19 裁定：**不遮蔽**（單一使用者、範例資料；接真實客戶資料時再評估） |
+| D-04 | 週報是否由系統代發 | 徵詢 Dev-B 中（#82）；傾向 P1 不代發、只產文字 |
+| D-05 | 完成回報儲存後是否允許修改 | 本期不做（#47 A1：回 `FEEDBACK_EXISTS`），長期允許延 9.3 |
+| D-06 | LINE 群組綁定是否放 P1（P1b） | 徵詢 Dev-B 中（#82）；貼上入口 P1 必要、LINE 視開發量 |
+| D-07 | 同一則訊息含延期與完成時的處理 | 徵詢 Dev-B 中（#82）；傾向完成優先、延期手動 |
 
 ### 9.2 已裁定（本規格依此撰寫）
 

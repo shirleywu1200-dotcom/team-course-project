@@ -117,6 +117,60 @@ def test_ai05_rejects_out_of_shape_output(bad):
         _client(FakeSDK(result=_reply(bad))).call("AI-05", {})
 
 
+# AI-03、AI-04（docs/dev-b/ai-03-04-sdd.md）：輸出範例與 stats 範例取自 spec 5.3a（#73）
+AI03_OUT = {"items": [{"task_id": 7, "goal_id": 2, "reason": "任務內容與 SQL 學習相關"},
+                      {"task_id": 8, "goal_id": None, "reason": "沒有內容相關的目標"}]}
+AI04_OUT = {"draft": "…", "figures": [{"key": "linked", "value": 3}, {"key": "avg_actual", "value": 4.0}]}
+AI04_STATS = {"linked": 3, "avg_actual": 4.0, "avg_expected": 3.3, "overdue_count": 1,
+              "energy": {"high": 2, "mid": 1, "low": 0}, "progress_pct": 100, "judgement": None}
+
+
+@pytest.mark.parametrize(("node", "out"), [("AI-03", AI03_OUT), ("AI-04", AI04_OUT)])
+def test_goal_nodes_registered_and_parse_spec_example(node, out):
+    assert node in NODES
+    assert _client(FakeSDK(result=_reply(out))).call(node, {}) == out
+
+
+@pytest.mark.parametrize("node", ["AI-03", "AI-04"])
+def test_goal_nodes_schema_forbids_extra_keys(node):
+    schema = NODES[node].output.model_json_schema()
+    assert schema["additionalProperties"] is False
+    assert all(d["additionalProperties"] is False for d in schema["$defs"].values())
+
+
+@pytest.mark.parametrize("bad", [
+    {"items": [{"task_id": 7, "goal_id": "abc", "reason": "x"}]},
+    {"items": [{"task_id": 7, "goal_id": 2}]},
+    {"items": [{"task_id": 7, "goal_id": 2, "reason": "x", "score": 5}]},
+])
+def test_ai03_rejects_out_of_shape_output(bad):
+    with pytest.raises(AIInvalidOutput):
+        _client(FakeSDK(result=_reply(bad))).call("AI-03", {})
+
+
+@pytest.mark.parametrize("bad", [
+    {"draft": "x", "figures": [{"key": "total", "value": 3}]},
+    {"draft": "x"},
+])
+def test_ai04_rejects_out_of_shape_output(bad):
+    with pytest.raises(AIInvalidOutput):
+        _client(FakeSDK(result=_reply(bad))).call("AI-04", {})
+
+
+def _numeric_keys(d, prefix=""):
+    for k, v in d.items():
+        if isinstance(v, dict):
+            yield from _numeric_keys(v, f"{prefix}{k}.")
+        elif isinstance(v, int | float) and not isinstance(v, bool):
+            yield prefix + k
+
+
+def test_ai04_figure_keys_cover_stats_numeric_keys():
+    # 鍵名值域＝5.3a stats 的數字鍵（巢狀攤平）；呼叫端合併後改綁呼叫端的 stats（SDD 2.3）
+    schema = NODES["AI-04"].output.model_json_schema()
+    assert set(schema["$defs"]["Figure"]["properties"]["key"]["enum"]) == set(_numeric_keys(AI04_STATS))
+
+
 def test_sdk_retries_disabled():
     assert AnthropicAIClient(api_key="k", model="m").sdk.max_retries == 0
 
@@ -250,3 +304,34 @@ def test_real_ai05_smoke():
     draft, items = ai05.parse_output(_real().call("AI-05", AI05_PAYLOAD, timeout_s=20))
     assert reconcile(items, data)
     assert {(i["section"], i["task_id"]) for i in items} == {("done", 1), ("delay", 2), ("next", 2), ("next", 3)}
+
+
+AI03_PAYLOAD = {
+    "goals": [{"goal_id": 2, "type": "growth", "title": "學會 SQL 視窗函式", "period": "2026Q4"},
+              {"goal_id": 3, "type": "time", "title": "每週留時間做客戶拜訪", "period": "2026Q4"}],
+    "tasks": [{"task_id": 7, "title": "報表查詢改寫成視窗函式", "done_date": "2026-11-12"},
+              {"task_id": 8, "title": "辦公室搬遷打包", "done_date": "2026-11-13"}],
+}
+
+
+@pytest.mark.real_ai
+@real_ai
+def test_real_ai03_smoke():
+    items = _real().call("AI-03", AI03_PAYLOAD, timeout_s=20)["items"]
+    assert {i["task_id"] for i in items} == {7, 8}
+    assert {i["goal_id"] for i in items} <= {2, 3, None}
+
+
+AI04_PAYLOAD = {"goal": {"type": "growth", "title": "學會 SQL 視窗函式", "period": "2026Q4", "energy_plan": "high"},
+                "stats": AI04_STATS,
+                "tasks": [{"task_id": 7, "title": "報表查詢改寫", "done_date": "2026-11-12"}]}
+
+
+@pytest.mark.real_ai
+@real_ai
+def test_real_ai04_smoke():
+    # R3 第 1 點：figures 都等於 stats 同名值；第 2 點（草稿內數字）由 scripts/eval_ai04.py 量（SDD Q1）
+    out = _real().call("AI-04", AI04_PAYLOAD, timeout_s=20)
+    flat = {"energy." + k: v for k, v in AI04_STATS["energy"].items()} | AI04_STATS
+    assert out["draft"].strip()
+    assert all(flat[f["key"]] == f["value"] for f in out["figures"])

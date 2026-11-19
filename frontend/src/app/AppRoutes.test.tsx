@@ -45,7 +45,7 @@ afterEach(() => vi.unstubAllGlobals());
 
 test.each([
   ["/projects", "專案現況"],
-  ["/projects/1", "專案現況"],
+  ["/projects/1", "範例專案"],
   ["/tasks", "任務"],
   ["/tasks/new", "新增任務"],
   ["/history", "歷程"],
@@ -69,7 +69,7 @@ test.each([
       expect(await screen.findByText(timeManagementFixtures.insufficient.judgement_note)).toBeInTheDocument();
       expect(screen.queryByText("此功能尚未開放。")).not.toBeInTheDocument();
       expect(fetchSpy).toHaveBeenCalled();
-    } else if (["/import", "/inbox", "/setup", "/settings", "/reports", "/data-control", "/history", "/projects/1/history"].includes(path)) {
+    } else if (["/import", "/inbox", "/setup", "/settings", "/reports", "/data-control", "/projects/1", "/history", "/projects/1/history"].includes(path)) {
       expect(screen.queryByText("此功能尚未開放。")).not.toBeInTheDocument();
       expect(fetchSpy).toHaveBeenCalled();
     } else {
@@ -105,6 +105,8 @@ test("切換手機與網站版面保留同一個任務元件、網址與未送�
   server.use(http.get(`${API}/tasks/4`, () => HttpResponse.json({ task: makeTask() })));
   open("/tasks/4?from=history#adjust");
   await screen.findByRole("heading", { name: "確認驗收條件" });
+  expect(screen.getByRole("region", { name: "任務歷程" })).toBeInTheDocument();
+  await userEvent.setup().click(screen.getByRole("button", { name: "改預計日" }));
   const input = screen.getByLabelText("新的預計完成日");
   fireEvent.change(input, { target: { value: "2026-11-20" } });
   const content = screen.getByRole("region", { name: "頁面內容" });
@@ -119,6 +121,13 @@ test("切換手機與網站版面保留同一個任務元件、網址與未送�
   expect(screen.getByTestId("app-shell")).toHaveAttribute("data-layout", "wide");
   expect(screen.getByLabelText("新的預計完成日")).toBe(input);
   expect(input).toHaveValue("2026-11-20");
+});
+
+test("#67：/tasks/:id 接正式任務詳情，顯示任務資訊與歷程區塊", async () => {
+  open("/tasks/4");
+  expect(await screen.findByRole("heading", { name: "確認驗收條件", level: 1 })).toBeInTheDocument();
+  expect(screen.getByRole("region", { name: "任務資訊" })).toBeInTheDocument();
+  expect(screen.getByRole("region", { name: "任務歷程" })).toBeInTheDocument();
 });
 
 test("既有整批順延路由仍載入 Dev-A 頁面", async () => {

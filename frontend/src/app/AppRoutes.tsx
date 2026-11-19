@@ -2,11 +2,12 @@ import { Link, Route, Routes } from "react-router-dom";
 import type { ComponentType } from "react";
 
 import { BulkShiftPage } from "../features/bulk-shift/BulkShiftPage";
-import { TaskDuePage } from "../features/due-adjust/TaskDuePage";
+import { TaskDetailPage } from "../features/task-detail/TaskDetailPage";
 import { DataControlPage } from "../features/data-control/DataControlPage";
 import { ImportPage } from "../features/import/ImportPage";
 import { InboxPage } from "../features/inbox/InboxPage";
 import { OnboardingPage } from "../features/settings/OnboardingPage";
+import { ProjectOverviewPage } from "../features/project-overview/ProjectOverviewPage";
 import { ProjectHistoryPage } from "../features/project-history/ProjectHistoryPage";
 import { SettingsPage } from "../features/settings/SettingsPage";
 import { WeeklyReportPage } from "../features/weekly-report/WeeklyReportPage";
@@ -23,6 +24,7 @@ const featurePages: Record<string, ComponentType> = {
   "/time-management": TimeManagementPage,
   "/reports": WeeklyReportPage,
   "/data-control": DataControlPage,
+  "/projects/:projectId": ProjectOverviewPage,
   "/history": ProjectHistoryPage,
   "/projects/:projectId/history": ProjectHistoryPage,
 };
@@ -75,8 +77,7 @@ export function AppRoutes() {
           const Page = featurePages[path];
           return <Route key={path} path={path} element={Page ? <Page /> : <ReservedPage title={title} />} />;
         })}
-        {/* 12.2、12.5 保留原入口；12.3 後續整合正式任務詳情。 */}
-        <Route path="/tasks/:taskId" element={<TaskDuePage />} />
+        <Route path="/tasks/:taskId" element={<TaskDetailPage />} />
         <Route path="/projects/:projectId/bulk-shift" element={<BulkShiftPage />} />
         <Route path="*" element={<NotFound />} />
       </Route>
