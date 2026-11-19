@@ -12,16 +12,17 @@
 | QC-1 規則與歷程 | Phase 1–5、10；夾具庫 | （待補） |
 | QC-2 資料進出、AI 與前端 | Phase 6–9、11–12；Playwright | @Andpeterpan |
 
-產品負責人與 Dev-C 為同一人。Dev-C 的 PR 由 Dev-B 審查，不得自行核准。
+產品負責人與 Dev-C 為同一人。Dev-C 的 PR 由 Dev-A 審查，不得自行核准。
 
 ## 合併條件（三項皆須成立）
 1. 開發自己的單元測試綠
 2. QC 的 AC 驗收測試綠
 3. 另一位開發審查通過
 
-## 審查配對
-Dev-A 審 Dev-B；Dev-B 審 Dev-C；Dev-C 審 Dev-A。
+## 審查配對（方案甲，2026-11-19 更新）
+Dev-B 審 Dev-A；Dev-C 審 Dev-B；Dev-A 審 Dev-C（循環 A→B→C→A，各自審上一棒）。
 涉及 `adjust_due` 的 PR，Dev-A 與 Dev-B 互審。
+Code Review 過後仍須真人 QC 驗收（第三關）。詳見 `docs/design/QC三角色交叉分工卡.md`。
 
 ## PR 規則
 - 一個 PR 對應 todo 的一組任務（建議不超過半個 Phase）
