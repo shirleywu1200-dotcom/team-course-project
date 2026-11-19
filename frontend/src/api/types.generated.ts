@@ -861,6 +861,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/goal-links/suggest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Suggest Links
+         * @description AI-03 建議；AI 失敗也回 200 加退路（AC-50）。不帶 body。
+         */
+        post: operations["suggest_links_api_v1_goal_links_suggest_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/goal-links": {
         parameters: {
             query?: never;
@@ -1539,6 +1559,11 @@ export interface components {
             goal_id: number | null;
             /** Expected Version */
             expected_version: number;
+            /**
+             * Ai Run Id
+             * @description 該次 AI-03 的 ai_runs.id；帶了才寫 ai_feedback
+             */
+            ai_run_id?: number | null;
         };
         /** GoalListOut */
         GoalListOut: {
@@ -1662,6 +1687,33 @@ export interface components {
             judgement: ("一致" | "建議檢視") | null;
             /** Judgement Note */
             judgement_note: string;
+        };
+        /** GoalSuggestItem */
+        GoalSuggestItem: {
+            /** Task Id */
+            task_id: number;
+            /**
+             * Goal Id
+             * @description null 表示 AI 認為沒有合適的目標
+             */
+            goal_id: number | null;
+            /** Reason */
+            reason: string;
+        };
+        /** GoalSuggestOut */
+        GoalSuggestOut: {
+            /**
+             * Ai Status
+             * @enum {string}
+             */
+            ai_status: "ok" | "unavailable" | "invalid_output";
+            /**
+             * Ai Run Id
+             * @description 確認關聯時帶回 POST /goal-links；非 ok 時為 null
+             */
+            ai_run_id: number | null;
+            /** Items */
+            items: components["schemas"]["GoalSuggestItem"][];
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -4464,6 +4516,26 @@ export interface operations {
             };
         };
     };
+    suggest_links_api_v1_goal_links_suggest_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoalSuggestOut"];
+                };
+            };
+        };
+    };
     link_goal_api_v1_goal_links_post: {
         parameters: {
             query?: never;
@@ -4500,7 +4572,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description 任務未完成或沒有回報、目標不存在或已封存（VALIDATION_ERROR）；與目前關聯相同（NO_CHANGE） */
+            /** @description 任務未完成或沒有回報、目標不存在或已封存、ai_run_id 不是可用的 AI-03 紀錄（VALIDATION_ERROR）；與目前關聯相同（NO_CHANGE） */
             422: {
                 headers: {
                     [name: string]: unknown;

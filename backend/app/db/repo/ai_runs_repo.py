@@ -53,6 +53,13 @@ def has_feedback_for_run(conn: Connection, node_id: str, run_id: int) -> bool:
     return conn.execute(sql, {"n": node_id, "r": str(run_id)}).first() is not None
 
 
+def has_goal_link_feedback(conn: Connection, run_id: int, task_id: int) -> bool:
+    """AI-03 的回饋一筆建議（ai_run_id＋task_id）只寫一次（spec 5.13）。"""
+    sql = text("SELECT 1 FROM ai_feedback WHERE node_id = 'AI-03' AND detail->>'ai_run_id' = :r "
+               "AND detail->>'task_id' = :t LIMIT 1")
+    return conn.execute(sql, {"r": str(run_id), "t": str(task_id)}).first() is not None
+
+
 def status_for(exc: Exception) -> str:
     """例外對應 ai_runs.status；子類別也正確歸類。"""
     if isinstance(exc, AITimeout):
