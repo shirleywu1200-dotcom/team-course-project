@@ -827,7 +827,7 @@ CREATE TABLE idempotency_keys (
 
 | Method | Path | 說明 |
 | --- | --- | --- |
-| GET | `/tasks` | 篩選：`project_id`、`owner`、`status`、`scope`、`due_before`；`project_id=none` 為單點任務 |
+| GET | `/tasks` | 篩選：`project_id`、`owner`、`status`、`scope`、`due_before`；`project_id=none` 為單點任務；`due_before` 為嚴格小於（`latest_due < due_before`，不含當天），要含今天就送隔天 |
 | POST | `/tasks` | 建立 |
 | GET | `/tasks/{id}` | 詳情，含最近歷程 |
 | PATCH | `/tasks/{id}/owner` | 改負責人 |
