@@ -1058,15 +1058,26 @@ CREATE TABLE idempotency_keys (
 
 | Method | Path | 說明 |
 | --- | --- | --- |
-| GET / POST | `/goals` | 列表、建立 |
+| GET / POST | `/goals` | 列表（`?include_archived=false` 預設不含封存）、建立 |
 | GET / PATCH | `/goals/{id}` | 取得、編輯 |
+| POST | `/goals/{id}/archive` | 封存（停用即封存，不刪除；#47 B7） |
 | GET | `/goals/{id}/stats` | 統計與判讀 |
 | GET | `/goals/matrix` | 目標 × 精力矩陣 |
 | GET | `/goal-links/pending` | 已完成回報但未關聯目標的事件；不含 AI 建議、不呼叫 AI（#47 G3） |
 | POST | `/goal-links/suggest` | AI-03 關聯建議；使用者按「請 AI 建議」才呼叫（#47 G3） |
-| POST | `/goal-links` | 你確認關聯（`{ task_id, goal_id }`，`goal_id=null` 表示不關聯；2026-11-18 裁定統一端點，#47 B1） |
+| POST | `/goal-links` | 你確認關聯（`{ task_id, goal_id, expected_version }`，`goal_id=null` 表示不關聯；2026-11-18 裁定統一端點，#47 B1；2026-11-19 G1） |
 | POST | `/goals/{id}/report/draft` | AI-04 草稿 |
 | PUT | `/goals/{id}/report/manual` | 儲存人工版 |
+
+目標的建立、編輯、封存（9.5；比照專案 FR-PRJ-01～03，#47 B4、B7 與第二片提案）：
+- `GoalOut`＝`{ id, type, title, period, definition, target, energy_plan, project_id, created_at, archived_at }`；列表輸出 `{ "items": [GoalOut] }`，依 id 排序。
+- `POST /goals` 輸入：`{ "type": "growth", "title": "學會 SQL 視窗函式", "period": "2026Q4", "definition": "", "target": 3, "energy_plan": "high", "project_id": null }`，回 201 `GoalOut`。
+  - `type`（`growth`／`time`／`expectation`）、`title`、`period`、`energy_plan`（`high`／`mid`／`low`）必填；`title`、`period` 去頭尾空白後不可為空。`definition` 預設空字串；`target` 為 0 以上的 JSON 整數（`true`、`"3"` 回 `VALIDATION_ERROR`），預設 0；多個欄位同時不合格時一次列出。
+  - `expectation` 必須帶存在且未封存的 `project_id`；`target` 仍須符合格式，但值忽略、存 0（B4）；其他類型 `project_id` 必須為 null。違反時回 `VALIDATION_ERROR`（`details.fields` 指出欄位）。
+- `PATCH /goals/{id}` 可改 `title`、`period`、`definition`、`target`、`energy_plan`；`type`、`project_id` 建立後不可改（送了也忽略）；`expectation` 的 `target` 忽略；欄位明確送 null 回 `VALIDATION_ERROR`。封存的目標仍可編輯（比照專案）。只有實際變更的欄位寫事件，沒有變更回原值、不寫事件。輸出 `{ "goal": GoalOut, "changes": [EventOut] }`。
+- `POST /goals/{id}/archive` 寫 `archived_at`；已封存再送回原值、不寫事件。封存的目標照常可讀、可查統計，不可新增關聯（422，B7）。
+- 歷程（FR-HIS-01）：建立、每個變更欄位、封存各寫一筆事件，`kind='goal'`、`task_id` 為 null、`task_title` 為空字串，`field` 為 `created`／欄位名／`archived_at`，`extra`＝`{ "goal_id": id }`，`project_id` 為目標的 `project_id`。和關聯事件（`field='goal_id'`、帶 `task_id`）以 `task_id` 是否為 null 分辨。
+- 目標不存在回 `NOT_FOUND`。
 
 `GET /goals/{id}/stats` 輸出：
 
@@ -1082,13 +1093,44 @@ CREATE TABLE idempotency_keys (
 }
 ```
 
+目標關聯（9.6；2026-11-19 產品負責人裁定，#47 G1 與第二片提案）：
+- **單一事實來源**：任務目前關聯的目標存在 `tasks.goal_id`；統計、矩陣、待關聯清單一律讀它。`goal` 事件是歷程。
+- `POST /goal-links` 輸入：`{ "task_id": 7, "goal_id": 2, "expected_version": 4 }`；`goal_id=null` 表示「不關聯」。`task_id`、`expected_version` 只收 JSON 整數，`goal_id` 為 JSON 整數或 null；缺欄或型別不對回 `VALIDATION_ERROR`。（第三片另加選填 `ai_run_id`，見上方 suggest。）
+- 檢查順序：任務不存在回 `NOT_FOUND`；版本不符回 `STALE_VERSION`；任務不是 `done` 或還沒有完成回報，回 `VALIDATION_ERROR`（`details.fields` 為 `["task_id"]`）；`goal_id` 指的目標不存在或已封存，回 `VALIDATION_ERROR`（`["goal_id"]`，B7）；已做過關聯決定、且新值等於目前的 `tasks.goal_id`，回 `NO_CHANGE`。
+- 「做過關聯決定」是指這個任務有過 `field='goal_id'` 的 `goal` 事件。第一次選「不關聯」時，目前值和新值都是 null，仍寫事件以記下這個決定，不回 `NO_CHANGE`。
+- 同一交易寫事件並更新任務：事件 `kind='goal'`、`field='goal_id'`、`task_id` 為該任務、`from_value` 為原本的 `goal_id`（沒有時為 null）、`to_value` 為新的 `goal_id`（不關聯為 null），`origin='manual'`；`tasks.goal_id` 改為新值、`version` 加 1。改選、改成不關聯都是新增一筆事件（FR-GOL-03、歷程只增）。
+- 輸出 200：`{ "task": TaskOut, "event": EventOut }`。
+- 私人與工作範圍的任務都可以關聯、都進統計（目標是你自己的）；AI-03 送出前排除私人範圍（5.3a）。
+- 建立任務（`POST /tasks`）時帶的 `goal_id` 算不算關聯決定〔待決：#47，產品負責人裁定〕；裁定前維持現行：照存、不算決定。
+
+`GET /goal-links/pending`（9.6）：
+- 輸出 `{ "items": [PendingLinkItem], "total": n }`，列出 `status='done'`、有完成回報、而且**從來沒有做過關聯決定**的任務；選過「不關聯」的不再列。工作與私人範圍都列，已封存專案底下的任務也列。依 `done_date`、`task_id` 由新到舊，不分頁。
+- `PendingLinkItem`＝`{ task_id, title, project_id, scope, done_date, version }`；`version` 供 `POST /goal-links` 的 `expected_version` 使用。不含 AI 建議、不呼叫 AI（G3）。
+
+`GET /goals/{id}/stats`（9.8；FR-GOL-04、05，AC-46）：
+- 母體：`tasks.goal_id` 為該目標、`status='done'`、有完成回報的任務。封存的目標照常可查。
+- `linked` 為母體件數。`avg_actual` 為回報的 `actual_stars` 平均，`avg_expected` 為任務的 `expected_stars` 平均，都四捨五入到小數一位；母體為 0 時為 null。`overdue_count` 為回報 `overdue_days > 0` 的件數。`energy` 為回報精力的分布。`energy_plan` 為目標的預期精力。`min_sample` 為 5〔假設〕。
+- `progress`：
+  - growth：`text`＝「{linked} ／ {target} 件完成事件」，`pct`＝`linked ÷ target × 100` 四捨五入到整數、上限 100；`target=0` 時 `pct` 為 null。
+  - time：`progress` 為 null，只顯示統計（B3）。
+  - expectation：`text`＝「{完成數} ／ {全部} 件專案任務完成」，`pct`＝對應專案 `status='done'` 的任務數 ÷ 該專案全部任務數 × 100，四捨五入到整數；專案沒有任務時 `pct` 為 null（B4）。
+- 判讀（FR-GOL-05，程式規則，非 AI）：
+  - `linked < min_sample`：`judgement=null`，`judgement_note`＝「樣本 {n} 筆，不到 {min_sample} 筆，只顯示不下結論」（比照 DA-12）。
+  - 樣本足夠時，主要精力是 `energy` 裡件數最多的等級。
+    - 最多的等級不只一個：`judgement`＝「建議檢視」，`judgement_note`＝「主要精力並列：{等級}、{等級}」，依高、中、低的順序列出（G2）。
+    - 主要精力等於 `energy_plan`：`judgement`＝「一致」，`judgement_note`＝「主要精力為{等級}，與預期相同」。
+    - 其他情況：`judgement`＝「建議檢視」，`judgement_note`＝「主要精力為{等級}，預期為{等級}」。
+  - 等級中文：`high`＝高、`mid`＝中、`low`＝低。
+
+`GET /goals/matrix`（9.9；FR-GOL-04）：輸出 `{ "items": [{ "goal_id": 2, "title": "學會 SQL 視窗函式", "energy_plan": "high", "energy": { "high": 2, "mid": 1, "low": 0 }, "linked": 3 }] }`。每個未封存的目標一列，依 id 排序；`energy`、`linked` 的母體與 stats 相同。路由要排在 `/goals/{id}` 之前。
+
 `POST /goal-links/suggest`（AI-03，payload 與驗證見 5.3a；2026-11-19 裁定，#47 G3）：
 - 不帶 body。伺服器依 5.3a 組 payload：未封存的目標，以及工作範圍、完成日最新的 20 筆待關聯任務。
 - 輸出：`{ "ai_status": "ok", "ai_run_id": 12, "items": [{ "task_id": 7, "goal_id": 2, "reason": "任務內容與 SQL 學習相關" }] }`
   - `items` 是通過 5.3a 驗證的建議（重複項與不在 payload 的項目已丟棄）；AI 沒有建議的任務不列。`goal_id=null` 表示 AI 認為沒有合適的目標。
   - AI 不可用或輸出不合格式時照樣回 200：`ai_status` 為 `unavailable` 或 `invalid_output`，`ai_run_id=null`、`items=[]`，由使用者自己選（AC-50）。
   - 沒有未封存的目標，或沒有可送的工作範圍任務時，不呼叫 AI、不寫 `ai_runs`，回 `ai_status="unavailable"`、`ai_run_id=null`、`items=[]`（5.3「依規則刻意不呼叫」）。
-- 建議不存檔。使用者確認關聯時，`POST /goal-links` 可帶 `ai_run_id`（該次 AI-03 的 `ai_runs.id`），伺服器讀該筆 `raw_output` 比對，寫 `ai_feedback`（與建議相同 `accepted`，不同或選不關聯 `changed`），比照 AI-07 的匯入回饋（5.6）。`POST /goal-links` 其餘輸入欄位依 #47 G1 定案後寫入。
+- 建議不存檔。使用者確認關聯時，`POST /goal-links` 可帶 `ai_run_id`（該次 AI-03 的 `ai_runs.id`），伺服器讀該筆 `raw_output` 比對，寫 `ai_feedback`（與建議相同 `accepted`，不同或選不關聯 `changed`），比照 AI-07 的匯入回饋（5.6）。`POST /goal-links` 的其他欄位與規則見上方「目標關聯」。
 
 ### 5.14 週報
 
