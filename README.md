@@ -22,7 +22,7 @@
 ## 審查配對（方案甲，2026-11-19 更新）
 Dev-B 審 Dev-A；Dev-C 審 Dev-B；Dev-A 審 Dev-C（循環 A→B→C→A，各自審上一棒）。
 涉及 `adjust_due` 的 PR，Dev-A 與 Dev-B 互審。
-Code Review 過後仍須真人 QC 驗收（第三關）。詳見 `docs/design/QC三角色交叉分工卡.md`。
+Code Review 過後仍須 QC 驗收（第三關）：CI 跑 AC 驗收＋阿想契約抽查（真人 QC-2 已取消，2026-11-19），L2 由 PO 抽查。詳見 `docs/design/QC三角色交叉分工卡.md`。
 
 ## PR 規則
 - 一個 PR 對應 todo 的一組任務（建議不超過半個 Phase）
