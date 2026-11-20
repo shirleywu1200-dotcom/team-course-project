@@ -15,6 +15,7 @@ from app.domain.inbox.ingest import FAILED_MESSAGE, process_sources, result_summ
 
 log = logging.getLogger(__name__)
 IDLE_SLEEP_S = 1.0
+JOB_TIMEOUT_S = 60.0   # 整份貼上一次送 AI-01；150 則實測 25.8 秒，超過同步的 20 秒（13-4-sdd 4.3）
 
 
 def run_once(db: Database, ai: AIClient) -> int | None:
@@ -25,7 +26,7 @@ def run_once(db: Database, ai: AIClient) -> int | None:
     p = job["payload"]
     try:
         outcome = process_sources(db, ai, p["source_ids"], p["project_id"], job_id=job["id"],
-                                  attempts_done=job["attempts"])
+                                  attempts_done=job["attempts"], timeout_s=JOB_TIMEOUT_S)
     except Exception:   # 不讓工作卡在 running；前端輪詢才看得到 failed 與手動建立的提示
         db.run(lambda c: jobs_repo.update(c, job["id"], {"status": "failed", "error": FAILED_MESSAGE,
                                                           "updated_at": get_clock().now()}))

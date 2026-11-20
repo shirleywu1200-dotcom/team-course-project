@@ -13,7 +13,7 @@ from datetime import timedelta
 
 from sqlalchemy import Connection
 
-from app.ai.client import AIClient, AIInvalidOutput, AIUnavailable
+from app.ai.client import DEFAULT_TIMEOUT_S, AIClient, AIInvalidOutput, AIUnavailable
 from app.clock import get_clock
 from app.db.database import Database
 from app.db.repo import ai_runs_repo, candidates_repo, jobs_repo, projects_repo, sources_repo
@@ -111,7 +111,8 @@ def _payload(conn: Connection, source_ids: list[int], project_id: int | None) ->
 
 
 def process_sources(db: Database, ai: AIClient, source_ids: list[int], project_id: int | None, *,
-                    job_id: int | None = None, attempts_done: int = 0) -> Outcome:
+                    job_id: int | None = None, attempts_done: int = 0,
+                    timeout_s: float = DEFAULT_TIMEOUT_S) -> Outcome:
     """呼叫 AI-01 並把結果寫成 open 候選；失敗則續跑，總嘗試次數不超過 MAX_ATTEMPTS。"""
     if project_id is not None and db.run(lambda c: projects_repo.get(c, project_id))["scope"] == "private":
         # 私人專案的原文不送 AI（資安規則 2、PR #20 B1）；原文已存，可在收件匣手動建任務
@@ -125,7 +126,7 @@ def process_sources(db: Database, ai: AIClient, source_ids: list[int], project_i
         started = time.monotonic()
         output, drafts, error = None, [], None
         try:
-            output = ai.call(NODE, payload)
+            output = ai.call(NODE, payload, timeout_s=timeout_s)
             drafts = r2.apply(output, texts, task_ids, get_clock().today())
         except Exception as exc:   # 供應商可能丟出非 AIError 的例外，一律算這次失敗（FR-INB-08）
             error = exc

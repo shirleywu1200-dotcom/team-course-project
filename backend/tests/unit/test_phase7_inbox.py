@@ -3,7 +3,7 @@
 import pytest
 
 from app import worker
-from app.ai.client import AIInvalidOutput, AITimeout
+from app.ai.client import DEFAULT_TIMEOUT_S, AIInvalidOutput, AITimeout
 from tests.unit.seeds import BASE
 
 API = "/api/v1"
@@ -355,6 +355,25 @@ def test_non_ai_error_from_provider_counts_as_failed_attempt(client, seed, ai, q
     r = ingest(client, "[10:12] 阿德：好")
     assert r.status_code == 200 and r.json()["ai_status"] == "ok"
     assert [x["status"] for x in query("SELECT status FROM ai_runs ORDER BY id")] == ["error", "error", "ok"]
+
+
+def test_job_calls_ai01_with_longer_timeout_and_sync_keeps_default(client, seed, ai, db, monkeypatch):
+    # 13-4-sdd 4.3：150 則實測 25.8 秒，背景工作放寬到 60 秒；同步路徑（≤30 行）維持 20 秒
+    seed(BASE)
+    timeouts = []
+    real_call = ai.call
+
+    def spy(node_id, payload, *, timeout_s=DEFAULT_TIMEOUT_S):
+        timeouts.append(timeout_s)
+        return real_call(node_id, payload, timeout_s=timeout_s)
+
+    monkeypatch.setattr(ai, "call", spy)
+    ai.script(NODE, {"items": []}, {"items": []})
+    ingest(client, "[10:12] 阿德：好")
+    ingest(client, long_text())
+    worker.run_once(db, ai)
+    assert timeouts == [DEFAULT_TIMEOUT_S, worker.JOB_TIMEOUT_S]
+    assert worker.JOB_TIMEOUT_S == 60
 
 
 def test_worker_marks_job_failed_on_unexpected_exception(client, seed, ai, db, query, monkeypatch):
