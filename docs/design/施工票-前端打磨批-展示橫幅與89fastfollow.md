@@ -12,10 +12,10 @@
 1. `GoalLinkInbox` 收到 `STALE_VERSION` 時，順手 invalidate `goalsMatrix` 與 `goalStats`（否則別處已關聯的任務，矩陣要等下一次成功關聯才追上）。
 2. 「已在其他地方處理」提示：下次 mutate 時清掉 `staleTaskId`，否則提示殘留。
 
-## C.（待 PO 確認才做）Demo 打磨兩項（#94 MoraChen 提）
+## C. Demo 打磨兩項（#94 MoraChen 提；**PO 2026-11-20 已確認納入，要做**）
 - 匯入私人專案的「AI 無法判斷欄位」→ 改「私人專案不送 AI，請手動指定」。
-- 匯入成功訊息 → 連到專案頁。
-> 這兩項 Demo 前要不要改由 PO 決定；未確認前不做。
+- 匯入成功訊息 → 連到專案頁（連結到對應專案頁）。
+- 兩項都要補/調對應前端測試。
 
 ## 完成定義
 - 行為與測試全綠；完整前端測試維持全數通過；typecheck／build／format:check 全過。
