@@ -2,8 +2,10 @@
 import { expect, test } from "@playwright/test";
 
 import { TOKEN } from "../playwright.config";
+import { resetDb } from "./helpers";
 
 test("首次啟用：略過精靈後進入工作總覽，之後不再回到精靈", async ({ page }) => {
+  resetDb();
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "設定存取 token" })).toBeVisible();
   await page.getByLabel("後端 G4_API_TOKEN").fill(TOKEN);
