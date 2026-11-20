@@ -739,6 +739,13 @@ CREATE TABLE idempotency_keys (
   2. `draft` 裡出現的每個數字都在允許名單內：`stats` 的值，以及 payload 文字本來就有的數字（`goal.title`、`goal.period`、各任務 `title`，以及 `done_date` 拆出的年、月、日）。
   - 比對前正規化：`4.0`＝`4`、`100%`＝`100`、全形數字轉半形。
   - 誤判率由 Dev-B 在 #50 的評估實測；太高時調整允許名單，不放寬規則本身。
+  - 〔提案，待裁定：#47 9.10 第 8 點〕數字的切法與比較（9.10 子代理審查後補）：
+    - 先把全形數字（U+FF10～FF19）、全形「．」「％」轉成半形，不做 NFKC（`①`、`²` 不算數字）。
+    - 數字＝連續的阿拉伯數字，後面可接「.」加數字當小數；以數值比較（`05`＝`5`、`4.0`＝`4`、`100%`＝`100`）。不認負號（`2026-11-12` 切成 2026、11、12）、千分位（`1,000` 切成 1 與 000）與科學記號；句尾的 `3.` 算 3。
+    - 允許名單從 payload 文字取數字時，用和草稿同一套切法，所以照抄標題、期間一定通過。
+    - 第 1 點比較數值，不比型別（`4`＝`4.0`）；沒有容差（3.25 不等於 3.3）。同一個鍵列兩次，兩次都要相等。
+    - 已知限制（不檢查）：國字數字（「三件」）；數字寫在哪一段（統計值互換位置仍會通過）；與允許名單撞號的錯數字（SDD 已記錄）。
+  - 〔提案，待裁定：#47 9.10 第 9 點〕輸出格式的細節：`figures` 每項只能有 `key`、`value`，多出來的鍵與 `key` 不在 `FIGURE_KEYS`（節點定義）都算格式不合（`invalid_output`，可重試），不算 R3 失敗；`value` 必須是 JSON 數字，`true`、`"3"`、null 都算格式不合。`draft` 的字數以 Unicode 字元（code point）計，同 AI-05。
 - 重試與紀錄同 AI-05：總共最多 3 次，`AIUnavailable` 與 R3 失敗立刻停；R3 失敗記 `status='invalid_output'`、`error='R3_MISMATCH'`；不存 `raw_output`。存在 `reports` 表 `kind='goal'`，比照週報（5.14）。
 
 ### 5.4 設定與量表
@@ -1142,6 +1149,37 @@ CREATE TABLE idempotency_keys (
   - 回饋只記任務的**第一次**關聯決定；之後改選即使帶 `ai_run_id` 也不寫，因為那已不是對建議的回應。
   - 不寫回饋的情況（關聯照常完成）：該筆 `raw_output` 已清除（6.7）；建議裡沒有這個任務（例如任務是私人範圍，或建議之後才完成）；這個任務已做過關聯決定。AI-03 不寫 `ignored`。
   - 回饋列：`node_id='AI-03'`、`target_type='goal_link'`、`target_id` 為這次寫入的 `goal` 事件 id；`detail`＝`{ ai_run_id, task_id, ai, final }`，只含整數或 null，不含 `reason` 或任何標題。與事件、任務更新在同一交易。
+
+目標回報（9.10；AI-04，payload 與驗證見 5.3a）〔提案，待產品負責人裁定：#47 9.10；裁定前不實作端點〕：
+
+| Method | Path | 說明 |
+| --- | --- | --- |
+| POST | `/goals/{id}/report/draft` | 產生 AI-04 草稿，不帶 body |
+| GET | `/goals/{id}/report` | 取得既有回報（不產生；新增，第 2 點） |
+| PUT | `/goals/{id}/report/manual` | 儲存人工版 |
+
+1. **每個目標一列**：存在 `reports`（`kind='goal'`、`goal_id`）。遷移只新增：`reports (goal_id) WHERE kind='goal'` 的部分唯一索引，以及 `CHECK (kind <> 'goal' OR goal_id IS NOT NULL)`（比照 0005，#18 J8）。
+2. **讀取**：`GET /goals/{id}/report` 不呼叫 AI、不寫入。目標存在但還沒有回報列時回 404 `NOT_FOUND`，`details` 只放 `goal_id`：代表「尚未產生」，前端顯示空狀態，不顯示錯誤橫幅（比照 5.14，#23）。
+3. **三個端點輸出相同**：
+   ```json
+   { "id": 9, "goal_id": 2, "ai_status": "ok", "excluded_private": 1,
+     "draft": "【目標】學會 SQL 視窗函式（能力成長，2026Q4，預期精力：高）…",
+     "validated": true, "manual_text": null, "updated_at": "2026-11-20T10:00:00+08:00" }
+   ```
+   - `validated=false` 時 `draft=null`，前端改用 `GET /goals/{id}/stats` 顯示統計表；回應不重複附統計（單一事實來源）。
+4. **產生**：
+   - payload 的 `stats` 與 `GET /goals/{id}/stats` 同一份計算；`progress_pct` 取 `progress.pct`，`progress` 為 null（time）時送 null。
+   - `tasks`：stats 母體中 `scope='work'` 的任務（依任務本身的範圍，同 AI-03），依 `done_date`、`task_id` 由新到舊，不設筆數上限；標題用任務現值。`excluded_private`＝母體中私人範圍的件數。
+   - 封存的目標照常可產生（封存照常可讀、可查統計）。
+   - `linked=0` 時不呼叫 AI、不寫 `ai_runs`，回 `ai_status="unavailable"`、`validated=false`（5.3「依規則刻意不呼叫」，同 AI-03）。存檔照下一點的失敗規則。
+   - 存檔比照 FR-RPT-04：成功時更新 `ai_draft`、`ai_items`（存驗證後的 `figures`）、`ai_status`、`excluded_private`、`updated_at`，`manual_text` 不動；失敗時已有成功初稿整列不動，回應仍是這次的退路（`validated=false`）；第一次就失敗時建一列、AI 欄位為 null。
+5. **讀取時重新對帳**：`GET`、`PUT`（以及產生成功時）的 `validated` 由存下的 `ai_draft`、`figures` 對**目前**的統計與 payload 重跑 R3 得出（比照 5.14 R4 重新對帳）。之後新增關聯、改了完成回報或任務標題，草稿的數字對不上就改回統計表。
+6. **人工版**：`PUT /goals/{id}/report/manual` 輸入 `{ "manual_text": "…" }`，規則同 5.14（不帶 `expected_version`、後寫蓋先寫；可為 null 或空字串；超過 20,000 字回 413 `PAYLOAD_TOO_LARGE`；含 NUL 回 `VALIDATION_ERROR`；內容相同照常儲存）。還沒有回報列時建一列（AI 欄位為 null）。封存的目標也可儲存。
+7. 其他：
+   - 目標不存在回 `NOT_FOUND`。週報端點讀到 `kind='goal'` 的列回 404（5.14 J10 已定）。
+   - `POST draft`、`PUT manual` 不存冪等快取（同 5.14 J7）。
+   - 不寫 `ai_feedback`（同 AI-05）。匯出：`ai_draft` 不帶、`manual_text` 照帶（#54），`ai_items` 只含鍵名與數字、照帶。清除範圍隨 #64 的裁定，週報與目標回報一致。
+   - #47 Q6（綁私人專案的 expectation 目標要不要送 AI）若裁定 A，這類目標的產生比照 `linked=0` 不呼叫 AI；裁定前照現行（照送）。
 
 ### 5.14 週報
 
