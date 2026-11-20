@@ -29,3 +29,18 @@ def list_all(conn: Connection, include_archived: bool) -> list[dict]:
     where = "" if include_archived else " WHERE archived_at IS NULL"
     sql = "SELECT * FROM goals" + where + " ORDER BY id"  # noqa: S608 固定字串
     return [dict(r) for r in conn.execute(text(sql)).mappings()]
+
+
+def list_sendable_to_ai(conn: Connection) -> list[dict]:
+    """可送給 AI-03 的目標：未封存，且沒有綁私人專案（Q6，#92；資安規則 2）。
+
+    只有 expectation 會綁專案（建立時檢查），這裡不依賴這個前提：綁私人專案的一律不送。
+    以查詢當下的 projects.scope 判定；這類目標仍可手動關聯。
+    """
+    return [dict(r) for r in conn.execute(text("""
+        SELECT g.* FROM goals g
+          LEFT JOIN projects p ON p.id = g.project_id
+         WHERE g.archived_at IS NULL
+           AND p.scope IS DISTINCT FROM 'private'   -- 沒綁專案時 p.scope 為 NULL，照送
+         ORDER BY g.id
+    """)).mappings()]

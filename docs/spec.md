@@ -240,7 +240,7 @@
 
 - FR-GOL-01 目標三類：能力成長（衡量：完成事件數）、時間配置（衡量：每週確認分鐘數；未知時段不算 0）、績效期待（衡量：對應專案的完成比）。
 - FR-GOL-02 每個目標有預期精力投入（高／中／低），用來和實際完成事件的精力對照，**不是考核**。
-- FR-GOL-03 關聯：完成事件關聯到目標，**由你確認**。AI-03 只提議；改選、不關聯記為修正事件。
+- FR-GOL-03 關聯：完成事件關聯到目標，**由你確認**。AI-03 只提議；改選、不關聯記為修正事件。AI-03 不送綁私人專案的績效期待目標，這類目標由你手動關聯（Q6，#92）。
 - FR-GOL-04 目標統計：關聯事件數、實際平均星數、事前預設平均、逾期件數、精力分布。
 - FR-GOL-05 判讀：關聯事件少於 5 筆只顯示分布，`judgement=null`（〔假設〕門檻，G2 驗證）；5 筆以上：實際主要精力等級與預期相同為「一致」，否則「建議檢視」。判讀由程式規則計算，非 AI。
 - FR-GOL-06 工作目標回報：AI-04 以已確認關聯的完成事件與統計產生對內草稿；人工版與草稿分開保存。
@@ -711,13 +711,13 @@ CREATE TABLE idempotency_keys (
   { "goals": [{ "goal_id": 2, "type": "growth", "title": "學會 SQL 視窗函式", "period": "2026Q4" }],
     "tasks": [{ "task_id": 7, "title": "報表查詢改寫", "done_date": "2026-11-12" }] }
   ```
-  - `goals` 只送未封存的目標。`tasks` 只送工作範圍（`scope='work'`）的待關聯任務，私人任務不送、也不建議（資安規則 2、FR-GOV-05）。
+  - `goals` 只送未封存的目標，並排除綁私人專案（`projects.scope='private'`）的 `expectation` 目標，以送出當下的專案範圍判定；這類目標仍可手動關聯（2026-11-20 產品負責人裁定 Q6，#92）。`tasks` 只送工作範圍（`scope='work'`）的待關聯任務，私人任務不送、也不建議（資安規則 2、FR-GOV-05）。
   - 待關聯超過 20 筆時，送完成日最新的 20 筆；其餘再按一次。
   - 明確不送：完成回報的星數與精力（FR-AI-06）、目標的 `definition`、`energy_plan`、任務負責人、原句。
 - 輸出：`{ "items": [{ "task_id": 7, "goal_id": 2, "reason": "任務內容與 SQL 學習相關" }] }`
   - `goal_id` 可為 null，表示沒有合適的目標。每個任務最多一項：同一個 `task_id` 出現多次時保留第一項、其餘丟棄；`task_id` 或 `goal_id` 不在 payload 的項目整項丟棄（兩者都不算錯誤，#73 Dev-B 提問、Dev-A 定）。
   - `reason` 不超過 200 字、不含 NUL，否則算 `invalid_output`。`reason` 只說明內容相關，不評價任務或人（FR-AI-06）。
-- 記錄：比照 AI-01 存 `raw_output`（清除與匯出依 6.7：清除時設 NULL，匯出不帶）。重試比照 AI-01。
+- 記錄：比照 AI-01 存 `raw_output`（清除與匯出依 6.7：清除時設 NULL，匯出不帶）；`status='ok'` 那一列存的是驗證後的建議、不是 AI 原始輸出，見 5.13。重試比照 AI-01。
 
 **AI-04 目標回報草稿（FR-GOL-06、07，Phase 9；2026-11-18 #72 Dev-A、Dev-B 定案）**
 
@@ -1133,13 +1133,13 @@ CREATE TABLE idempotency_keys (
 `GET /goals/matrix`（9.9；FR-GOL-04）：輸出 `{ "items": [{ "goal_id": 2, "title": "學會 SQL 視窗函式", "energy_plan": "high", "energy": { "high": 2, "mid": 1, "low": 0 }, "linked": 3 }] }`。每個未封存的目標一列，依 id 排序；`energy`、`linked` 的母體與 stats 相同。路由要排在 `/goals/{id}` 之前。
 
 `POST /goal-links/suggest`（AI-03，payload 與驗證見 5.3a；2026-11-19 裁定，#47 G3）：
-- 不帶 body。伺服器依 5.3a 組 payload：未封存的目標，以及工作範圍、完成日最新的 20 筆待關聯任務。
+- 不帶 body。伺服器依 5.3a 組 payload：未封存的目標（排除綁私人專案的 expectation 目標，#92），以及工作範圍、完成日最新的 20 筆待關聯任務。
 - 輸出：`{ "ai_status": "ok", "ai_run_id": 12, "items": [{ "task_id": 7, "goal_id": 2, "reason": "任務內容與 SQL 學習相關" }] }`
   - `items` 是通過 5.3a 驗證的建議（重複項與不在 payload 的項目已丟棄）；AI 沒有建議的任務不列。`goal_id=null` 表示 AI 認為沒有合適的目標。
   - AI 不可用或輸出不合格式時照樣回 200：`ai_status` 為 `unavailable` 或 `invalid_output`，`ai_run_id=null`、`items=[]`，由使用者自己選（AC-50）。
-  - 沒有未封存的目標，或沒有可送的工作範圍任務時，不呼叫 AI、不寫 `ai_runs`，回 `ai_status="unavailable"`、`ai_run_id=null`、`items=[]`（5.3「依規則刻意不呼叫」）。
+  - 沒有可送的目標（未封存、且不是綁私人專案的 expectation 目標，#92），或沒有可送的工作範圍任務時，不呼叫 AI、不寫 `ai_runs`，回 `ai_status="unavailable"`、`ai_run_id=null`、`items=[]`（5.3「依規則刻意不呼叫」）。
 - 輸出驗證的順序（9.7 實作定案，#84 後子代理審查）：
-  1. 先查結構：`items` 為陣列，每項為物件，`task_id` 為 JSON 整數、`goal_id` 為 JSON 整數或 null、`reason` 為字串（可為空，不超過 200 字、不含 NUL）。任一項不合（包括之後會被丟掉的項目）整次算 `invalid_output`；項目多帶的鍵丟掉，不算錯誤。
+  1. 先查結構：`items` 為陣列，每項為物件，`task_id` 為 JSON 整數、`goal_id` 為 JSON 整數或 null、`reason` 為字串（可為空，不超過 200 字、不含 NUL）。任一項不合（包括之後會被丟掉的項目）整次算 `invalid_output`；項目多帶的鍵丟掉，不算錯誤。（這句只對 `FakeAIClient` 成立：真實供應商的輸出先經節點 schema（`additionalProperties: false`）檢查，多帶鍵在那一層就算格式不合。）
   2. 再丟掉 `task_id` 不在 payload，或 `goal_id` 非 null 且不在 payload 的項目。
   3. 最後同一 `task_id` 留第一項。
 - 重試與紀錄：任何例外都算一次失敗，總共最多 3 次，`AIUnavailable` 立刻停；最終 `ai_status` 以最後一次嘗試為準（格式不合為 `invalid_output`，其餘為 `unavailable`，比照 AI-05）。每次嘗試寫一列 `ai_runs`（`latency_ms` 失敗也記；`error` 只放例外類別名稱）。`status='ok'` 那一列的 `raw_output` 存驗證後的 `{ "items": [...] }`（與回應相同，供回饋比對）；格式不合的嘗試存 AI 原始輸出；沒有輸出時為 NULL。

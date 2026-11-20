@@ -63,7 +63,7 @@ A4 已補齊全部成功回應模型。`src/api/types.ts` 的既有名稱改為�
 | `/time-management` | 12.10 預留 |
 | `/setup` | 12.11 首次啟用精靈；已啟用者由守門導回首頁 |
 | `/settings` | 12.11 設定與量表 |
-| `/goals` | 12.12 預留 |
+| `/goals` | 12.12 階段 1：目標管理、統計、精力矩陣與人工關聯；AI 建議與回報留待階段 2 |
 | `/reports` | 12.13 週報：按週讀取、明確產稿、人工版保存與事件退路 |
 | `/data-control` | 12.14 預留 |
 | `/tasks/new` | 12.15 預留；靜態路由優先於任務編號 |
@@ -148,6 +148,7 @@ code／message 必須是非空字串，details 必須是非陣列物件。
 
 資源前綴涵蓋全部列表、詳情及篩選查詢。原因、健康不受上述寫入影響。
 `gantt` 與 `events` 由共用查詢鍵管理。歷程 filters 以 `normalizeEventFilters` 為單一來源，URL、請求與 query key 共用；空值省略，limit/offset 預設 100/0。
+目標頁的清單、詳情、統計、矩陣鍵都位於 `goals` 根下；待關聯鍵位於 `goalLinks` 根下。關聯成功失效 tasks、goals、goalLinks、gantt、events，再以伺服器值重讀，不在前端重算統計。
 `runMutationWithInvalidation` 只在成功後失效，等待使用中的查詢重讀，未使用的查詢留待下次讀取。
 失敗原樣交回呼叫者，不重送；STALE_VERSION 沿用既有頁面重讀流程。
 此共用包裝供後續頁面使用，未改動 Dev-A 功能頁既有的 onSuccess／onError 行為。

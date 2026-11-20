@@ -75,4 +75,9 @@ export const keys = {
   activeRubric: [...queryRoots.rubrics, "active"] as const,
   weeklyReport: (id: number) => [...queryRoots.weeklyReports, id] as const,
   weeklyReportByWeek: (weekStart: string) => [...queryRoots.weeklyReports, "week", weekStart] as const,
+  goals: () => [...queryRoots.goals, "list", { include_archived: true }] as const,
+  goal: (id: number) => [...queryRoots.goals, "detail", id] as const,
+  goalStats: (id: number) => [...queryRoots.goals, "stats", id] as const,
+  goalMatrix: () => [...queryRoots.goals, "matrix"] as const,
+  goalLinksPending: () => [...queryRoots.goalLinks, "pending"] as const,
 };
