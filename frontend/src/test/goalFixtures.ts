@@ -50,3 +50,19 @@ export const goalFixtures = {
   emptyPending: { items: [], total: 0 } satisfies components["schemas"]["PendingLinkOut"],
   linkResult,
 };
+
+// 12.12 階段 2：依 spec 5.13 的 GoalReportOut 暫代 MSW 資料；#111 入 OpenAPI 後改由生成型別核對。
+export const goalReportFixtures = {
+  ready: { id: 9, goal_id: 1, ai_status: "ok", excluded_private: 2,
+    draft: "AI 目標初稿", validated: true, manual_text: "使用者人工版",
+    updated_at: "2026-11-20T10:00:00+08:00" },
+  unavailable: { id: 9, goal_id: 1, ai_status: "unavailable", excluded_private: 2,
+    draft: null, validated: false, manual_text: "使用者人工版",
+    updated_at: "2026-11-20T10:01:00+08:00" },
+  invalidOutput: { id: 9, goal_id: 1, ai_status: "invalid_output", excluded_private: 2,
+    draft: null, validated: false, manual_text: "使用者人工版",
+    updated_at: "2026-11-20T10:02:00+08:00" },
+  manualOnly: { id: 9, goal_id: 1, ai_status: null, excluded_private: 0,
+    draft: null, validated: false, manual_text: "使用者人工版",
+    updated_at: "2026-11-20T10:03:00+08:00" },
+} as const;

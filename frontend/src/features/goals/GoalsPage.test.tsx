@@ -5,7 +5,7 @@ import { MemoryRouter } from "react-router-dom";
 
 import { App } from "../../App";
 import { AppRoutes } from "../../app/AppRoutes";
-import { goalFixtures } from "../../test/goalFixtures";
+import { goalFixtures, goalReportFixtures } from "../../test/goalFixtures";
 import { API, apiError, makeSettings, renderWithClient, server } from "../../test/server";
 
 function open() {
@@ -31,7 +31,26 @@ test("12.12 路由顯示目標管理、統計、矩陣與待關聯四區；不�
   expect(await screen.findByRole("region", { name: "目標統計" })).toBeInTheDocument();
   expect(await screen.findByRole("region", { name: "目標精力矩陣" })).toBeInTheDocument();
   expect(await screen.findByRole("region", { name: "待關聯任務" })).toBeInTheDocument();
+  expect(await screen.findByRole("region", { name: "目標回報：練習規格分析" })).toBeInTheDocument();
   expect(screen.queryByText("此功能尚未開放。")).not.toBeInTheDocument();
+});
+
+test("階段 2：切換目標時回報區只讀新目標，不沿用前一目標草稿", async () => {
+  const user = userEvent.setup();
+  const requested: string[] = [];
+  server.use(http.get(`${API}/goals/:goalId/report`, ({ params }) => {
+    const id = Number(params.goalId);
+    requested.push(String(id));
+    return HttpResponse.json({ ...goalReportFixtures.ready, goal_id: id,
+      draft: id === 1 ? "第一個目標初稿" : "第二個目標初稿" });
+  }));
+  open();
+  expect(await screen.findByText("第一個目標初稿")).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "查看安排確認時間統計" }));
+  expect(await screen.findByRole("region", { name: "目標回報：安排確認時間" })).toBeInTheDocument();
+  expect(await screen.findByText("第二個目標初稿")).toBeInTheDocument();
+  expect(screen.queryByText("第一個目標初稿")).not.toBeInTheDocument();
+  expect(requested).toContain("2");
 });
 
 test("FR-GOL-01／02：停用類型不能新增，既有目標仍可讀；類型與預期精力不預選", async () => {

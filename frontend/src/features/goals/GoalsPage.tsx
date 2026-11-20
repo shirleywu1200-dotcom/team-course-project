@@ -7,6 +7,7 @@ import type { components } from "../../api/types.generated";
 import { GoalEnergyMatrix } from "./GoalEnergyMatrix";
 import { GoalLinkInbox } from "./GoalLinkInbox";
 import { GoalManagement } from "./GoalManagement";
+import { GoalReportArea } from "./GoalReportArea";
 import { GoalStatsSection } from "./GoalStatsSection";
 
 type GoalListOut = components["schemas"]["GoalListOut"];
@@ -23,6 +24,8 @@ export function GoalsPage() {
     <GoalManagement goals={goals.data?.items} loading={!goals.data && !goals.error} error={goals.error}
       onRetry={() => { void goals.refetch(); }} selectedId={selectedGoalId} onSelect={setSelectedId} />
     <GoalStatsSection goalId={selectedGoalId} goalTitle={selectedGoalTitle} />
+    {selectedGoalId !== null && selectedGoalTitle !== null &&
+      <GoalReportArea key={selectedGoalId} goalId={selectedGoalId} goalTitle={selectedGoalTitle} />}
     <GoalEnergyMatrix />
     <GoalLinkInbox goals={goals.data?.items} />
   </main>;

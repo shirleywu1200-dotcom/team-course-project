@@ -78,6 +78,7 @@ export const keys = {
   goals: () => [...queryRoots.goals, "list", { include_archived: true }] as const,
   goal: (id: number) => [...queryRoots.goals, "detail", id] as const,
   goalStats: (id: number) => [...queryRoots.goals, "stats", id] as const,
+  goalReport: (id: number) => [...queryRoots.goals, "report", id] as const,
   goalMatrix: () => [...queryRoots.goals, "matrix"] as const,
   goalLinksPending: () => [...queryRoots.goalLinks, "pending"] as const,
 };
