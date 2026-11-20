@@ -41,8 +41,9 @@ export const mutationInvalidations = {
   "POST /goals/{goal_id}/archive": ["goals", "events"],
   "POST /goal-links": ["tasks", "goals", "goalLinks", "gantt", "events"],
   "POST /goal-links/suggest": [],
-  "POST /goals/{goal_id}/report/draft": ["goals"],   // 目標回報（9.10）：鍵放在 goals 根下，由 12.12 階段 2 定
-  "PUT /goals/{goal_id}/report/manual": ["goals"],
+  // 目標回報（9.10）：不改目標、統計、矩陣；回應由元件 setQueryData（#115），不失效，避免洗掉產生失敗的退路
+  "POST /goals/{goal_id}/report/draft": [],
+  "PUT /goals/{goal_id}/report/manual": [],
 } as const satisfies Record<string, readonly (keyof typeof queryRoots)[]>;
 
 export type MutationAction = keyof typeof mutationInvalidations;
