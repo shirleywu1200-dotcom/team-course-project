@@ -739,13 +739,13 @@ CREATE TABLE idempotency_keys (
   2. `draft` 裡出現的每個數字都在允許名單內：`stats` 的值，以及 payload 文字本來就有的數字（`goal.title`、`goal.period`、各任務 `title`，以及 `done_date` 拆出的年、月、日）。
   - 比對前正規化：`4.0`＝`4`、`100%`＝`100`、全形數字轉半形。
   - 誤判率由 Dev-B 在 #50 的評估實測；太高時調整允許名單，不放寬規則本身。
-  - 〔提案，待裁定：#47 9.10 第 8 點〕數字的切法與比較（9.10 子代理審查後補）：
+  - 數字的切法與比較（2026-11-20 產品負責人裁定，#47、#86 第 8 點；Dev-B 確認）：
     - 先把全形數字（U+FF10～FF19）、全形「．」「％」轉成半形，不做 NFKC（`①`、`²` 不算數字）。
     - 數字＝連續的阿拉伯數字，後面可接「.」加數字當小數；以數值比較（`05`＝`5`、`4.0`＝`4`、`100%`＝`100`）。不認負號（`2026-11-12` 切成 2026、11、12）、千分位（`1,000` 切成 1 與 000）與科學記號；句尾的 `3.` 算 3。
     - 允許名單從 payload 文字取數字時，用和草稿同一套切法，所以照抄標題、期間一定通過。
     - 第 1 點比較數值，不比型別（`4`＝`4.0`）；沒有容差（3.25 不等於 3.3）。同一個鍵列兩次，兩次都要相等。
     - 已知限制（不檢查）：國字數字（「三件」）；數字寫在哪一段（統計值互換位置仍會通過）；與允許名單撞號的錯數字（SDD 已記錄）。
-  - 〔提案，待裁定：#47 9.10 第 9 點〕輸出格式的細節：`figures` 每項只能有 `key`、`value`，多出來的鍵與 `key` 不在 `FIGURE_KEYS`（節點定義）都算格式不合（`invalid_output`，可重試），不算 R3 失敗；`value` 必須是 JSON 數字，`true`、`"3"`、null 都算格式不合：由節點 schema（嚴格數字，Dev-B PR #87）擋下，因為 `AnthropicAIClient` 回傳的是轉型後的值，呼叫端分不出原始型別；呼叫端的格式檢查仍要求 `value` 為數字、不是 bool（`FakeAIClient` 不套節點 schema）。`draft` 的字數以 Unicode 字元（code point）計，同 AI-05。
+  - 輸出格式的細節（2026-11-20 產品負責人裁定，#47、#86 第 9 點；Dev-B 確認）：`figures` 每項只能有 `key`、`value`，多出來的鍵與 `key` 不在 `FIGURE_KEYS`（節點定義）都算格式不合（`invalid_output`，可重試），不算 R3 失敗；`value` 必須是 JSON 數字，`true`、`"3"`、null 都算格式不合：由節點 schema（嚴格數字，Dev-B PR #87）擋下，因為 `AnthropicAIClient` 回傳的是轉型後的值，呼叫端分不出原始型別；呼叫端的格式檢查仍要求 `value` 為數字、不是 bool（`FakeAIClient` 不套節點 schema）。`draft` 的字數以 Unicode 字元（code point）計，同 AI-05。
 - 重試與紀錄同 AI-05：總共最多 3 次，`AIUnavailable` 與 R3 失敗立刻停；R3 失敗記 `status='invalid_output'`、`error='R3_MISMATCH'`；不存 `raw_output`。存在 `reports` 表 `kind='goal'`，比照週報（5.14）。
 
 ### 5.4 設定與量表
@@ -1074,6 +1074,7 @@ CREATE TABLE idempotency_keys (
 | POST | `/goal-links/suggest` | AI-03 關聯建議；使用者按「請 AI 建議」才呼叫（#47 G3） |
 | POST | `/goal-links` | 你確認關聯（`{ task_id, goal_id, expected_version }`，`goal_id=null` 表示不關聯；2026-11-18 裁定統一端點，#47 B1；2026-11-19 G1） |
 | POST | `/goals/{id}/report/draft` | AI-04 草稿 |
+| GET | `/goals/{id}/report` | 取得既有目標回報（不產生） |
 | PUT | `/goals/{id}/report/manual` | 儲存人工版 |
 
 目標的建立、編輯、封存（9.5；比照專案 FR-PRJ-01～03，#47 B4、B7 與第二片提案）：
@@ -1150,7 +1151,7 @@ CREATE TABLE idempotency_keys (
   - 不寫回饋的情況（關聯照常完成）：該筆 `raw_output` 已清除（6.7）；建議裡沒有這個任務（例如任務是私人範圍，或建議之後才完成）；這個任務已做過關聯決定。AI-03 不寫 `ignored`。
   - 回饋列：`node_id='AI-03'`、`target_type='goal_link'`、`target_id` 為這次寫入的 `goal` 事件 id；`detail`＝`{ ai_run_id, task_id, ai, final }`，只含整數或 null，不含 `reason` 或任何標題。與事件、任務更新在同一交易。
 
-目標回報（9.10；AI-04，payload 與驗證見 5.3a）〔提案，待產品負責人裁定：#47 9.10；裁定前不實作端點〕：
+目標回報（9.10；AI-04，payload 與驗證見 5.3a；2026-11-20 產品負責人裁定照提案，#47、#86）：
 
 | Method | Path | 說明 |
 | --- | --- | --- |
