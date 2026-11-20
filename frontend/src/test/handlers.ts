@@ -30,6 +30,9 @@ export function adjustStartHandler(scenario: keyof typeof adjustStartFixtures = 
 }
 
 export const handlers = [
+  http.get(`${API}/goals/:goalId/report`, ({ params }) => HttpResponse.json({
+    error: { code: "NOT_FOUND", message: "目標回報尚未產生", details: { goal_id: Number(params.goalId) } },
+  }, { status: 404 })),
   http.get(`${API}/goals`, () => HttpResponse.json(goalFixtures.list)),
   http.get(`${API}/goals/1/stats`, () => HttpResponse.json(goalFixtures.insufficient)),
   http.get(`${API}/goals/matrix`, () => HttpResponse.json(goalFixtures.matrix)),
