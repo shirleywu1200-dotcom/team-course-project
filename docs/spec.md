@@ -1176,6 +1176,7 @@ CREATE TABLE idempotency_keys (
    - `linked=0` 時不呼叫 AI、不寫 `ai_runs`，回 `ai_status="unavailable"`、`validated=false`（5.3「依規則刻意不呼叫」，同 AI-03）。存檔照下一點的失敗規則。
    - 存檔比照 FR-RPT-04：成功時更新 `ai_draft`、`ai_items`（存驗證後的 `figures`）、`ai_status`、`excluded_private`、`updated_at`，`manual_text` 不動；失敗時已有成功初稿整列不動，回應仍是這次的退路（`validated=false`）；第一次就失敗時建一列、AI 欄位為 null。
 5. **讀取時重新對帳**：`GET`、`PUT`（以及產生成功時）的 `validated` 由存下的 `ai_draft`、`figures` 對**目前**的統計與 payload 重跑 R3 得出（比照 5.14 R4 重新對帳）。之後新增關聯、改了完成回報或任務標題，草稿的數字對不上就改回統計表。
+   - 已知限制（2026-11-20 產品負責人裁定 Q7，#47：維持現狀）：R3 只比數字、不比 `task_id`。產生回報之後任務才改成私人範圍、且標題不含數字時，重算 `validated` 仍可能通過，畫面會續顯示該任務標題。產生當下送 AI 是合法的（當時 `scope='work'`），不是洩漏。週報靠 R4 比對 `task_id` 可擋（5.14）。日後要補時：`ai_items` 加存送出的 `task_ids`，`validated` 時比對目前範圍（照週報 R4），不需遷移、不改契約；目前不排。
 6. **人工版**：`PUT /goals/{id}/report/manual` 輸入 `{ "manual_text": "…" }`，規則同 5.14（不帶 `expected_version`、後寫蓋先寫；可為 null 或空字串；超過 20,000 字回 413 `PAYLOAD_TOO_LARGE`；含 NUL 回 `VALIDATION_ERROR`；內容相同照常儲存）。還沒有回報列時建一列（AI 欄位為 null）。封存的目標也可儲存。
 7. 其他：
    - 目標不存在回 `NOT_FOUND`。週報端點讀到 `kind='goal'` 的列回 404（5.14 J10 已定）。
