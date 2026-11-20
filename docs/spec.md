@@ -567,6 +567,7 @@ CREATE TABLE idempotency_keys (
 | 0003 系統種子 | 寫入 `settings`（id=1，三句精力定義，其餘欄位用 DDL 預設值）與 `rubrics`（version=0、`source='default'`、五句量表），冪等（`ON CONFLICT DO NOTHING`）；降級不刪除種子 | PR #1 審查 B2（種子文字經產品負責人確認，修改文字屬規格變更）；AC-59 |
 | 0004 候選記住收件專案 | `candidates` 加 `project_id BIGINT REFERENCES projects(id)`（可為 NULL，NULL 表示收件時沒有指定專案）與索引 `ix_candidates_project`。只新增欄位與索引 | PR #20 審查 B5（2026-11-16 產品負責人裁定）；FR-INB-14 |
 | 0005 週報存檔 | `reports` 加 `ai_items JSONB`（AI 回傳的結構化項目）與 `ai_status TEXT`（`ok`、`unavailable`、`invalid_output`，可為 NULL）；加部分唯一索引「每週一列」（`period_start`，`WHERE kind = 'weekly'`）；加 CHECK「週報列一定要有 `period_start`」（NULL 不受唯一索引約束）（#18 J8；2026-11-17 定案）。只新增欄位、索引與 CHECK | 2026-11-16 產品負責人裁定（#18 第 1 點 (b)）；FR-RPT-03、04 |
+| 0006 目標回報存檔 | `reports` 加部分唯一索引「每個目標一列」（`goal_id`，`WHERE kind = 'goal'`）與 CHECK「目標回報列一定要有 `goal_id`」。`ai_items` 沿用 0005 的欄位，目標回報存驗證後的 `figures`。只新增索引與 CHECK | 2026-11-20 產品負責人裁定（#47、#86）；spec 5.13「目標回報」第 1 點 |
 
 系統種子相關規則（2026-11-15 產品負責人裁定）：
 

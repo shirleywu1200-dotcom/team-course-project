@@ -1,4 +1,5 @@
 """週報端點驗收測試（spec 5.14、FR-RPT-01～04、AC-25、48～51、65～67）。
+對應 AC（逐條列出，供 scripts/ac_matrix.py 辨識）：AC-25、AC-48、AC-49、AC-50、AC-51、AC-65、AC-66、AC-67。
 
 Dev-A 暫代撰寫：issue #18 裁定 QC 帳號定案前由 Dev-A 自補，QC-1 帳號定案後移交複核或接手。
 只經 HTTP 與 SQL 種子操作，不呼叫 app 內部函式。
@@ -251,7 +252,9 @@ def test_unknown_or_bad_ids(client, rid):
 
 
 def test_goal_report_id_is_not_found(client, seed, query):
-    seed("INSERT INTO reports (id, kind, created_at, updated_at) VALUES (50, 'goal', now(), now());")
+    seed("INSERT INTO goals (id, type, title, period, energy_plan, created_at) "   # 0006：goal 列要有 goal_id
+         "VALUES (1, 'growth', 'g', '2026Q4', 'high', now());"
+         "INSERT INTO reports (id, kind, goal_id, created_at, updated_at) VALUES (50, 'goal', 1, now(), now());")
     assert client.get(ONE.format(50)).status_code == 404
     assert client.put(MANUAL.format(50), json={"manual_text": "x"}).status_code == 404
 
@@ -580,8 +583,10 @@ def test_by_week_not_generated_is_404(client, data, week):
 
 
 def test_by_week_reads_only_weekly_rows(client, seed):
-    seed(f"INSERT INTO reports (id, kind, period_start, created_at, updated_at) "
-         f"VALUES (50, 'goal', '{WEEK}', now(), now());")
+    seed("INSERT INTO goals (id, type, title, period, energy_plan, created_at) "   # 0006：goal 列要有 goal_id
+         "VALUES (1, 'growth', 'g', '2026Q4', 'high', now());"
+         f"INSERT INTO reports (id, kind, goal_id, period_start, created_at, updated_at) "
+         f"VALUES (50, 'goal', 1, '{WEEK}', now(), now());")
     assert by_week(client).status_code == 404
 
 

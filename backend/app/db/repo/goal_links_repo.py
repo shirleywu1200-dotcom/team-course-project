@@ -5,9 +5,10 @@
 
 from sqlalchemy import Connection, text
 
-# 統計母體：已完成、有完成回報的任務（spec 5.13 stats）
+# 統計母體：已完成、有完成回報的任務（spec 5.13 stats）；AI-04 的 tasks 也取自這裡（5.3a）
 _LINKED = """
-    SELECT t.goal_id, t.expected_stars, cf.actual_stars, cf.energy, cf.overdue_days
+    SELECT t.goal_id, t.expected_stars, cf.actual_stars, cf.energy, cf.overdue_days,
+           t.id AS task_id, t.title, t.scope, t.done_date
       FROM tasks t
       JOIN completion_feedback cf ON cf.task_id = t.id
      WHERE t.status = 'done' AND t.goal_id IS NOT NULL
