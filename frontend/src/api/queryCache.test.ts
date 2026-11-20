@@ -84,6 +84,23 @@ test("12.9：完成與保存回報使待補清單失效，保存回報也刷新�
   }
 });
 
+test("12.12：目標鍵共用根；關聯成功失效任務、目標、待關聯、甘特與歷程", async () => {
+  expect(keys.goals()[0]).toBe("goals");
+  expect(keys.goal(1)[0]).toBe("goals");
+  expect(keys.goalStats(1)[0]).toBe("goals");
+  expect(keys.goalMatrix()[0]).toBe("goals");
+  expect(keys.goalLinksPending()[0]).toBe("goal-links");
+  const client = makeQueryClient();
+  const entries = [keys.task(101), keys.goals(), keys.goalStats(1), keys.goalMatrix(),
+    keys.goalLinksPending(), keys.gantt(1), keys.events({ task_id: 101 })];
+  entries.forEach(key => client.setQueryData(key, {}));
+  await runMutationWithInvalidation(client, "POST /goal-links", async () => undefined);
+  entries.forEach(key => expect(client.getQueryState(key)?.isInvalidated).toBe(true));
+  const readme = readFileSync("README.md", "utf8");
+  expect(readme).toContain("| `POST /goal-links` | tasks、goals、goalLinks、gantt、events |");
+  client.clear();
+});
+
 test("S：URL、query key 與請求共用同一份歷程 filters 正規化", () => {
   const url = new URLSearchParams("project_id=0012&task_id=4&batch_id=8&limit=25&offset=50&from=2026-11-01&to=2026-11-30&kind=due");
   const normalized = normalizeEventFilters(url);
