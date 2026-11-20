@@ -24,7 +24,7 @@ def _fallback(ai_status: str = "unavailable") -> dict:
 
 
 def _collect(conn) -> dict:
-    goals = goals_repo.list_all(conn, include_archived=False)
+    goals = goals_repo.list_sendable_to_ai(conn)   # 綁私人專案的 expectation 目標不送（#92）
     tasks = [t for t in goal_links_repo.pending(conn) if t["scope"] == "work"]   # 私人任務不送（資安規則 2）
     return ai03.build_payload(goals, tasks)
 
