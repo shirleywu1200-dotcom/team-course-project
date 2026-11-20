@@ -18,6 +18,13 @@ def get_run(conn: Connection, run_id: int) -> dict | None:
     return dict(row) if row else None
 
 
+def ok_run_id_for_job(conn: Connection, job_id: int) -> int | None:
+    """這個工作已成功的 AI 呼叫；有的話候選已和它同一交易存好（#107）。"""
+    return conn.execute(text(
+        "SELECT id FROM ai_runs WHERE job_id = :j AND status = 'ok' ORDER BY id LIMIT 1"),
+        {"j": job_id}).scalar()
+
+
 def clear_raw_output_before(conn: Connection, before) -> int:
     """建立時間早於 before 的輸出設為 NULL，不分節點（PR #20 B2）。"""
     return conn.execute(text(

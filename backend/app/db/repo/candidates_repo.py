@@ -23,6 +23,11 @@ def insert(conn: Connection, fields: dict) -> dict:
     return insert_row(conn, "candidates", COLUMNS, fields)
 
 
+def ids_for_run(conn: Connection, ai_run_id: int) -> list[int]:
+    return list(conn.execute(text("SELECT id FROM candidates WHERE ai_run_id = :r ORDER BY id"),
+                             {"r": ai_run_id}).scalars())
+
+
 def update(conn: Connection, candidate_id: int, fields: dict) -> dict:
     return update_row(conn, "candidates", COLUMNS, candidate_id, fields)
 

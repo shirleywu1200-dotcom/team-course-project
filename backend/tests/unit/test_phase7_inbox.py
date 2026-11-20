@@ -3,7 +3,7 @@
 import pytest
 
 from app import worker
-from app.ai.client import AIInvalidOutput, AITimeout
+from app.ai.client import DEFAULT_TIMEOUT_S, AIInvalidOutput, AITimeout
 from tests.unit.seeds import BASE
 
 API = "/api/v1"
@@ -349,12 +349,102 @@ def test_unknown_candidate_is_404(client, seed):
 
 # ---------- 審查修正的回歸測試 ----------
 
+def crash_before_final_status(monkeypatch):
+    """模擬行程在「候選已存」之後、「工作結案」之前崩潰（#107）：寫最終狀態那一次丟例外。"""
+    original = worker.jobs_repo.update
+
+    def update(conn, job_id, fields):
+        if fields.get("status") in ("succeeded", "failed"):
+            raise RuntimeError("crash")
+        return original(conn, job_id, fields)
+
+    monkeypatch.setattr(worker.jobs_repo, "update", update)
+
+
+def test_107_rerun_after_crash_does_not_duplicate_candidates_or_call_ai(client, seed, ai, db, query, monkeypatch):
+    seed(BASE)
+    job_id = ingest(client, long_text()).json()["job_id"]
+    ai.script(NODE, {"items": [{"ref": 1, "kind": "done", "task_id": 3}]})
+    crash_before_final_status(monkeypatch)
+    with pytest.raises(RuntimeError):
+        worker.run_once(db, ai)
+    monkeypatch.undo()
+    first_ids = [r["id"] for r in query("SELECT id FROM candidates ORDER BY id")]
+    assert query("SELECT status FROM jobs WHERE id = :i", i=job_id)[0]["status"] == "running"
+
+    worker.reset_running(db)
+    ai.script(NODE, {"items": [{"ref": 1, "kind": "done", "task_id": 3}]})
+    worker.run_once(db, ai)
+
+    assert [r["id"] for r in query("SELECT id FROM candidates ORDER BY id")] == first_ids
+    assert count(query, "ai_runs") == 1   # AI-01 只呼叫一次
+    job = client.get(f"{API}/ingest/jobs/{job_id}").json()
+    assert (job["status"], job["attempts"], job["error"]) == ("succeeded", 1, None)
+    assert job["result"]["candidate_ids"] == first_ids
+    assert job["result"]["created"] == 1 and job["result"]["skipped"] == 30
+
+
+def test_107_rerun_after_crash_on_third_attempt_success_is_not_failed(client, seed, ai, db, query, monkeypatch):
+    seed(BASE)
+    job_id = ingest(client, long_text()).json()["job_id"]
+    ai.script(NODE, AIInvalidOutput, AIInvalidOutput, {"items": [{"ref": 1, "kind": "done", "task_id": 3}]})
+    crash_before_final_status(monkeypatch)
+    with pytest.raises(RuntimeError):
+        worker.run_once(db, ai)
+    monkeypatch.undo()
+
+    worker.reset_running(db)
+    worker.run_once(db, ai)
+
+    job = client.get(f"{API}/ingest/jobs/{job_id}").json()
+    assert (job["status"], job["attempts"], job["error"]) == ("succeeded", 3, None)
+    assert count(query, "candidates") == 1 and count(query, "ai_runs") == 3
+
+
+def test_107_rerun_with_only_failed_runs_still_calls_ai(seed, ai, db, query):
+    seed(BASE + """
+    INSERT INTO sources (id, channel, speaker, excerpt, excerpt_hash, received_at, expires_at) VALUES
+      (1, 'paste', '阿德', '報表做完了', 'h1', '2026-11-11T10:00+08:00', '2026-12-11T10:00+08:00');
+    INSERT INTO jobs (id, kind, status, attempts, payload, created_at, updated_at) VALUES
+      (5, 'ingest', 'running', 1,
+       '{"source_ids":[1],"project_id":null,"duplicates":0,"unparsed_lines":[]}',
+       '2026-11-11T10:00+08:00', '2026-11-11T10:00+08:00');
+    INSERT INTO ai_runs (node_id, job_id, status, attempt, error, created_at) VALUES
+      ('AI-01', 5, 'invalid_output', 1, 'AIInvalidOutput', '2026-11-11T10:00+08:00');
+    """)
+    worker.reset_running(db)
+    ai.script(NODE, {"items": [{"ref": 1, "kind": "done", "task_id": 3}]})
+    worker.run_once(db, ai)
+    assert query("SELECT status, attempts FROM jobs")[0] == {"status": "succeeded", "attempts": 2}
+    assert count(query, "candidates") == 1
+    assert [r["status"] for r in query("SELECT status FROM ai_runs ORDER BY id")] == ["invalid_output", "ok"]
+
+
 def test_non_ai_error_from_provider_counts_as_failed_attempt(client, seed, ai, query):
     seed(BASE)
     ai.script(NODE, RuntimeError, ValueError, {"items": []})
     r = ingest(client, "[10:12] 阿德：好")
     assert r.status_code == 200 and r.json()["ai_status"] == "ok"
     assert [x["status"] for x in query("SELECT status FROM ai_runs ORDER BY id")] == ["error", "error", "ok"]
+
+
+def test_job_calls_ai01_with_longer_timeout_and_sync_keeps_default(client, seed, ai, db, monkeypatch):
+    # 13-4-sdd 4.3：150 則實測 25.8 秒，背景工作放寬到 60 秒；同步路徑（≤30 行）維持 20 秒
+    seed(BASE)
+    timeouts = []
+    real_call = ai.call
+
+    def spy(node_id, payload, *, timeout_s=DEFAULT_TIMEOUT_S):
+        timeouts.append(timeout_s)
+        return real_call(node_id, payload, timeout_s=timeout_s)
+
+    monkeypatch.setattr(ai, "call", spy)
+    ai.script(NODE, {"items": []}, {"items": []})
+    ingest(client, "[10:12] 阿德：好")
+    ingest(client, long_text())
+    worker.run_once(db, ai)
+    assert timeouts == [DEFAULT_TIMEOUT_S, worker.JOB_TIMEOUT_S]
+    assert worker.JOB_TIMEOUT_S == 60
 
 
 def test_worker_marks_job_failed_on_unexpected_exception(client, seed, ai, db, query, monkeypatch):

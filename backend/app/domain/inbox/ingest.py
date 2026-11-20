@@ -2,6 +2,7 @@
 
 AI 呼叫可能很久，不放在資料庫交易裡：先用一個交易寫 sources（必要時建 jobs），
 再在交易外呼叫 AI-01，每次結果各用一個短交易寫 ai_runs（成功時連同 candidates）。
+背景工作續跑時，若已有成功的 ai_runs，直接沿用那次的候選，不再呼叫 AI（#107）。
 同步與背景工作共用 `process_sources`。
 """
 
@@ -13,7 +14,7 @@ from datetime import timedelta
 
 from sqlalchemy import Connection
 
-from app.ai.client import AIClient, AIInvalidOutput, AIUnavailable
+from app.ai.client import DEFAULT_TIMEOUT_S, AIClient, AIInvalidOutput, AIUnavailable
 from app.clock import get_clock
 from app.db.database import Database
 from app.db.repo import ai_runs_repo, candidates_repo, jobs_repo, projects_repo, sources_repo
@@ -111,11 +112,17 @@ def _payload(conn: Connection, source_ids: list[int], project_id: int | None) ->
 
 
 def process_sources(db: Database, ai: AIClient, source_ids: list[int], project_id: int | None, *,
-                    job_id: int | None = None, attempts_done: int = 0) -> Outcome:
+                    job_id: int | None = None, attempts_done: int = 0,
+                    timeout_s: float = DEFAULT_TIMEOUT_S) -> Outcome:
     """呼叫 AI-01 並把結果寫成 open 候選；失敗則續跑，總嘗試次數不超過 MAX_ATTEMPTS。"""
     if project_id is not None and db.run(lambda c: projects_repo.get(c, project_id))["scope"] == "private":
         # 私人專案的原文不送 AI（資安規則 2、PR #20 B1）；原文已存，可在收件匣手動建任務
         return Outcome("unavailable", attempts_done, skipped=len(source_ids), message=PRIVATE_MESSAGE)
+    if job_id is not None:
+        done = db.run(lambda c: _saved_candidate_ids(c, job_id))
+        if done is not None:
+            log.info("AI-01 已完成，續跑不重呼叫 job=%s candidates=%s", job_id, len(done))
+            return Outcome("ok", attempts_done, done, skipped=len(source_ids) - len(done))
     payload, texts, task_ids = db.run(lambda c: _payload(c, source_ids, project_id))
     ai_status, attempt = "unavailable", attempts_done
     while attempt < MAX_ATTEMPTS:
@@ -125,7 +132,7 @@ def process_sources(db: Database, ai: AIClient, source_ids: list[int], project_i
         started = time.monotonic()
         output, drafts, error = None, [], None
         try:
-            output = ai.call(NODE, payload)
+            output = ai.call(NODE, payload, timeout_s=timeout_s)
             drafts = r2.apply(output, texts, task_ids, get_clock().today())
         except Exception as exc:   # 供應商可能丟出非 AIError 的例外，一律算這次失敗（FR-INB-08）
             error = exc
@@ -143,6 +150,12 @@ def process_sources(db: Database, ai: AIClient, source_ids: list[int], project_i
         if isinstance(error, AIUnavailable):
             break   # 供應商不可用時續跑沒有意義（續跑只針對逾時與不合格式）
     return Outcome(ai_status, attempt, skipped=len(source_ids))
+
+
+def _saved_candidate_ids(conn: Connection, job_id: int) -> list[int] | None:
+    """工作已有成功的 AI-01 時回傳那次存下的候選 id；沒有則回 None（#107：崩潰後續跑不重建）。"""
+    run_id = ai_runs_repo.ok_run_id_for_job(conn, job_id)
+    return None if run_id is None else candidates_repo.ids_for_run(conn, run_id)
 
 
 def _save_candidates(conn: Connection, run: dict, drafts: list[r2.Draft], project_id: int | None) -> list[int]:
