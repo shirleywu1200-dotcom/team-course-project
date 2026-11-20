@@ -32,8 +32,9 @@ npx playwright test
 | `tests/06-data-control.spec.ts` | 下載匯出（合法 JSON、無 `raw_output`）→ 刪除所有原文（沒勾確認不能送出）→ 任務歷程改顯示原文已刪除 | 12.14；AC-53、AC-28、AC-54（部分） |
 | `tests/07-bulk-shift.spec.ts` | 專案頁進整批順延 → 勾 4 項 → 預覽不寫入 → 統一註記 → 同一批次、註記只在我的任務 | 12.4；AC-14、15、19 |
 | `tests/08-baseline.spec.ts` | 任務詳情小連結 → 預覽影響不寫入 → 勾聲明才能更正 → 只改原訂日、留一筆 `baseline` 事件 | 12.5；AC-20、21（畫面側）、22 |
+| `tests/11-goals.spec.ts` | 目標頁：待關聯任務選目標 → 統計與矩陣同步更新；選不關聯後離開清單；樣本不足與程式判讀 | 12.12（關聯、統計、矩陣）；US-16、AC-46 |
 
-流程 7、8 用 `scripts/e2e_seeds/bulk.sql`（日期在 12 月）；流程 5 用 `import.sql`，流程 6 用 `inbox.sql`。
+流程 7、8 用 `scripts/e2e_seeds/bulk.sql`（日期在 12 月）；流程 5 用 `import.sql`，流程 6 用 `inbox.sql`，流程 11 用 `goals.sql`。
 
 ## 範圍
 
