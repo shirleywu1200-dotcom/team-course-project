@@ -142,3 +142,24 @@ git pull
 - API 文件：`/docs`、`/redoc` 已關閉；OpenAPI 在 `/api/v1/openapi.json`，需要 token（DA-24）。
 - 不接任何第三方遙測或錯誤回報服務（CLAUDE.md 資安 2）。FastAPI 內建的 OpenTelemetry 已在 `create_app` 全部關閉；不要安裝 `opentelemetry-sdk` 或任何 exporter。
 - 不要開 SDK 的除錯 log：`ANTHROPIC_LOG=debug`，或把 `anthropic`、`httpx` 的 logger 調到 DEBUG，會把送出的內容、回應原文或 API key 寫進 log。
+
+## 10. 例外演練（todo 13.5，Dev-A；#98）
+
+`cd backend && .venv/bin/python ../scripts/drills/exception_drill.py`（Windows：`.venv\Scripts\python.exe ..\scripts\drills\exception_drill.py`）：以真實行程（`app.main.run`，含背景工作）對暫時資料庫 `g4_drill_ex`（port 8765、AI 關閉）演練，結束時關閉行程、刪除資料庫。崩潰一律以 `Popen.kill()` 硬砍（POSIX 為 `SIGKILL`、Windows 為 TerminateProcess）；要讓行程停在交易中途，是由另一條連線鎖住它接下來要寫的表或列。
+
+| 情境 | 做法 | 預期（依據） |
+| --- | --- | --- |
+| A 重啟時有 `running` 工作 | 31 行貼上產生背景工作；鎖住 `ai_runs`，工作停在 `running` 時砍掉行程，再重啟 | 工作改回 `queued` 續跑完成，`attempts` 保留後再加一（spec 6.1） |
+| B 寫入中途崩潰 | 鎖住 `events`，整批順延 commit 已寫入 batch（交易已有 xid）、卡在寫事件時砍掉行程 | 任務日期與版本、`events`、`batches` 都沒變；重啟後同一請求成功（AC-57） |
+| C1 列被鎖住 | 另一連線 `FOR UPDATE` 鎖住任務 2 秒後放開 | 改期請求等待後完成，只寫一筆事件 |
+| C2 鎖住期間版本被改 | 另一連線鎖住並把 `version` 加一後提交 | 改期請求回 409 `STALE_VERSION`，不寫入（spec 7） |
+| C3 死結 | 另一連線先鎖任務 22，整批順延鎖 13、14 後等 22，另一連線再鎖 13；另一連線 `deadlock_timeout=10s`，讓服務端被選為犧牲者 | 服務端收到 40P01 後整筆重試並成功；`pg_stat_database.deadlocks` 加一（spec 7：重試最多 3 次） |
+
+| 日期 | 環境 | 結果 |
+| --- | --- | --- |
+| 2026-11-20 | macOS、Docker `postgres:17`、遷移 0005、`weekly.sql` 種子 | 12／12 項通過 |
+| 2026-11-20 | Windows 11、Docker postgres（`g4-pg`）；Dev-B 實跑（#108 審查） | 12／12（改用 `proc.kill()` 後）；`MAX_RETRIES=0` 破壞檢查同樣重現 C3 → 500 |
+
+- 破壞檢查：把 `Database.run` 的 `MAX_RETRIES` 暫時改成 0，C3 變成 HTTP 500（已還原），確認演練抓得到「沒有重試」。這次 500 的日誌只記 `unhandled error: OperationalError`，沒有 traceback 或資料庫訊息（DA-25、資安規則 3）。
+- 已知問題：背景工作在「候選已存、工作狀態未更新」之間崩潰時，重啟後會重複建立候選並再呼叫 AI，見 #107（Dev-B）。演練以行程內模擬重現，修正後由 #107 的測試涵蓋。
+- 資料庫整個停掉的情境不在 13.5 範圍；`pool_pre_ping` 會在資料庫恢復後重新連線。
