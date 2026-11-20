@@ -9,16 +9,16 @@
     C1 任務列被另一連線鎖住 → 改期請求等待，鎖放開後完成，只寫一筆事件。
     C2 鎖住期間對方改了任務版本 → 改期請求回 STALE_VERSION，不寫入（spec 7 樂觀鎖）。
     C3 死結 → 服務端被選為犧牲者（40P01）後整筆重試並成功（spec 7：重試最多 3 次）。
-任一項不符以非 0 結束；結束時關閉行程、刪除暫時資料庫。
+任一項不符以非 0 結束；結束時關閉行程、刪除暫時資料庫。崩潰用 Popen.kill() 硬砍（POSIX 為 SIGKILL）。
 
 已知限制：「候選已存、工作狀態未更新」之間崩潰會重複建候選，見 #107（Dev-B），本腳本不涵蓋。
 
 用法（在 backend/ 下）：
-  .venv/bin/python ../scripts/drills/exception_drill.py
+  .venv/bin/python ../scripts/drills/exception_drill.py              # macOS／Linux
+  .venv\Scripts\python.exe ..\scripts\drills\exception_drill.py       # Windows
 """
 
 import os
-import signal
 import subprocess
 import sys
 import tempfile
@@ -44,6 +44,7 @@ TOKEN = "drill-local-token"  # noqa: S105 只用於本機暫時資料庫的測�
 API = f"http://127.0.0.1:{PORT}/api/v1"
 SEED = BACKEND.parent / "scripts" / "e2e_seeds" / "weekly.sql"
 EXTERNAL = "drill-external"         # 外部連線的 application_name，用來和服務端連線區分
+CONNECTION_DROPPED = {"ReadError", "RemoteProtocolError"}   # 行程被砍時 httpx 的例外（依平台與時機而定）
 
 results: list[tuple[str, bool, str]] = []
 
@@ -54,7 +55,7 @@ def check(name: str, ok: bool, detail: str = "") -> None:
 
 
 class Server:
-    """以真實行程啟動後端（app.main.run：含背景工作與排程）；kill() 送 SIGKILL 模擬崩潰。"""
+    """以真實行程啟動後端（app.main.run：含背景工作與排程）；kill() 硬砍行程模擬崩潰。"""
 
     def __init__(self, db_url: str, log_dir: Path):
         self.db_url, self.log_dir, self.proc, self.n = db_url, log_dir, None, 0
@@ -76,7 +77,7 @@ class Server:
         raise RuntimeError("後端沒有啟動")
 
     def kill(self) -> None:
-        self.proc.send_signal(signal.SIGKILL)
+        self.proc.kill()   # POSIX 為 SIGKILL、Windows 為 TerminateProcess：都不給行程收尾
         self.proc.wait(timeout=10)
 
 
@@ -182,7 +183,8 @@ def scenario_b(server: Server, engine, db_url: str) -> None:
     ext.rollback()
     ext.close()
     ext_eng.dispose()
-    check("B2 請求因行程崩潰中斷", "error" in box or box.get("response") is None, box.get("error", ""))
+    check("B2 請求因行程崩潰而連線中斷", not t.is_alive() and box.get("error") in CONNECTION_DROPPED,
+          box.get("error", "（沒有例外）"))
     check("B3 任務的日期與版本都沒變", task_state(engine, ids) == before)
     check("B4 events、batches 筆數沒變",
           (scalar(engine, "SELECT count(*) FROM events"), scalar(engine, "SELECT count(*) FROM batches"))

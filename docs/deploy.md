@@ -145,7 +145,7 @@ git pull
 
 ## 10. 例外演練（todo 13.5，Dev-A；#98）
 
-`cd backend && .venv/bin/python ../scripts/drills/exception_drill.py`：以真實行程（`app.main.run`，含背景工作）對暫時資料庫 `g4_drill_ex`（port 8765、AI 關閉）演練，結束時關閉行程、刪除資料庫。崩潰一律用 `SIGKILL` 模擬；要讓行程停在交易中途，是由另一條連線鎖住它接下來要寫的表或列。
+`cd backend && .venv/bin/python ../scripts/drills/exception_drill.py`（Windows：`.venv\Scripts\python.exe ..\scripts\drills\exception_drill.py`）：以真實行程（`app.main.run`，含背景工作）對暫時資料庫 `g4_drill_ex`（port 8765、AI 關閉）演練，結束時關閉行程、刪除資料庫。崩潰一律以 `Popen.kill()` 硬砍（POSIX 為 `SIGKILL`、Windows 為 TerminateProcess）；要讓行程停在交易中途，是由另一條連線鎖住它接下來要寫的表或列。
 
 | 情境 | 做法 | 預期（依據） |
 | --- | --- | --- |
@@ -158,6 +158,7 @@ git pull
 | 日期 | 環境 | 結果 |
 | --- | --- | --- |
 | 2026-11-20 | macOS、Docker `postgres:17`、遷移 0005、`weekly.sql` 種子 | 12／12 項通過 |
+| 2026-11-20 | Windows 11、Docker postgres（`g4-pg`）；Dev-B 實跑（#108 審查） | 12／12（改用 `proc.kill()` 後）；`MAX_RETRIES=0` 破壞檢查同樣重現 C3 → 500 |
 
 - 破壞檢查：把 `Database.run` 的 `MAX_RETRIES` 暫時改成 0，C3 變成 HTTP 500（已還原），確認演練抓得到「沒有重試」。這次 500 的日誌只記 `unhandled error: OperationalError`，沒有 traceback 或資料庫訊息（DA-25、資安規則 3）。
 - 已知問題：背景工作在「候選已存、工作狀態未更新」之間崩潰時，重啟後會重複建立候選並再呼叫 AI，見 #107（Dev-B）。演練以行程內模擬重現，修正後由 #107 的測試涵蓋。
