@@ -117,7 +117,7 @@ git pull
   ```
   - 還原到**全新的空資料庫**時不需要 `--clean`：先 `CREATE DATABASE`，再 `pg_restore --dbname=<新資料庫>`。
   - 本機沒有 PostgreSQL 用戶端時，可經容器執行：`docker exec -i g4-pg pg_restore -U g4 --clean --if-exists --dbname=<目標資料庫> < 備份檔`。
-- 還原演練（todo 13.6，Dev-A；#98）：`cd backend && .venv/bin/python ../scripts/drills/backup_restore_drill.py`。
+- 還原演練（todo 13.6，Dev-A；#98）：`cd backend && .venv/bin/python ../scripts/drills/backup_restore_drill.py`（Windows：`.venv\Scripts\python.exe ..\scripts\drills\backup_restore_drill.py`）。
   用兩個暫時資料庫（`g4_drill_src`、`g4_drill_dst`），不碰正式資料；結束時自動刪除。驗證兩條路徑：
   A. 還原到全新空資料庫；B. 在已有資料（多一筆）的資料庫上照上方指令以 `--clean --if-exists` 覆蓋。
   兩條路徑都比對每張表筆數、遷移版本、觸發器，並確認 `events`、`rubrics` 防改觸發器仍有效、序號接續。
@@ -126,6 +126,7 @@ git pull
   | 日期 | 環境 | 資料 | 結果 | 耗時 |
   | --- | --- | --- | --- | --- |
   | 2026-11-20 | macOS、Docker `postgres:17`、遷移 0005 | `scripts/e2e_seeds/weekly.sql`：18 張表、19 筆、觸發器 6 個；備份檔約 50 KB | A、B 皆一致 | 備份 0.11 秒、A 0.14 秒、B 0.16 秒 |
+  | 2026-11-20 | Windows、Docker `g4-pg`；Dev-B 實跑（#105 審查） | 同上 | A、B 皆一致 | 總共約 10 秒 |
 
   資料量很小，耗時只代表流程可行；真實試用（13.9）累積資料後再演練一次，記下備份與還原時間。
 

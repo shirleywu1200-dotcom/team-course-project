@@ -1,4 +1,4 @@
-"""備份還原演練（todo 13.6；#98）：用暫時資料庫走一遍 docs/deploy.md 第 6 節，不碰開發資料庫。
+r"""備份還原演練（todo 13.6；#98）：用暫時資料庫走一遍 docs/deploy.md 第 6 節，不碰開發資料庫。
 
 做的事：
 1. 建來源庫 g4_drill_src：跑遷移到最新版、灌種子 SQL（預設 scripts/e2e_seeds/weekly.sql）。
@@ -11,7 +11,9 @@
 本機沒有 PostgreSQL 用戶端時，pg_dump／pg_restore 經 docker 容器執行（同 deploy.md 的 G4_PG_DUMP_CMD 例子）。
 
 用法（在 backend/ 下）：
-  .venv/bin/python ../scripts/drills/backup_restore_drill.py [種子.sql] [--container g4-pg]
+  .venv/bin/python ../scripts/drills/backup_restore_drill.py [種子.sql] [--container g4-pg]   # macOS／Linux
+  .venv\Scripts\python.exe ..\scripts\drills\backup_restore_drill.py                            # Windows
+密碼只放在環境變數 PGPASSWORD，經 `docker exec -e PGPASSWORD` 傳入，不出現在指令字串（失敗訊息也就不會帶出）。
 """
 
 import argparse
@@ -29,12 +31,14 @@ os.chdir(BACKEND)
 from alembic import command  # noqa: E402
 from sqlalchemy import create_engine, text  # noqa: E402
 from sqlalchemy.engine import URL, make_url  # noqa: E402
+from sqlalchemy.exc import DBAPIError  # noqa: E402
 
 from app.config import DEFAULT_ENV_FILE, load_env_file  # noqa: E402
 from app.db import backup  # noqa: E402
 from tests.conftest import alembic_config  # noqa: E402
 
 SRC, DST = "g4_drill_src", "g4_drill_dst"   # 寫死，避免動到開發資料庫
+RESTRICT_VIOLATION = "23001"   # events、rubrics 防改觸發器的 ERRCODE（遷移 0001、0002）
 DEFAULT_SEED = BACKEND.parent / "scripts" / "e2e_seeds" / "weekly.sql"
 TS = "2026-11-20T09:00+08:00"
 NEW_PROJECT = text("INSERT INTO projects (name, scope, audience, created_at, updated_at) "
@@ -56,9 +60,9 @@ def recreate(admin: URL, name: str, drop_only: bool = False) -> None:
 
 
 def docker_pg(container: str, admin: URL, tool: list[str], **kw) -> subprocess.CompletedProcess:
-    env = ["-e", f"PGPASSWORD={admin.password or ''}"]
-    return subprocess.run(["docker", "exec", "-i", *env, container, *tool, "-U", admin.username],  # noqa: S603, S607
-                          check=True, **kw)
+    # -e PGPASSWORD 不帶值：docker 從本行程的環境變數取值，指令字串裡沒有密碼（資安規則 3）
+    return subprocess.run(["docker", "exec", "-i", "-e", "PGPASSWORD", container, *tool,  # noqa: S603, S607
+                           "-U", admin.username], check=True, **kw)
 
 
 def snapshot(url: str) -> dict:
@@ -94,8 +98,9 @@ def guards_hold(url: str) -> list[str]:
             with eng.begin() as c:
                 c.execute(text(sql))
             failures.append(f"{label} 沒有被擋下")
-        except Exception:   # noqa: BLE001, S110 預期被觸發器擋下
-            pass
+        except DBAPIError as exc:   # 只認觸發器丟出的 restrict_violation；欄位不存在、連線、權限錯誤照常拋出
+            if getattr(exc.orig, "sqlstate", None) != RESTRICT_VIOLATION:
+                raise
     with eng.begin() as c:   # 不指定 id 新增：序號若沒還原會撞到既有 id
         before = c.execute(text("SELECT coalesce(max(id), 0) FROM projects")).scalar_one()
         new_id = c.execute(NEW_PROJECT, {"name": "演練新增", "ts": TS}).scalar_one()
@@ -122,6 +127,7 @@ def main() -> int:
     ap.add_argument("--container", default="g4-pg")
     args = ap.parse_args()
     admin = admin_url()
+    os.environ["PGPASSWORD"] = admin.password or ""   # 只給子行程（docker exec -e PGPASSWORD）用
     src_url = admin.set(database=SRC).render_as_string(hide_password=False)
     dst_url = admin.set(database=DST).render_as_string(hide_password=False)
     failures: list[str] = []
@@ -139,7 +145,7 @@ def main() -> int:
 
         with tempfile.TemporaryDirectory() as folder:
             t = time.monotonic()
-            os.environ["G4_PG_DUMP_CMD"] = (f"docker exec -e PGPASSWORD={admin.password or ''} {args.container} "
+            os.environ["G4_PG_DUMP_CMD"] = (f"docker exec -e PGPASSWORD {args.container} "
                                             f"pg_dump -U {admin.username} --format=custom {SRC}")
             dump = backup.backup(Path(folder))
             timing["備份（app.db.backup）"] = time.monotonic() - t
