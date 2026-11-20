@@ -32,7 +32,7 @@ test("收件匣：確認延期並補註記、確認完成，任務詳情反映�
 
   // 任務詳情（真實路由 /tasks/:id）看得到確認後的值
   await page.goto("/tasks/2");
-  await expect(page.getByRole("heading", { name: "畫面規格 v1" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "畫面規格 v1", level: 1 })).toBeVisible();
   await expect(page.locator("dd", { hasText: "2026-11-20" }).first()).toBeVisible();
   const { task: t2, events } = await getTask(request, 2);
   expect([t2.orig_due, t2.latest_due]).toEqual(["2026-11-13", "2026-11-20"]);
@@ -42,6 +42,6 @@ test("收件匣：確認延期並補註記、確認完成，任務詳情反映�
   expect(events.filter((e) => e.kind === "annotation").map((e) => [e.ref_event_id, e.mark])).toEqual([[due.id, "none"]]);
 
   await page.goto("/tasks/3");
-  await expect(page.getByRole("heading", { name: "API 介面定義" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "API 介面定義", level: 1 })).toBeVisible();
   expect((await getTask(request, 3)).task.status).toBe("done");
 });
