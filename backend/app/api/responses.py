@@ -609,3 +609,15 @@ class GoalMatrixItem(Out):
 
 class GoalMatrixOut(Out):
     items: list[GoalMatrixItem]
+
+
+class GoalSuggestItem(Out):
+    task_id: int
+    goal_id: int | None = Field(description="null 表示 AI 認為沒有合適的目標")
+    reason: str
+
+
+class GoalSuggestOut(Out):
+    ai_status: Literal["ok", "unavailable", "invalid_output"]
+    ai_run_id: int | None = Field(description="確認關聯時帶回 POST /goal-links；非 ok 時為 null")
+    items: list[GoalSuggestItem]

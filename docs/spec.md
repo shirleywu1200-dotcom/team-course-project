@@ -1131,7 +1131,17 @@ CREATE TABLE idempotency_keys (
   - `items` 是通過 5.3a 驗證的建議（重複項與不在 payload 的項目已丟棄）；AI 沒有建議的任務不列。`goal_id=null` 表示 AI 認為沒有合適的目標。
   - AI 不可用或輸出不合格式時照樣回 200：`ai_status` 為 `unavailable` 或 `invalid_output`，`ai_run_id=null`、`items=[]`，由使用者自己選（AC-50）。
   - 沒有未封存的目標，或沒有可送的工作範圍任務時，不呼叫 AI、不寫 `ai_runs`，回 `ai_status="unavailable"`、`ai_run_id=null`、`items=[]`（5.3「依規則刻意不呼叫」）。
-- 建議不存檔。使用者確認關聯時，`POST /goal-links` 可帶 `ai_run_id`（該次 AI-03 的 `ai_runs.id`），伺服器讀該筆 `raw_output` 比對，寫 `ai_feedback`（與建議相同 `accepted`，不同或選不關聯 `changed`），比照 AI-07 的匯入回饋（5.6）。`POST /goal-links` 的其他欄位與規則見上方「目標關聯」。
+- 輸出驗證的順序（9.7 實作定案，#84 後子代理審查）：
+  1. 先查結構：`items` 為陣列，每項為物件，`task_id` 為 JSON 整數、`goal_id` 為 JSON 整數或 null、`reason` 為字串（可為空，不超過 200 字、不含 NUL）。任一項不合（包括之後會被丟掉的項目）整次算 `invalid_output`；項目多帶的鍵丟掉，不算錯誤。
+  2. 再丟掉 `task_id` 不在 payload，或 `goal_id` 非 null 且不在 payload 的項目。
+  3. 最後同一 `task_id` 留第一項。
+- 重試與紀錄：任何例外都算一次失敗，總共最多 3 次，`AIUnavailable` 立刻停；最終 `ai_status` 以最後一次嘗試為準（格式不合為 `invalid_output`，其餘為 `unavailable`，比照 AI-05）。每次嘗試寫一列 `ai_runs`（`latency_ms` 失敗也記；`error` 只放例外類別名稱）。`status='ok'` 那一列的 `raw_output` 存驗證後的 `{ "items": [...] }`（與回應相同，供回饋比對）；格式不合的嘗試存 AI 原始輸出；沒有輸出時為 NULL。
+- 帶 `Idempotency-Key` 時依 5.1 冪等規則：同一個鍵重送回首次結果，不再呼叫 AI。
+- 建議不存檔。使用者確認關聯時，`POST /goal-links` 可帶 `ai_run_id`（該次 AI-03 的 `ai_runs.id`；JSON 整數，null 等於沒帶），伺服器讀該筆 `raw_output` 比對，寫 `ai_feedback`（與建議相同 `accepted`，不同或選不關聯 `changed`），比照 AI-07 的匯入回饋（5.6）。`POST /goal-links` 的其他欄位與規則見上方「目標關聯」。
+  - 檢查順序：在目標檢查之後、`NO_CHANGE` 之前檢查 `ai_run_id`；不存在、不是 AI-03、或 `status` 不是 `ok`，回 `VALIDATION_ERROR`（`["ai_run_id"]`），不關聯、不寫回饋。
+  - 回饋只記任務的**第一次**關聯決定；之後改選即使帶 `ai_run_id` 也不寫，因為那已不是對建議的回應。
+  - 不寫回饋的情況（關聯照常完成）：該筆 `raw_output` 已清除（6.7）；建議裡沒有這個任務（例如任務是私人範圍，或建議之後才完成）；這個任務已做過關聯決定。AI-03 不寫 `ignored`。
+  - 回饋列：`node_id='AI-03'`、`target_type='goal_link'`、`target_id` 為這次寫入的 `goal` 事件 id；`detail`＝`{ ai_run_id, task_id, ai, final }`，只含整數或 null，不含 `reason` 或任何標題。與事件、任務更新在同一交易。
 
 ### 5.14 週報
 

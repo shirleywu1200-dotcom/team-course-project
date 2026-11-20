@@ -40,6 +40,7 @@ export const mutationInvalidations = {
   "PATCH /goals/{goal_id}": ["goals", "events"],
   "POST /goals/{goal_id}/archive": ["goals", "events"],
   "POST /goal-links": ["tasks", "goals", "goalLinks", "gantt", "events"],
+  "POST /goal-links/suggest": [],
 } as const satisfies Record<string, readonly (keyof typeof queryRoots)[]>;
 
 export type MutationAction = keyof typeof mutationInvalidations;

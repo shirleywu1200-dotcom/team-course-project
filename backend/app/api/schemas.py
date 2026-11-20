@@ -153,3 +153,4 @@ class GoalLinkIn(Strict):
     task_id: int = Field(strict=True)
     goal_id: int | None = Field(strict=True)
     expected_version: int = Field(strict=True)
+    ai_run_id: int | None = Field(None, strict=True, description="該次 AI-03 的 ai_runs.id；帶了才寫 ai_feedback")
