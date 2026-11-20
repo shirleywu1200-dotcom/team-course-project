@@ -6,6 +6,7 @@
 import hmac
 import json
 import logging
+import re
 
 from starlette.concurrency import run_in_threadpool
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -25,6 +26,9 @@ IDEMPOTENT_METHODS = {"POST", "PUT", "PATCH"}
 NO_CACHE_PATHS = {f"{API_PREFIX}/export"}
 # 週報產生與人工版：重播會略過重新對帳，快取也會多存一份初稿與人工版（#18 J7）。路徑含 id，以前綴比對
 NO_CACHE_PREFIXES = (f"{API_PREFIX}/reports/weekly/",)
+# 目標回報的產生與人工版（spec 5.13 第 7 點，同 J7）。id 在路徑中間，
+# 只比對 /goals/{id}/report/，其他 /goals 端點照常快取
+NO_CACHE_PATTERNS = (re.compile(rf"^{API_PREFIX}/goals/[^/]+/report/"),)
 
 
 def _error(code: str, message: str | None = None) -> JSONResponse:
@@ -63,7 +67,8 @@ class IdempotencyMiddleware(BaseHTTPMiddleware):
         key = request.headers.get("Idempotency-Key")
         path = request.url.path
         if not key or request.method not in IDEMPOTENT_METHODS or not path.startswith(API_PREFIX) \
-                or path in NO_CACHE_PATHS or path.startswith(NO_CACHE_PREFIXES):
+                or path in NO_CACHE_PATHS or path.startswith(NO_CACHE_PREFIXES) \
+                or any(p.match(path) for p in NO_CACHE_PATTERNS):
             return await call_next(request)
         db = request.app.state.db
         endpoint = f"{request.method} {request.url.path}"

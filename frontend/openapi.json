@@ -2276,7 +2276,7 @@
             "required": true,
             "schema": {
               "type": "integer",
-              "maximum": 9223372036854776000,
+              "maximum": 9223372036854775807,
               "minimum": 1,
               "title": "Report Id"
             }
@@ -2320,7 +2320,7 @@
             "required": true,
             "schema": {
               "type": "integer",
-              "maximum": 9223372036854776000,
+              "maximum": 9223372036854775807,
               "minimum": 1,
               "title": "Report Id"
             }
@@ -2768,6 +2768,145 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/GoalOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/goals/{goal_id}/report/draft": {
+      "post": {
+        "tags": [
+          "goals"
+        ],
+        "summary": "Report Draft",
+        "operationId": "report_draft_api_v1_goals__goal_id__report_draft_post",
+        "parameters": [
+          {
+            "name": "goal_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Goal Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GoalReportOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/goals/{goal_id}/report": {
+      "get": {
+        "tags": [
+          "goals"
+        ],
+        "summary": "Report Get",
+        "operationId": "report_get_api_v1_goals__goal_id__report_get",
+        "parameters": [
+          {
+            "name": "goal_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Goal Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GoalReportOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "目標不存在，或尚未產生（正常狀態，不是錯誤；spec 5.13 第 2 點）"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/goals/{goal_id}/report/manual": {
+      "put": {
+        "tags": [
+          "goals"
+        ],
+        "summary": "Report Manual",
+        "operationId": "report_manual_api_v1_goals__goal_id__report_manual_put",
+        "parameters": [
+          {
+            "name": "goal_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Goal Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManualText"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GoalReportOut"
                 }
               }
             }
@@ -4418,8 +4557,8 @@
         "properties": {
           "actual_stars": {
             "type": "integer",
-            "maximum": 5,
-            "minimum": 1,
+            "maximum": 5.0,
+            "minimum": 1.0,
             "title": "Actual Stars"
           },
           "energy": {
@@ -4695,7 +4834,7 @@
           },
           "target": {
             "type": "integer",
-            "minimum": 0,
+            "minimum": 0.0,
             "title": "Target",
             "default": 0
           },
@@ -4957,7 +5096,7 @@
             "anyOf": [
               {
                 "type": "integer",
-                "minimum": 0
+                "minimum": 0.0
               },
               {
                 "type": "null"
@@ -5031,6 +5170,86 @@
           "pct"
         ],
         "title": "GoalProgress"
+      },
+      "GoalReportOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "goal_id": {
+            "type": "integer",
+            "title": "Goal Id"
+          },
+          "ai_status": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "ok",
+                  "unavailable",
+                  "invalid_output"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ai Status",
+            "description": "最近一次產生的結果；只存過人工版、從未產生時為 null"
+          },
+          "excluded_private": {
+            "type": "integer",
+            "title": "Excluded Private",
+            "description": "產生當下母體中私人範圍的件數（只進統計，不列標題）"
+          },
+          "draft": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Draft",
+            "description": "validated=false 時為 null，前端改讀 GET /goals/{id}/stats 顯示統計表"
+          },
+          "validated": {
+            "type": "boolean",
+            "title": "Validated",
+            "description": "存下的草稿對目前資料重跑 R3 的結果（第 5 點）"
+          },
+          "manual_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manual Text"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "goal_id",
+          "ai_status",
+          "excluded_private",
+          "draft",
+          "validated",
+          "manual_text",
+          "updated_at"
+        ],
+        "title": "GoalReportOut",
+        "description": "目標回報（spec 5.13「目標回報」第 3 點）：產生、讀取、存人工版的輸出相同；不附統計。"
       },
       "GoalStatsOut": {
         "properties": {
@@ -7220,8 +7439,8 @@
           },
           "expected_stars": {
             "type": "integer",
-            "maximum": 5,
-            "minimum": 1,
+            "maximum": 5.0,
+            "minimum": 1.0,
             "title": "Expected Stars",
             "default": 3
           },
@@ -7229,8 +7448,8 @@
             "anyOf": [
               {
                 "type": "integer",
-                "maximum": 5,
-                "minimum": 1
+                "maximum": 5.0,
+                "minimum": 1.0
               },
               {
                 "type": "null"

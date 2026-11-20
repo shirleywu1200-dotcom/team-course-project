@@ -41,6 +41,8 @@ export const mutationInvalidations = {
   "POST /goals/{goal_id}/archive": ["goals", "events"],
   "POST /goal-links": ["tasks", "goals", "goalLinks", "gantt", "events"],
   "POST /goal-links/suggest": [],
+  "POST /goals/{goal_id}/report/draft": ["goals"],   // 目標回報（9.10）：鍵放在 goals 根下，由 12.12 階段 2 定
+  "PUT /goals/{goal_id}/report/manual": ["goals"],
 } as const satisfies Record<string, readonly (keyof typeof queryRoots)[]>;
 
 export type MutationAction = keyof typeof mutationInvalidations;

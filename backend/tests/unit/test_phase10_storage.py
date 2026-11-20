@@ -15,10 +15,18 @@ from tests.conftest import alembic_config, create_empty_db, drop_db
 NOW = "'2026-11-11T10:00+08:00'"
 
 
-def insert(db, kind, period, ai_status="NULL"):
+def insert(db, kind, period, ai_status="NULL", goal_id="NULL"):
     db.run(lambda c: c.execute(text(
-        f"INSERT INTO reports (kind, period_start, ai_status, created_at, updated_at) "  # noqa: S608 測試固定字串
-        f"VALUES ('{kind}', {period}, {ai_status}, {NOW}, {NOW})")))
+        f"INSERT INTO reports (kind, goal_id, period_start, ai_status, created_at, updated_at) "  # noqa: S608 測試固定字串
+        f"VALUES ('{kind}', {goal_id}, {period}, {ai_status}, {NOW}, {NOW})")))
+
+
+def goals(db, *ids):
+    """遷移 0006 起 goal 列要有 goal_id，且每個目標一列：先建目標。"""
+    for i in ids:
+        db.run(lambda c, i=i: c.execute(text(
+            "INSERT INTO goals (id, type, title, period, energy_plan, created_at) "
+            "VALUES (:i, 'growth', 'g', '2026Q4', 'high', now())"), {"i": i}))
 
 
 def test_one_weekly_row_per_week(db):
@@ -28,9 +36,10 @@ def test_one_weekly_row_per_week(db):
 
 
 def test_goal_reports_share_period_freely(db):
+    goals(db, 1, 2)
     insert(db, "weekly", "'2026-11-09'")
-    insert(db, "goal", "'2026-11-09'")
-    insert(db, "goal", "'2026-11-09'")
+    insert(db, "goal", "'2026-11-09'", goal_id="1")
+    insert(db, "goal", "'2026-11-09'", goal_id="2")
 
 
 def test_ai_status_check(db):
@@ -42,7 +51,8 @@ def test_ai_status_check(db):
 def test_weekly_row_needs_period(db):
     with pytest.raises(IntegrityError):
         insert(db, "weekly", "NULL")
-    insert(db, "goal", "NULL")   # 目標回報不受限
+    goals(db, 1)
+    insert(db, "goal", "NULL", goal_id="1")   # 目標回報不受限
 
 
 def test_ai_items_is_jsonb(db, query):

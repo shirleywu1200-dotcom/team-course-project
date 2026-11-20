@@ -844,6 +844,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/goals/{goal_id}/report/draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Report Draft */
+        post: operations["report_draft_api_v1_goals__goal_id__report_draft_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/goals/{goal_id}/report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Report Get */
+        get: operations["report_get_api_v1_goals__goal_id__report_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/goals/{goal_id}/report/manual": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Report Manual */
+        put: operations["report_manual_api_v1_goals__goal_id__report_manual_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/goal-links/pending": {
         parameters: {
             query?: never;
@@ -1659,6 +1710,43 @@ export interface components {
              * @description 0～100；分母為 0 時為 null
              */
             pct: number | null;
+        };
+        /**
+         * GoalReportOut
+         * @description 目標回報（spec 5.13「目標回報」第 3 點）：產生、讀取、存人工版的輸出相同；不附統計。
+         */
+        GoalReportOut: {
+            /** Id */
+            id: number;
+            /** Goal Id */
+            goal_id: number;
+            /**
+             * Ai Status
+             * @description 最近一次產生的結果；只存過人工版、從未產生時為 null
+             */
+            ai_status: ("ok" | "unavailable" | "invalid_output") | null;
+            /**
+             * Excluded Private
+             * @description 產生當下母體中私人範圍的件數（只進統計，不列標題）
+             */
+            excluded_private: number;
+            /**
+             * Draft
+             * @description validated=false 時為 null，前端改讀 GET /goals/{id}/stats 顯示統計表
+             */
+            draft: string | null;
+            /**
+             * Validated
+             * @description 存下的草稿對目前資料重跑 R3 的結果（第 5 點）
+             */
+            validated: boolean;
+            /** Manual Text */
+            manual_text: string | null;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
         };
         /** GoalStatsOut */
         GoalStatsOut: {
@@ -4483,6 +4571,110 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["GoalOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    report_draft_api_v1_goals__goal_id__report_draft_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                goal_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoalReportOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    report_get_api_v1_goals__goal_id__report_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                goal_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoalReportOut"];
+                };
+            };
+            /** @description 目標不存在，或尚未產生（正常狀態，不是錯誤；spec 5.13 第 2 點） */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    report_manual_api_v1_goals__goal_id__report_manual_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                goal_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ManualText"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoalReportOut"];
                 };
             };
             /** @description Validation Error */

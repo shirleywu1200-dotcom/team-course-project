@@ -175,3 +175,14 @@ def test_numbers_only_ascii_digits_after_fullwidth_conversion():
     """不做 NFKC（spec 5.3a 第 8 點）：①、²、阿拉伯－印度數字不算數字；全形數字轉半形後才算。"""
     assert ai04.numbers("① ² ٣") == set()
     assert ai04.numbers("１２．５％ 與 05、1,000、1e5") == {Decimal("12.5"), 5, 1, 0}
+
+
+def test_trailing_point_counts_as_integer():
+    assert ai04.numbers("逾期 3.") == {3}
+    assert reconcile(draft="已關聯 3.") is True
+
+
+def test_draft_length_counts_code_points_with_emoji():
+    assert parse(draft="🙂" * 20_000)[0] == "🙂" * 20_000      # 20,000 個 code point（UTF-16 是 40,000）
+    with pytest.raises(AIInvalidOutput):
+        parse(draft="🙂" * 20_001)

@@ -17,6 +17,7 @@ from app.db.database import Database
 from app.db.repo import ai_runs_repo, reports_repo, weekly_repo
 from app.domain import ai05, weekly_report
 from app.domain.due import check_date_range
+from app.domain.text import check_manual_text
 from app.errors import DomainError
 
 log = logging.getLogger("g4")
@@ -125,11 +126,7 @@ def get_by_week(db: Database, week_start: date) -> dict:
 
 
 def save_manual(db: Database, report_id: int, manual_text: str | None) -> dict:
-    if manual_text is not None:
-        if len(manual_text) > MANUAL_MAX_CHARS:
-            raise DomainError("PAYLOAD_TOO_LARGE", details={"max_chars": MANUAL_MAX_CHARS})
-        if "\x00" in manual_text:   # PostgreSQL 的文字欄位不收 NUL
-            raise DomainError("VALIDATION_ERROR", "manual_text 含有不能使用的字元", {"fields": ["manual_text"]})
+    check_manual_text(manual_text, MANUAL_MAX_CHARS)
 
     def run(conn: Connection) -> dict:
         reports_repo.save_manual(conn, report_id, manual_text, get_clock().now())
