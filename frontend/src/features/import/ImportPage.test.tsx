@@ -107,6 +107,7 @@ test("規則對應：不需確認，直接可保存；送出帶 Idempotency-Key 
   expect(screen.queryByRole("button", { name: "確認對應" })).not.toBeInTheDocument();
   await user.click(saveButton());
   expect(await screen.findByText("已建立 1 個任務、略過 0 列（專案 #9）。")).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "查看專案" })).toHaveAttribute("href", "/projects/9");
   expect(commits[0].key).toBeTruthy();
   expect(commits[0].body).toEqual({
     target: "new", new_name: "官網改版",
@@ -162,6 +163,19 @@ test("AI 無法判斷（mapped_by=null）：先手動指定任務名稱與結束
   await waitFor(() => expect(calls).toHaveLength(2));
   expect(calls[1].body.column_map).toEqual({ title: 0, owner: null, start: null, end: 3 });
   expect(await screen.findByRole("region", { name: "診斷結果" })).toBeInTheDocument();
+});
+
+test("私人專案不送 AI 時以專屬文案引導手動指定", async () => {
+  const user = userEvent.setup();
+  capture("/projects/import/preview", () => HttpResponse.json(previewOf([], null, { ai_status: "unavailable" })));
+  renderWithClient(<ImportPage />);
+  await user.click(screen.getByLabelText("既有專案"));
+  await user.selectOptions(screen.getByLabelText("選擇專案"), "5");
+  await user.click(screen.getByLabelText("貼上表格"));
+  await user.paste(TEXT);
+  await user.click(screen.getByRole("button", { name: "預覽" }));
+  expect(await screen.findByText("私人專案不送 AI，請手動指定")).toBeInTheDocument();
+  expect(screen.queryByText("AI 無法判斷欄位，請手動指定任務名稱與結束欄位。")).not.toBeInTheDocument();
 });
 
 // ---------- 診斷與略過 ----------

@@ -252,6 +252,40 @@ test("A1：STALE_VERSION 後列從 pending 消失時，區塊保留處理提示"
   expect(posts).toBe(1);
 });
 
+test("#89 fast-follow：STALE_VERSION 使矩陣與各目標統計重讀", async () => {
+  const user = userEvent.setup();
+  let matrix = 0; let stats = 0;
+  server.use(http.get(`${API}/goals/matrix`, () => { matrix++; return HttpResponse.json(goalFixtures.matrix); }),
+    http.get(`${API}/goals/1/stats`, () => { stats++; return HttpResponse.json(goalFixtures.insufficient); }),
+    http.post(`${API}/goal-links`, () => apiError(409, "STALE_VERSION")));
+  open();
+  await user.selectOptions(await screen.findByLabelText("範例已完成任務的關聯目標"), "1");
+  await waitFor(() => expect(matrix).toBe(1));
+  await waitFor(() => expect(stats).toBe(1));
+  await user.click(screen.getByRole("button", { name: "確認範例已完成任務關聯" }));
+  await waitFor(() => expect(matrix).toBeGreaterThanOrEqual(2));
+  await waitFor(() => expect(stats).toBeGreaterThanOrEqual(2));
+});
+
+test("#89 fast-follow：新一次確認時清掉上次列消失的提示", async () => {
+  const user = userEvent.setup();
+  let posts = 0;
+  server.use(http.get(`${API}/goal-links/pending`, () => HttpResponse.json({ ...goalFixtures.pending,
+    items: posts === 0 ? goalFixtures.pending.items : [{ ...goalFixtures.pending.items[0], task_id: 102, title: "第二項範例任務" }],
+  })), http.post(`${API}/goal-links`, () => {
+    posts++;
+    return apiError(posts === 1 ? 409 : 422, posts === 1 ? "STALE_VERSION" : "NO_CHANGE");
+  }));
+  open();
+  await user.selectOptions(await screen.findByLabelText("範例已完成任務的關聯目標"), "1");
+  await user.click(screen.getByRole("button", { name: "確認範例已完成任務關聯" }));
+  expect(await screen.findByText("待關聯任務已在其他地方處理，清單已更新。")).toBeInTheDocument();
+  await user.selectOptions(screen.getByLabelText("第二項範例任務的關聯目標"), "1");
+  await user.click(screen.getByRole("button", { name: "確認第二項範例任務關聯" }));
+  expect(screen.queryByText("待關聯任務已在其他地方處理，清單已更新。")).not.toBeInTheDocument();
+  expect(await screen.findByText("目前關聯未變更。")).toBeInTheDocument();
+});
+
 test("四區載入狀態分離，清單尚未回來時統計不虛構零值", async () => {
   let releaseGoals!: () => void; let releaseMatrix!: () => void; let releasePending!: () => void;
   const goalsHold = new Promise<void>(resolve => { releaseGoals = resolve; });

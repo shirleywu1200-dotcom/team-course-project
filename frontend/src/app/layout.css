@@ -1,4 +1,15 @@
 .app-shell { min-height: 100dvh; }
+.app-demo-banner {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-warn-bg);
+  color: var(--color-warn-text);
+  border-bottom: 1px solid var(--color-border);
+  font-family: var(--font-sans);
+  text-align: center;
+}
 .app-header {
   display: flex;
   align-items: center;

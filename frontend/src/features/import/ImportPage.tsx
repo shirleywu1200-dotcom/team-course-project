@@ -2,10 +2,11 @@
 // 版面 D-5：左欄目標＋原文，右欄對應＋診斷＋保存；≤ 760px 上下堆疊。
 // 列與診斷只來自最近一次 preview 回應；本頁自管的只有 skip、confirmed 兩個狀態，輸入一改就清掉。
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 
 import { ApiError, api, newIdempotencyKey } from "../../api/client";
+import { fetchProjects, keys } from "../../api/queries";
 import { queryRoots } from "../../api/queryKeys";
 import type { ColumnIndexes, ImportCommitResult, ImportPreview } from "../../api/types";
 import { ErrorBanner } from "../../components/ErrorBanner";
@@ -26,6 +27,7 @@ function commitErrorMessage(err: unknown): string | null {
 
 export function ImportPage() {
   const qc = useQueryClient();
+  const projects = useQuery({ queryKey: keys.projectList(), queryFn: fetchProjects });
   const [dest, setDest] = useState<Dest>({ mode: "new", newName: "", projectId: null });
   const [text, setText] = useState("");
   const [skip, setSkip] = useState<Set<number>>(new Set());
@@ -121,13 +123,16 @@ export function ImportPage() {
         <div>
           {commit.data && (
             <p className="banner banner-ok" role="status">
-              已建立 {commit.data.created} 個任務、略過 {commit.data.skipped} 列（專案 #{commit.data.project_id}）。
+              <span>已建立 {commit.data.created} 個任務、略過 {commit.data.skipped} 列（專案 #{commit.data.project_id}）。</span>{" "}
+              <a href={`/projects/${commit.data.project_id}`}>查看專案</a>
             </p>
           )}
           {data && (
             <>
               <MappingPanel key={JSON.stringify(data.column_map)} preview={data} confirmed={confirmed}
-                busy={preview.isPending} onConfirm={() => setConfirmed(true)} onApply={(m) => preview.mutate(m)} />
+                busy={preview.isPending} onConfirm={() => setConfirmed(true)} onApply={(m) => preview.mutate(m)}
+                privateTarget={dest.mode === "existing" && projects.data?.items.some(project =>
+                  project.id === dest.projectId && project.scope === "private") === true} />
               {data.column_map.mapped_by !== null && (
                 <DiagnoseTable preview={data} skip={skip} onToggleSkip={toggleSkip} />
               )}
