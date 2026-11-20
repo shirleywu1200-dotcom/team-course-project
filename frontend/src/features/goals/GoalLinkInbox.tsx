@@ -13,7 +13,7 @@ type PendingLinkOut = components["schemas"]["PendingLinkOut"];
 type GoalLinkIn = components["schemas"]["GoalLinkIn"];
 type TaskEventOut = components["schemas"]["TaskEventOut"];
 
-function GoalLinkRow({ item, goals }: { item: PendingLinkItem; goals: Goal[] }) {
+function GoalLinkRow({ item, goals, onStale }: { item: PendingLinkItem; goals: Goal[]; onStale: (taskId: number) => void }) {
   const qc = useQueryClient();
   const [choice, setChoice] = useState("");
   const [unchanged, setUnchanged] = useState(false);
@@ -24,6 +24,8 @@ function GoalLinkRow({ item, goals }: { item: PendingLinkItem; goals: Goal[] }) 
       api<TaskEventOut>("/goal-links", { method: "POST", body }));
   }, onError: error => {
     if (error instanceof ApiError && error.code === "STALE_VERSION") {
+      setChoice("");
+      onStale(item.task_id);
       void qc.invalidateQueries({ queryKey: keys.goalLinksPending() });
     }
     if (error instanceof ApiError && error.code === "NO_CHANGE") setUnchanged(true);
@@ -43,15 +45,18 @@ function GoalLinkRow({ item, goals }: { item: PendingLinkItem; goals: Goal[] }) 
 }
 
 export function GoalLinkInbox({ goals }: { goals: Goal[] | undefined }) {
+  const [staleTaskId, setStaleTaskId] = useState<number | null>(null);
   const pending = useQuery({ queryKey: keys.goalLinksPending(),
     queryFn: () => api<PendingLinkOut>("/goal-links/pending") });
   return <section className="card" aria-label="待關聯任務">
     <h2>待關聯任務</h2>
+    {staleTaskId !== null && pending.data && !pending.data.items.some(item => item.task_id === staleTaskId)
+      && <p role="status">待關聯任務已在其他地方處理，清單已更新。</p>}
     {pending.error ? <><ErrorBanner error={pending.error} />
       <button type="button" onClick={() => { void pending.refetch(); }}>重試待關聯清單</button></>
       : !pending.data ? <p role="status">載入待關聯任務中…</p>
         : pending.data.items.length === 0 ? <p>沒有待關聯任務。</p>
           : <ul>{pending.data.items.map(item =>
-            <GoalLinkRow key={`${item.task_id}-${item.version}`} item={item} goals={goals ?? []} />)}</ul>}
+            <GoalLinkRow key={item.task_id} item={item} goals={goals ?? []} onStale={setStaleTaskId} />)}</ul>}
   </section>;
 }

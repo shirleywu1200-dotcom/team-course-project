@@ -18,6 +18,7 @@ type Energy = GoalCreate["energy_plan"];
 type Settings = components["schemas"]["SettingsOut"];
 const typeLabels = { growth: "能力成長", time: "時間配置", expectation: "績效期待" };
 const energyLabels = { high: "高", mid: "中", low: "低" };
+const targetUnit = (type: string) => type === "time" ? "（分鐘／週）" : "（件）";
 
 function GoalCreateForm({ allowedTypes, onClose }: { allowedTypes: GoalType[]; onClose: () => void }) {
   const qc = useQueryClient();
@@ -46,7 +47,7 @@ function GoalCreateForm({ allowedTypes, onClose }: { allowedTypes: GoalType[]; o
     <div className="field"><label htmlFor="goal-title">名稱</label><input id="goal-title" value={title} onChange={event => setTitle(event.target.value)} /></div>
     <div className="field"><label htmlFor="goal-period">期間</label><input id="goal-period" value={period} onChange={event => setPeriod(event.target.value)} /></div>
     <div className="field"><label htmlFor="goal-definition">定義</label><textarea id="goal-definition" value={definition} onChange={event => setDefinition(event.target.value)} /></div>
-    {type !== "expectation" && <div className="field"><label htmlFor="goal-target">衡量目標</label>
+    {type !== "expectation" && <div className="field"><label htmlFor="goal-target">衡量目標{targetUnit(type)}</label>
       <input id="goal-target" type="number" min="0" step="1" value={target} onChange={event => setTarget(event.target.value)} /></div>}
     {type === "expectation" && <div className="field"><label htmlFor="goal-project">指定專案</label>
       {projects.error && <ErrorBanner error={projects.error} />}
@@ -90,7 +91,7 @@ function GoalEditForm({ goal, onClose }: { goal: Goal; onClose: () => void }) {
       <input id={`edit-period-${goal.id}`} value={period} onChange={event => setPeriod(event.target.value)} /></div>
     <div className="field"><label htmlFor={`edit-definition-${goal.id}`}>編輯定義</label>
       <textarea id={`edit-definition-${goal.id}`} value={definition} onChange={event => setDefinition(event.target.value)} /></div>
-    {goal.type !== "expectation" && <div className="field"><label htmlFor={`edit-target-${goal.id}`}>編輯衡量目標</label>
+    {goal.type !== "expectation" && <div className="field"><label htmlFor={`edit-target-${goal.id}`}>編輯衡量目標{targetUnit(goal.type)}</label>
       <input id={`edit-target-${goal.id}`} type="number" min="0" step="1" value={target} onChange={event => setTarget(event.target.value)} /></div>}
     <div className="field"><label htmlFor={`edit-energy-${goal.id}`}>編輯預期精力</label>
       <select id={`edit-energy-${goal.id}`} value={energy} onChange={event => setEnergy(event.target.value as Energy)}>

@@ -60,7 +60,7 @@ test("FR-GOL-01：建立 growth 僅送明選欄位，201 後重讀目標清單",
   await user.type(screen.getByLabelText("名稱"), "練習規格分析");
   await user.type(screen.getByLabelText("期間"), "2026Q4");
   await user.selectOptions(screen.getByLabelText("預期精力"), "high");
-  await user.type(screen.getByLabelText("衡量目標"), "3");
+  await user.type(screen.getByLabelText("衡量目標（件）"), "3");
   await user.click(screen.getByRole("button", { name: "儲存新目標" }));
   await waitFor(() => expect(bodies).toEqual([{ type: "growth", title: "練習規格分析", period: "2026Q4",
     energy_plan: "high", target: 3, project_id: null }]));
@@ -85,6 +85,17 @@ test("B4：績效期待必選未封存專案，不送完成率目標值", async 
   await waitFor(() => expect(bodies).toEqual([{ type: "expectation", title: "完成專案", period: "2026Q4",
     energy_plan: "low", project_id: 1 }]));
   expect(JSON.stringify(bodies)).not.toContain("pct");
+});
+
+test("A3：時間配置建立與編輯的衡量目標標明分鐘／週", async () => {
+  const user = userEvent.setup();
+  open();
+  await user.click(await screen.findByRole("button", { name: "新增目標" }));
+  await user.selectOptions(screen.getByLabelText("目標類型"), "time");
+  expect(screen.getByLabelText("衡量目標（分鐘／週）")).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "取消" }));
+  await user.click(screen.getByRole("button", { name: "編輯安排確認時間" }));
+  expect(screen.getByLabelText("編輯衡量目標（分鐘／週）")).toBeInTheDocument();
 });
 
 test("PATCH 只送更動欄位；封存目標仍可編輯", async () => {
@@ -136,9 +147,12 @@ test("B3／B4／G2：time progress=null，expectation 百分比與並列判讀�
   await user.click(await screen.findByRole("button", { name: "查看安排確認時間統計" }));
   const stats = await screen.findByRole("region", { name: "目標統計" });
   expect(await within(stats).findByText("主要精力為中，與預期相同")).toBeInTheDocument();
-  expect(within(stats).getByText("進度").nextElementSibling).toHaveTextContent("—");
+  expect(within(stats).getByRole("heading", { name: "目標統計：安排確認時間" })).toBeInTheDocument();
+  expect(within(stats).queryByText("進度")).not.toBeInTheDocument();
+  expect(within(stats).queryByText("進度比例")).not.toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "查看完成專案統計" }));
   expect(await within(stats).findByText("主要精力並列：高、中")).toBeInTheDocument();
+  expect(within(stats).getByRole("heading", { name: "目標統計：完成專案" })).toBeInTheDocument();
   expect(within(stats).getByText("建議檢視")).toBeInTheDocument();
 });
 
@@ -213,11 +227,29 @@ test("STALE_VERSION 重讀 pending、清除選擇，不自動重送；NO_CHANGE 
   await waitFor(() => expect(gets).toBeGreaterThanOrEqual(2));
   expect(posts).toBe(1);
   expect(screen.getByLabelText("範例已完成任務的關聯目標")).toHaveValue("");
+  expect(screen.getByText("資料已被其他操作更新，已重新載入，請確認後再操作一次。")).toBeInTheDocument();
   await user.selectOptions(screen.getByLabelText("範例已完成任務的關聯目標"), "1");
   await user.click(screen.getByRole("button", { name: "確認範例已完成任務關聯" }));
   expect(await screen.findByText("目前關聯未變更。")).toBeInTheDocument();
   expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   expect(posts).toBe(2);
+});
+
+test("A1：STALE_VERSION 後列從 pending 消失時，區塊保留處理提示", async () => {
+  const user = userEvent.setup();
+  let gets = 0; let posts = 0;
+  server.use(http.get(`${API}/goal-links/pending`, () => {
+    gets++;
+    return HttpResponse.json(gets === 1 ? goalFixtures.pending : goalFixtures.emptyPending);
+  }), http.post(`${API}/goal-links`, () => { posts++; return apiError(409, "STALE_VERSION"); }));
+  open();
+  await user.selectOptions(await screen.findByLabelText("範例已完成任務的關聯目標"), "1");
+  await user.click(screen.getByRole("button", { name: "確認範例已完成任務關聯" }));
+  const pending = screen.getByRole("region", { name: "待關聯任務" });
+  expect(await within(pending).findByText("待關聯任務已在其他地方處理，清單已更新。")).toBeInTheDocument();
+  expect(within(pending).getByText("沒有待關聯任務。")).toBeInTheDocument();
+  expect(within(pending).queryByLabelText("範例已完成任務的關聯目標")).not.toBeInTheDocument();
+  expect(posts).toBe(1);
 });
 
 test("四區載入狀態分離，清單尚未回來時統計不虛構零值", async () => {
