@@ -745,7 +745,7 @@ CREATE TABLE idempotency_keys (
     - 允許名單從 payload 文字取數字時，用和草稿同一套切法，所以照抄標題、期間一定通過。
     - 第 1 點比較數值，不比型別（`4`＝`4.0`）；沒有容差（3.25 不等於 3.3）。同一個鍵列兩次，兩次都要相等。
     - 已知限制（不檢查）：國字數字（「三件」）；數字寫在哪一段（統計值互換位置仍會通過）；與允許名單撞號的錯數字（SDD 已記錄）。
-  - 〔提案，待裁定：#47 9.10 第 9 點〕輸出格式的細節：`figures` 每項只能有 `key`、`value`，多出來的鍵與 `key` 不在 `FIGURE_KEYS`（節點定義）都算格式不合（`invalid_output`，可重試），不算 R3 失敗；`value` 必須是 JSON 數字，`true`、`"3"`、null 都算格式不合。`draft` 的字數以 Unicode 字元（code point）計，同 AI-05。
+  - 〔提案，待裁定：#47 9.10 第 9 點〕輸出格式的細節：`figures` 每項只能有 `key`、`value`，多出來的鍵與 `key` 不在 `FIGURE_KEYS`（節點定義）都算格式不合（`invalid_output`，可重試），不算 R3 失敗；`value` 必須是 JSON 數字，`true`、`"3"`、null 都算格式不合：由節點 schema（嚴格數字，Dev-B PR #87）擋下，因為 `AnthropicAIClient` 回傳的是轉型後的值，呼叫端分不出原始型別；呼叫端的格式檢查仍要求 `value` 為數字、不是 bool（`FakeAIClient` 不套節點 schema）。`draft` 的字數以 Unicode 字元（code point）計，同 AI-05。
 - 重試與紀錄同 AI-05：總共最多 3 次，`AIUnavailable` 與 R3 失敗立刻停；R3 失敗記 `status='invalid_output'`、`error='R3_MISMATCH'`；不存 `raw_output`。存在 `reports` 表 `kind='goal'`，比照週報（5.14）。
 
 ### 5.4 設定與量表
