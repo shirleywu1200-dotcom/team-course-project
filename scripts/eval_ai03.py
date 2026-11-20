@@ -9,11 +9,13 @@
     cd backend
     PYTHONUTF8=1 .venv/Scripts/python ../scripts/eval_ai03.py --model claude-sonnet-5-5
     選項：--cases 檔案（預設 scripts/eval_data/ai03_cases.json）、--only large（只跑指定 id）、--max-cost 0.3（美元）
+payload 由正式的 app.domain.ai03.build_payload 產生，輸出經正式的 parse_output（#85）。
 判定：
-    格式：節點 Output 驗證通過（client 不丟例外）。
-    id 合法：每一項的 task_id 在 payload、goal_id 在 payload 或為 null。
-    覆蓋：每個任務剛好一項（不漏、不重複）。
-    準確：goal_id 等於案例標註的 expected（以任務計，跨案例加總；expected 為陣列時任一皆算對）。
+    格式：節點 Output 驗證與 parse_output 都通過（不丟例外）。
+    id 合法：模型原始輸出的每一項，task_id 在 payload、goal_id 在 payload 或為 null
+    （parse_output 會靜默丟掉不合法的項目，所以這項看原始輸出，量模型本身）。
+    覆蓋：parse_output 之後每個任務剛好一項（使用者實際看到的）。
+    準確：parse_output 之後 goal_id 等於案例標註的 expected（以任務計，跨案例加總；expected 為陣列時任一皆算對）。
     困難案例：--cases ../scripts/eval_data/ai03_hard_cases.json
 """
 
@@ -23,6 +25,7 @@ import json
 import os
 import sys
 import time
+from datetime import date
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -31,6 +34,7 @@ sys.path.insert(0, str(ROOT / "backend"))
 from app.ai.anthropic_client import AnthropicAIClient  # noqa: E402
 from app.ai.client import DEFAULT_TIMEOUT_S, AIError  # noqa: E402
 from app.config import DEFAULT_ENV_FILE, load_env_file  # noqa: E402
+from app.domain.ai03 import build_payload, parse_output  # noqa: E402
 
 PRICES = {   # 美元／百萬 token（輸入, 輸出），2026-11 公告價
     "claude-opus-5-5": (4.0, 20.0),
@@ -43,6 +47,15 @@ EST_IN, EST_OUT = 1500, 1200   # 單次估算（SDD 第 5 節），取寬
 def cost(model: str, tin: int, tout: int) -> float:
     pin, pout = PRICES[model]
     return (tin * pin + tout * pout) / 1_000_000
+
+
+def formal_payload(case_payload: dict) -> dict:
+    # 案例存的是送出格式；還原成 build_payload 的輸入（目標用 id、完成日是 date）再組一次
+    goals = [{"id": g["goal_id"], "type": g["type"], "title": g["title"], "period": g["period"]}
+             for g in case_payload["goals"]]
+    tasks = [{"task_id": t["task_id"], "title": t["title"], "done_date": date.fromisoformat(t["done_date"])}
+             for t in case_payload["tasks"]]
+    return build_payload(goals, tasks)
 
 
 def ids_valid(items: list[dict], payload: dict) -> bool:
@@ -91,12 +104,14 @@ def main() -> int:
         if spent >= args.max_cost:
             print(f"已達費用上限 ${args.max_cost}，停止")
             break
-        payload, expected = case["payload"], case["expected"]
+        payload, expected = formal_payload(case["payload"]), case["expected"]
         ai.last_usage = (0, 0)
         started = time.monotonic()
-        items, error = [], ""
+        raw, items, error = [], [], ""
         try:
-            items = ai.call("AI-03", payload, timeout_s=DEFAULT_TIMEOUT_S)["items"]
+            output = ai.call("AI-03", payload, timeout_s=DEFAULT_TIMEOUT_S)
+            raw = output["items"]
+            items = parse_output(output, payload)
         except AIError as exc:
             error = type(exc).__name__
         latency = time.monotonic() - started
@@ -104,8 +119,8 @@ def main() -> int:
         tin_sum, tout_sum = tin_sum + tin, tout_sum + tout
         spent += cost(args.model, tin, tout)
         ok = {"格式": not error}
-        ok["id合法"] = ok["格式"] and ids_valid(items, payload)
-        ok["覆蓋"] = ok["id合法"] and covered(items, payload)
+        ok["id合法"] = ok["格式"] and ids_valid(raw, payload)
+        ok["覆蓋"] = ok["格式"] and covered(items, payload)
         for k, v in ok.items():
             counts[k] += v
         n_hit = correct_count(items, expected)
@@ -118,7 +133,7 @@ def main() -> int:
               + (f"；{error}" if error else ""))
         rows.append({"id": case["id"], "分類": case["category"], **{k: "Y" if v else "N" for k, v in ok.items()},
                      "準確": f"{n_hit}/{len(expected)}", "錯誤": error, "延遲秒": f"{latency:.1f}",
-                     "輸入token": tin, "輸出token": tout, "items": json.dumps(items, ensure_ascii=False),
+                     "輸入token": tin, "輸出token": tout, "items": json.dumps(raw, ensure_ascii=False),
                      "expected": json.dumps(expected, ensure_ascii=False), "檢視判定": "", "備註": ""})
 
     n = len(rows)
