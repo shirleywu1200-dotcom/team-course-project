@@ -1,6 +1,7 @@
 import { http, HttpResponse } from "msw";
 import { getErrorFixture, type ErrorFixtureCode } from "./errorFixtures";
 import { adjustStartFixtures, dueFixtures, historyFixtures, makeSerializedTask, makeTaskDetailFixture, overviewFixtures, statusFixtures, timeManagementFixtures, todayFixtures } from "./fixtures";
+import { goalFixtures } from "./goalFixtures";
 import { reasons } from "./reasons";
 
 export const API = "http://localhost:3000/api/v1";
@@ -29,6 +30,10 @@ export function adjustStartHandler(scenario: keyof typeof adjustStartFixtures = 
 }
 
 export const handlers = [
+  http.get(`${API}/goals`, () => HttpResponse.json(goalFixtures.list)),
+  http.get(`${API}/goals/1/stats`, () => HttpResponse.json(goalFixtures.insufficient)),
+  http.get(`${API}/goals/matrix`, () => HttpResponse.json(goalFixtures.matrix)),
+  http.get(`${API}/goal-links/pending`, () => HttpResponse.json(goalFixtures.pending)),
   http.get(`${API}/stats/time-management`, () => HttpResponse.json(timeManagementFixtures.insufficient)),
   http.get(`${API}/meta/reasons`, () => HttpResponse.json(reasons)),
   http.get(`${API}/meta/today`, () => HttpResponse.json(todayFixtures.today)),

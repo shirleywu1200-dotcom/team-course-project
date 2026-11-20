@@ -15,6 +15,7 @@ import { ONBOARDING_PATH } from "../features/settings/OnboardingGate";
 import { TimeManagementPage } from "../features/time-management/TimeManagementPage";
 import { TodayPage } from "../features/today/TodayPage";
 import { TaskFeedbackPage } from "../features/today/TaskFeedbackPage";
+import { GoalsPage } from "../features/goals/GoalsPage";
 import { AppLayout } from "./AppLayout";
 import { navigationRoutes, pageRoutes } from "./routeDefinitions";
 
@@ -26,6 +27,7 @@ const featurePages: Record<string, ComponentType> = {
   "/time-management": TimeManagementPage,
   "/today": TodayPage,
   "/tasks/:taskId/feedback": TaskFeedbackPage,
+  "/goals": GoalsPage,
   "/reports": WeeklyReportPage,
   "/data-control": DataControlPage,
   "/projects/:projectId": ProjectOverviewPage,

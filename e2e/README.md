@@ -28,6 +28,12 @@ npx playwright test
 | `tests/02-inbox-confirm.spec.ts` | 收件匣確認延期（補註記）與完成 → 任務詳情與 API 反映結果；註記是另一筆 `annotation` 事件 | 12.8；AC-08、34、39 |
 | `tests/03-project-adjust-due.spec.ts` | 專案頁延後我的任務（原因＋註記）→ 不換頁，任務表、甘特更新 → 專案歷程看得到 | 12.1；AC-02、AC-03 的 delta 與 orig_due |
 | `tests/04-complete-feedback.spec.ts` | 今日頁完成任務 → 完成回報（缺精力不能存）→ 離開待處理 → 週報退路列入本週完成 | 12.9、12.10；AC-43、50 |
+| `tests/05-import.spec.ts` | 既有專案貼 AC-30 表格 → 錯誤列沒略過不能保存 → 略過後保存基準；新專案＋非標準表頭 → AI 關時手動指定欄位 → 保存 | 12.7；AC-30、31（畫面側）、32、33 |
+| `tests/06-data-control.spec.ts` | 下載匯出（合法 JSON、無 `raw_output`）→ 刪除所有原文（沒勾確認不能送出）→ 任務歷程改顯示原文已刪除 | 12.14；AC-53、AC-28、AC-54（部分） |
+| `tests/07-bulk-shift.spec.ts` | 專案頁進整批順延 → 勾 4 項 → 預覽不寫入 → 統一註記 → 同一批次、註記只在我的任務 | 12.4；AC-14、15、19 |
+| `tests/08-baseline.spec.ts` | 任務詳情小連結 → 預覽影響不寫入 → 勾聲明才能更正 → 只改原訂日、留一筆 `baseline` 事件 | 12.5；AC-20、21（畫面側）、22 |
+
+流程 7、8 用 `scripts/e2e_seeds/bulk.sql`（日期在 12 月）；流程 5 用 `import.sql`，流程 6 用 `inbox.sql`。
 
 ## 範圍
 
