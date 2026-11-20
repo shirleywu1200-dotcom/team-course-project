@@ -1179,7 +1179,7 @@ CREATE TABLE idempotency_keys (
    - 目標不存在回 `NOT_FOUND`。週報端點讀到 `kind='goal'` 的列回 404（5.14 J10 已定）。
    - `POST draft`、`PUT manual` 不存冪等快取（同 5.14 J7）。
    - 不寫 `ai_feedback`（同 AI-05）。匯出：`ai_draft` 不帶、`manual_text` 照帶（#54），`ai_items` 只含鍵名與數字、照帶。清除範圍隨 #64 的裁定，週報與目標回報一致。
-   - #47 Q6（綁私人專案的 expectation 目標要不要送 AI）若裁定 A，這類目標的產生比照 `linked=0` 不呼叫 AI；裁定前照現行（照送）。
+   - 綁私人專案的 expectation 目標：Q6 已裁定 AI-03 排除（#92）；AI-04 同一原則，這類目標的產生比照 `linked=0` 不呼叫 AI（payload 的 `goal.title` 即該目標標題）。
 
 ### 5.14 週報
 
