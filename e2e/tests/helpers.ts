@@ -10,9 +10,9 @@ const ROOT = resolve(import.meta.dirname, "../..");
 const PYTHON = process.platform === "win32" ? ".venv\\Scripts\\python.exe" : ".venv/bin/python";
 export const AUTH = { Authorization: `Bearer ${TOKEN}` };
 
-/** 清回剛跑完遷移的狀態並灌種子；種子路徑相對於 repo 根目錄。 */
-export function resetDb(seed?: string): void {
-  const args = [resolve(ROOT, "e2e/reset_db.py"), ...(seed ? [resolve(ROOT, seed)] : [])];
+/** 清回剛跑完遷移的狀態並依序灌種子；種子路徑相對於 repo 根目錄。 */
+export function resetDb(...seeds: string[]): void {
+  const args = [resolve(ROOT, "e2e/reset_db.py"), ...seeds.map((seed) => resolve(ROOT, seed))];
   execFileSync(resolve(ROOT, "backend", PYTHON), args, {
     cwd: resolve(ROOT, "backend"),
     env: { ...process.env, PYTHONUTF8: "1" },

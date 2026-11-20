@@ -4,7 +4,7 @@
 只對 g4_e2e 動手；events、rubrics 的觸發器只在本交易內停用（SET LOCAL）。
 
 用法（在 backend/ 下；Playwright 的 tests/db.ts 會自動呼叫）：
-    PYTHONUTF8=1 .venv/Scripts/python ../e2e/reset_db.py [種子.sql]
+    PYTHONUTF8=1 .venv/Scripts/python ../e2e/reset_db.py [種子.sql ...]（多份依序灌入）
 """
 
 import os
@@ -35,8 +35,8 @@ def main() -> None:
         c.execute(text("SET LOCAL session_replication_role = origin"))
         cur = c.connection.driver_connection.cursor()
         cur.execute(SYSTEM_SEED.read_text(encoding="utf-8"))
-        if sys.argv[1:]:
-            cur.execute(Path(sys.argv[1]).read_text(encoding="utf-8"))
+        for seed in sys.argv[1:]:
+            cur.execute(Path(seed).read_text(encoding="utf-8"))
     eng.dispose()
     print(f"已重設 {DB_NAME}" + (f"，種子 {Path(sys.argv[1]).name}" if sys.argv[1:] else ""))
 
