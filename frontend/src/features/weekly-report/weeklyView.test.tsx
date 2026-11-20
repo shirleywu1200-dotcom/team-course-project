@@ -62,4 +62,28 @@ describe("週報人工版與版面骨架", () => {
     expect(screen.getByLabelText("人工版")).toBeDisabled();
     expect(screen.getByRole("button", { name: "儲存中…" })).toBeDisabled();
   });
+
+  it("複製目前人工版文字並顯示成功提示，不取 AI 初稿", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    const previous = Object.getOwnPropertyDescriptor(navigator, "clipboard");
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+    try {
+      const { rerender } = render(<WeeklyReportColumns ai={<p>AI 產生的文字</p>}
+        manual={<><h2>人工版</h2><ManualWeeklySection draft="原人工版" onChange={vi.fn()} onSave={vi.fn()} saving={false} /></>} />);
+      rerender(<WeeklyReportColumns ai={<p>AI 產生的文字</p>}
+        manual={<><h2>人工版</h2><ManualWeeklySection draft="修改後的人工版" onChange={vi.fn()} onSave={vi.fn()} saving={false} /></>} />);
+      fireEvent.click(screen.getByRole("button", { name: "複製" }));
+      expect(writeText).toHaveBeenCalledExactlyOnceWith("修改後的人工版");
+      expect(await screen.findByText("已複製")).toBeInTheDocument();
+      expect(screen.getByRole("region", { name: "AI 初稿區" })).not.toHaveTextContent("已複製");
+    } finally {
+      if (previous) Object.defineProperty(navigator, "clipboard", previous);
+      else Reflect.deleteProperty(navigator, "clipboard");
+    }
+  });
+
+  it("人工版空白時不可複製", () => {
+    render(<ManualWeeklySection draft="" onChange={vi.fn()} onSave={vi.fn()} saving={false} />);
+    expect(screen.getByRole("button", { name: "複製" })).toBeDisabled();
+  });
 });
