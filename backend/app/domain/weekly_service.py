@@ -22,7 +22,6 @@ from app.errors import DomainError
 
 log = logging.getLogger("g4")
 
-MANUAL_MAX_CHARS = ai05.TEXT_MAX_CHARS
 MAX_ATTEMPTS = 3   # 任何失敗都算一次、最多 3 次；只有 AI 不可用與 R4 失敗立刻停（#22，與 process_sources 一致）
 
 
@@ -126,7 +125,7 @@ def get_by_week(db: Database, week_start: date) -> dict:
 
 
 def save_manual(db: Database, report_id: int, manual_text: str | None) -> dict:
-    check_manual_text(manual_text, MANUAL_MAX_CHARS)
+    check_manual_text(manual_text)
 
     def run(conn: Connection) -> dict:
         reports_repo.save_manual(conn, report_id, manual_text, get_clock().now())

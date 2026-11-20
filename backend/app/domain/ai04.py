@@ -6,12 +6,13 @@
 - 不送逐筆的星數與精力（FR-AI-06）、目標定義、負責人、完成條件；私人任務只進統計數字、不列標題（資安規則 2）。
 """
 
+import math
 import re
 from decimal import Decimal
 
 from app.ai.client import AIInvalidOutput
 from app.ai.nodes.ai04 import FIGURE_KEYS
-from app.domain.ai05 import TEXT_MAX_CHARS  # 草稿上限同 AI-05（spec 5.3a）
+from app.domain.text import TEXT_MAX_CHARS  # 草稿上限同 AI-05（spec 5.3a）
 
 NODE = "AI-04"
 # R3 數字切法（spec 5.3a 第 8 點）：全形數字與全形「．」「％」轉半形，不做 NFKC；只認 ASCII 0–9，
@@ -50,7 +51,13 @@ def _flat_stats(stats: dict) -> dict:
 
 
 def _is_number(value) -> bool:
-    return isinstance(value, int | float) and not isinstance(value, bool)
+    """JSON 數字、非 bool、有限且能轉成浮點數（超大整數、inf、nan 算格式不合，不讓 R3 在重試迴圈外出錯）。"""
+    if not isinstance(value, int | float) or isinstance(value, bool):
+        return False
+    try:
+        return math.isfinite(float(value))
+    except OverflowError:
+        return False
 
 
 def _well_formed(item) -> bool:

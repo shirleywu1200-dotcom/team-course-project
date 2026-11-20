@@ -186,3 +186,10 @@ def test_draft_length_counts_code_points_with_emoji():
     assert parse(draft="🙂" * 20_000)[0] == "🙂" * 20_000      # 20,000 個 code point（UTF-16 是 40,000）
     with pytest.raises(AIInvalidOutput):
         parse(draft="🙂" * 20_001)
+
+
+@pytest.mark.parametrize("value", [10**5000, float("inf"), float("nan")], ids=["huge-int", "inf", "nan"])
+def test_non_finite_value_is_format_error(value):
+    """code-review：超大整數在 R3 的 str() 會丟 ValueError（重試迴圈外 → 500），在格式檢查就擋下（AC-50）。"""
+    with pytest.raises(AIInvalidOutput):
+        parse(figures=[{"key": "linked", "value": value}])

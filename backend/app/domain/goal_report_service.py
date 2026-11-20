@@ -14,7 +14,7 @@ from app.ai.client import DEFAULT_TIMEOUT_S, AIClient, AIUnavailable
 from app.clock import get_clock
 from app.db.database import Database
 from app.db.repo import ai_runs_repo, goal_reports_repo
-from app.domain import ai04, ai05, goal_report
+from app.domain import ai04, goal_report
 from app.domain.text import check_manual_text
 
 log = logging.getLogger("g4")
@@ -99,7 +99,7 @@ def get(db: Database, goal_id: int) -> dict:
 
 
 def save_manual(db: Database, goal_id: int, manual_text: str | None) -> dict:
-    check_manual_text(manual_text, ai05.TEXT_MAX_CHARS)   # 上限同週報人工版（第 6 點）
+    check_manual_text(manual_text)   # 規則與上限同週報人工版（第 6 點）
 
     def write(conn: Connection) -> dict:
         current = goal_report.collect(conn, goal_id)

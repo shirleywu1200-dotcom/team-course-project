@@ -28,7 +28,7 @@ NO_CACHE_PATHS = {f"{API_PREFIX}/export"}
 NO_CACHE_PREFIXES = (f"{API_PREFIX}/reports/weekly/",)
 # 目標回報的產生與人工版（spec 5.13 第 7 點，同 J7）。id 在路徑中間，
 # 只比對 /goals/{id}/report/，其他 /goals 端點照常快取
-NO_CACHE_PATTERNS = (re.compile(rf"^{API_PREFIX}/goals/[^/]+/report/"),)
+NO_CACHE_PATTERNS = (re.compile(rf"^{re.escape(API_PREFIX)}/goals/[^/]+/report/"),)
 
 
 def _error(code: str, message: str | None = None) -> JSONResponse:
