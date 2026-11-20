@@ -6,7 +6,7 @@ FIGURE_KEYS 是 stats 的數字鍵（巢狀以「.」攤平）；呼叫端合併
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, StrictFloat
 
 from app.ai.nodes.base import Node
 
@@ -17,7 +17,7 @@ FIGURE_KEYS = ("linked", "avg_actual", "avg_expected", "overdue_count",
 class Figure(BaseModel):
     model_config = ConfigDict(extra="forbid")
     key: Literal[FIGURE_KEYS]
-    value: float
+    value: StrictFloat   # "3"、true 不轉型（spec 5.3a）；呼叫端拿到的是轉型後的值，只能在這裡擋
 
 
 class Output(BaseModel):

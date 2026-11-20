@@ -151,6 +151,8 @@ def test_ai03_rejects_out_of_shape_output(bad):
 @pytest.mark.parametrize("bad", [
     {"draft": "x", "figures": [{"key": "total", "value": 3}]},
     {"draft": "x"},
+    {"draft": "x", "figures": [{"key": "linked", "value": "3"}]},   # spec 5.3a：value 須是 JSON 數字（#86 第 9 點）
+    {"draft": "x", "figures": [{"key": "linked", "value": True}]},
 ])
 def test_ai04_rejects_out_of_shape_output(bad):
     with pytest.raises(AIInvalidOutput):
