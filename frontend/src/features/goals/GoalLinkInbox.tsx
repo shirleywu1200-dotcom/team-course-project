@@ -13,11 +13,12 @@ type PendingLinkOut = components["schemas"]["PendingLinkOut"];
 type GoalLinkIn = components["schemas"]["GoalLinkIn"];
 type TaskEventOut = components["schemas"]["TaskEventOut"];
 
-function GoalLinkRow({ item, goals, onStale }: { item: PendingLinkItem; goals: Goal[]; onStale: (taskId: number) => void }) {
+function GoalLinkRow({ item, goals, onStale, onAttempt }: { item: PendingLinkItem; goals: Goal[];
+  onStale: (taskId: number) => void; onAttempt: () => void }) {
   const qc = useQueryClient();
   const [choice, setChoice] = useState("");
   const [unchanged, setUnchanged] = useState(false);
-  const mutation = useMutation({ mutationFn: () => {
+  const mutation = useMutation({ onMutate: onAttempt, mutationFn: () => {
     const body = { task_id: item.task_id, goal_id: choice === "none" ? null : Number(choice),
       expected_version: item.version } satisfies GoalLinkIn;
     return runMutationWithInvalidation(qc, "POST /goal-links", () =>
@@ -27,6 +28,8 @@ function GoalLinkRow({ item, goals, onStale }: { item: PendingLinkItem; goals: G
       setChoice("");
       onStale(item.task_id);
       void qc.invalidateQueries({ queryKey: keys.goalLinksPending() });
+      void qc.invalidateQueries({ queryKey: keys.goalMatrix() });
+      void qc.invalidateQueries({ queryKey: keys.goalStatsRoot() });
     }
     if (error instanceof ApiError && error.code === "NO_CHANGE") setUnchanged(true);
   } });
@@ -57,6 +60,7 @@ export function GoalLinkInbox({ goals }: { goals: Goal[] | undefined }) {
       : !pending.data ? <p role="status">載入待關聯任務中…</p>
         : pending.data.items.length === 0 ? <p>沒有待關聯任務。</p>
           : <ul>{pending.data.items.map(item =>
-            <GoalLinkRow key={item.task_id} item={item} goals={goals ?? []} onStale={setStaleTaskId} />)}</ul>}
+            <GoalLinkRow key={item.task_id} item={item} goals={goals ?? []} onStale={setStaleTaskId}
+              onAttempt={() => setStaleTaskId(null)} />)}</ul>}
   </section>;
 }
