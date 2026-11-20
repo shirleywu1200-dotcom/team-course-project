@@ -5,8 +5,8 @@
 終端機只印案例 id 與統計。設了環境變數 EVAL_OUT_DIR（放 env/local.env）時，另存逐案 CSV
 （含 draft、figures、不在允許名單的數字，以及空白的「檢視判定」欄：R3 失敗逐筆填「真錯」或「誤判」）。
 
-R3 對帳是暫用版（SDD Q1-A）：依 spec 5.3a 寫在這裡，只供評估用。Dev-A 的正式函式合併後，
-改 import 正式函式、刪掉本檔的 r3_rule1／r3_rule2，再重跑一輪當基準線。
+格式檢查與 R3 對帳用正式函式 app.domain.ai04 的 parse_output、reconcile（#120），和端點同一套。
+R3 第 1、2 點分開統計：第 1 點＝reconcile 給空草稿，第 2 點＝reconcile 不給 figures。
 
 用法（需 env/local.env 有 ANTHROPIC_API_KEY）：
     cd backend
@@ -19,10 +19,8 @@ import argparse
 import csv
 import json
 import os
-import re
 import sys
 import time
-import unicodedata
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -31,6 +29,7 @@ sys.path.insert(0, str(ROOT / "backend"))
 from app.ai.anthropic_client import AnthropicAIClient  # noqa: E402
 from app.ai.client import DEFAULT_TIMEOUT_S, AIError  # noqa: E402
 from app.config import DEFAULT_ENV_FILE, load_env_file  # noqa: E402
+from app.domain.ai04 import numbers, parse_output, reconcile  # noqa: E402
 
 PRICES = {   # 美元／百萬 token（輸入, 輸出），2026-11 公告價
     "claude-opus-5-5": (4.0, 20.0),
@@ -38,7 +37,6 @@ PRICES = {   # 美元／百萬 token（輸入, 輸出），2026-11 公告價
     "claude-haiku-5-5": (0.10, 0.50),
 }
 EST_IN, EST_OUT = 1500, 1200   # 單次估算（SDD 第 5 節），取寬
-NUMBER = re.compile(r"\d+(?:\.\d+)?")
 
 
 def cost(model: str, tin: int, tout: int) -> float:
@@ -46,37 +44,8 @@ def cost(model: str, tin: int, tout: int) -> float:
     return (tin * pin + tout * pout) / 1_000_000
 
 
-def flat_stats(stats: dict, prefix: str = "") -> dict[str, float]:
-    out = {}
-    for k, v in stats.items():
-        if isinstance(v, dict):
-            out |= flat_stats(v, f"{prefix}{k}.")
-        elif isinstance(v, int | float) and not isinstance(v, bool):
-            out[prefix + k] = float(v)
-    return out
-
-
-def numbers(text: str) -> list[float]:
-    # 正規化：全形轉半形（NFKC）；4.0＝4（以 float 比）；100% 只取 100
-    return [float(n) for n in NUMBER.findall(unicodedata.normalize("NFKC", text))]
-
-
-def allowed(payload: dict) -> set[float]:
-    texts = [payload["goal"]["title"], payload["goal"]["period"]] + [t["title"] for t in payload["tasks"]]
-    names = set(flat_stats(payload["stats"]).values())
-    names |= {n for t in texts for n in numbers(t)}
-    names |= {float(p) for t in payload["tasks"] for p in t["done_date"].split("-")}
-    return names
-
-
-def r3_rule1(figures: list[dict], payload: dict) -> bool:
-    stats = flat_stats(payload["stats"])
-    return all(f["key"] in stats and stats[f["key"]] == float(f["value"]) for f in figures)
-
-
-def r3_rule2_misses(draft: str, payload: dict) -> list[float]:
-    ok = allowed(payload)
-    return [n for n in numbers(draft) if n not in ok]
+def r3_rule2_misses(draft: str, payload: dict) -> list:
+    return sorted(n for n in numbers(draft) if not reconcile(str(n), [], payload))
 
 
 def main() -> int:
@@ -111,8 +80,7 @@ def main() -> int:
         started = time.monotonic()
         draft, figures, error = "", [], ""
         try:
-            out = ai.call("AI-04", payload, timeout_s=DEFAULT_TIMEOUT_S)
-            draft, figures = out["draft"], out["figures"]
+            draft, figures = parse_output(ai.call("AI-04", payload, timeout_s=DEFAULT_TIMEOUT_S))
         except AIError as exc:
             error = type(exc).__name__
         latency = time.monotonic() - started
@@ -120,8 +88,8 @@ def main() -> int:
         tin_sum, tout_sum = tin_sum + tin, tout_sum + tout
         spent += cost(args.model, tin, tout)
         misses = r3_rule2_misses(draft, payload) if not error else []
-        ok = {"格式": not error and bool(draft.strip())}
-        ok["R3-1"] = ok["格式"] and r3_rule1(figures, payload)
+        ok = {"格式": not error}
+        ok["R3-1"] = ok["格式"] and reconcile("", figures, payload)
         ok["R3-2"] = ok["格式"] and not misses
         for k, v in ok.items():
             counts[k] += v
