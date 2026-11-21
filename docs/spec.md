@@ -568,6 +568,7 @@ CREATE TABLE idempotency_keys (
 | 0004 候選記住收件專案 | `candidates` 加 `project_id BIGINT REFERENCES projects(id)`（可為 NULL，NULL 表示收件時沒有指定專案）與索引 `ix_candidates_project`。只新增欄位與索引 | PR #20 審查 B5（2026-11-16 產品負責人裁定）；FR-INB-14 |
 | 0005 週報存檔 | `reports` 加 `ai_items JSONB`（AI 回傳的結構化項目）與 `ai_status TEXT`（`ok`、`unavailable`、`invalid_output`，可為 NULL）；加部分唯一索引「每週一列」（`period_start`，`WHERE kind = 'weekly'`）；加 CHECK「週報列一定要有 `period_start`」（NULL 不受唯一索引約束）（#18 J8；2026-11-17 定案）。只新增欄位、索引與 CHECK | 2026-11-16 產品負責人裁定（#18 第 1 點 (b)）；FR-RPT-03、04 |
 | 0006 目標回報存檔 | `reports` 加部分唯一索引「每個目標一列」（`goal_id`，`WHERE kind = 'goal'`）與 CHECK「目標回報列一定要有 `goal_id`」。`ai_items` 沿用 0005 的欄位，目標回報存驗證後的 `figures`。只新增索引與 CHECK | 2026-11-20 產品負責人裁定（#47、#86）；spec 5.13「目標回報」第 1 點 |
+| 0007 清除範圍擴大 | `sources.speaker`、`sources.excerpt_hash` 改為可為 NULL（DROP NOT NULL）：清除時與 `excerpt` 一併設為 NULL。`excerpt_hash` 的 UNIQUE 保留（PostgreSQL 允許多個 NULL）。只放寬 NOT NULL，不改欄位語意 | 2026-11-21 產品負責人裁定（#64 第 1 點）；spec 6.7 |
 
 系統種子相關規則（2026-11-15 產品負責人裁定）：
 
@@ -1337,11 +1338,16 @@ CREATE TABLE idempotency_keys (
 
 ### 6.7 資料保存與清除
 
-- 清除排程（服務啟動時一次，之後每小時一次；冪等）：將 `expires_at` 已過的 `sources.excerpt` 設為 NULL，寫 `purged_at`。有原文被清除時，一併刪除 `idempotency_keys`（DA-23）。`created_at` 加保存天數已過的 `ai_runs.raw_output` 設為 NULL，不分節點（失敗的 AI-01 輸出連不回來源；AI-06、AI-07 的輸出也可能含原文；PR #20 B2）；另外，經背景工作的 `source_ids` 或候選的 `ai_run_id` 連得回已清除來源的輸出，也一併設為 NULL（背景工作可能晚於收件才呼叫 AI）。`events`、`candidates` 不動。（2026-11-15 裁定：原為每日 03:00，本機服務該時段常未開機會漏跑，改為每小時。）
+- 清除排程（服務啟動時一次，之後每小時一次；冪等）：將 `expires_at` 已過的 `sources.excerpt`、`sources.speaker`、`sources.excerpt_hash` 一併設為 NULL，寫 `purged_at`（2026-11-21 產品負責人裁定，#64 第 1 點）。`created_at` 加保存天數已過的 `reports.ai_draft`（週報與目標回報）設為 NULL（#64 第 2 點，比照 `ai_runs.raw_output`）。有原文被清除時，一併刪除 `idempotency_keys`（DA-23）。`created_at` 加保存天數已過的 `ai_runs.raw_output` 設為 NULL，不分節點（失敗的 AI-01 輸出連不回來源；AI-06、AI-07 的輸出也可能含原文；PR #20 B2）；另外，經背景工作的 `source_ids` 或候選的 `ai_run_id` 連得回已清除來源的輸出，也一併設為 NULL（背景工作可能晚於收件才呼叫 AI）。`events`、`candidates` 不動。（2026-11-15 裁定：原為每日 03:00，本機服務該時段常未開機會漏跑，改為每小時。）
 - 修改保存期限時，尚未清除的來源一併重算 `expires_at = received_at + 新天數`（2026-11-15 裁定）。
-- 「刪除所有來源原文」清除 `sources.excerpt`，刪除 `idempotency_keys` 全部列（回應本文可能含原句；這張表是 24 小時的重送暫存，不是歷程，DA-23），並將 `ai_runs.raw_output` 全部設為 NULL（PR #20 B2）。`events`、`candidates`、`tasks` 不動，事件的原句顯示改為已刪除。
+- 清除後的行為（2026-11-21 產品負責人裁定，#64 第 3～5 點）：
+  - 已清除的來源不再參與去重：`excerpt_hash` 為 NULL，同一句之後重貼會建新的來源（UNIQUE 允許多個 NULL）。
+  - 從待配對候選建任務時，若來源的 `speaker` 已清除、請求又沒帶 `owner`，回 `VALIDATION_ERROR`（`details.fields` 為 `["owner"]`），不自動改成「我」。
+  - 週報、目標回報的 `ai_draft` 已清除時，讀取一律 `validated=false`、`draft=null`，改走退路（週報為事件清單、目標回報為統計表）。
+  - 保留不清：`reports.manual_text`、`reports.ai_items`（只有 id 與數字）、`sources.spoken_at`、未到期的 `excerpt`，以及 `events`、`candidates`、`tasks`。
+- 「刪除所有來源原文」清除 `sources.excerpt`、`sources.speaker`、`sources.excerpt_hash` 與全部 `reports.ai_draft`（#64），刪除 `idempotency_keys` 全部列（回應本文可能含原句；這張表是 24 小時的重送暫存，不是歷程，DA-23），並將 `ai_runs.raw_output` 全部設為 NULL（PR #20 B2）。`events`、`candidates`、`tasks` 不動，事件的原句顯示改為已刪除。
 - 匯出檔包含全部表；`sources.excerpt` 已清除者匯出為 `null`。`ai_runs` 匯出時不帶 `raw_output` 欄位（不論是否已清除），其餘欄位與筆數照常：`raw_output` 可能含收件原句，清除與匯出要同一立場，否則清了還能從匯出撈回；匯出是可外傳的快照，不帶 AI 原始輸出暫存（2026-11-17 產品負責人裁定，#40；取代 2026-11-16 PR #20 Q1 的「尚未清除的照帶」）。
-- 匯出另外不帶下列欄位（2026-11-17 產品負責人裁定，#54，併 #46）。原則：可能含收件原句或 AI 原始輸出的欄位不進可外傳的快照；權杖一律不匯出；使用者刻意寫的業務內容保留。本條只改匯出，清除範圍不變（`reports.ai_draft`、`sources.speaker` 要不要一併清除，已在 #54 請產品負責人裁定）。
+- 匯出另外不帶下列欄位（2026-11-17 產品負責人裁定，#54，併 #46）。原則：可能含收件原句或 AI 原始輸出的欄位不進可外傳的快照；權杖一律不匯出；使用者刻意寫的業務內容保留。清除範圍另見上方（#64 裁定 `reports.ai_draft`、`sources.speaker`、`sources.excerpt_hash` 一併清除）。
   | 表.欄位 | 理由 |
   | --- | --- |
   | `confirmations.token` | 基準更正的確認權杖，外流沒有正當用途 |
