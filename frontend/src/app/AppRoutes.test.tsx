@@ -63,7 +63,6 @@ test("一般開發與未開啟展示旗標時不顯示橫幅", () => {
 test.each([
   ["/projects", "專案現況"],
   ["/projects/1", "範例專案"],
-  ["/tasks", "任務"],
   ["/tasks/new", "新增任務"],
   ["/history", "歷程"],
   ["/projects/1/history", "範例專案歷程"],
@@ -96,6 +95,14 @@ test.each([
   } finally {
     fetchSpy.mockRestore();
   }
+});
+
+test("#137 A：/tasks 導覽入口重導向到新增任務頁，不再是預留頁", async () => {
+  open("/tasks");
+  // 重導向後網址落在 /tasks/new，畫面是新增任務頁而非「此功能尚未開放」
+  expect(await screen.findByRole("heading", { name: "新增任務", level: 1 })).toBeInTheDocument();
+  expect(screen.getByLabelText("目前網址")).toHaveTextContent("/tasks/new");
+  expect(screen.queryByText("此功能尚未開放。")).not.toBeInTheDocument();
 });
 
 test("M1：每日確認連結留在收件匣；移除的 /confirmations 不再是預留頁", () => {
