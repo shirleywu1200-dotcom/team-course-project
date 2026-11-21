@@ -17,7 +17,6 @@ function open(path = "/tasks/new") {
 
 beforeEach(() => server.use(
   http.get(`${API}/projects`, () => HttpResponse.json(goalFixtures.projects)),
-  http.get(`${API}/goals`, () => HttpResponse.json(goalFixtures.list)),
 ));
 
 test("US-07／FR-TSK-01：必填標題與預計完成日未填時不送出，預設單點工作任務與 3 星", async () => {
@@ -64,11 +63,11 @@ test("201 建立單點任務：只送允許欄位、成功提示連任務詳情�
   expect(screen.getByRole("link", { name: "查看任務" })).toHaveAttribute("href", "/tasks/220");
   expect(bodies).toEqual([{ title: "整理範例資料", owner: "我", due: "2026-11-19",
     scope: "work", project_id: null, done_when: "文件已整理", remind: "morning",
-    goal_id: null, expected_stars: 3 }]);
+    expected_stars: 3 }]);
   expect(client.getQueryState(keys.taskList())?.isInvalidated).toBe(true);
 });
 
-test("指定專案時省略 scope，可選關聯目標，手動星數與提醒照選擇送出", async () => {
+test("指定專案時省略 scope，手動星數與提醒照選擇送出", async () => {
   const user = userEvent.setup();
   const bodies: unknown[] = [];
   server.use(http.post(`${API}/tasks`, async ({ request }) => {
@@ -80,14 +79,14 @@ test("指定專案時省略 scope，可選關聯目標，手動星數與提醒�
   await screen.findByRole("option", { name: "範例專案" });
   await user.selectOptions(screen.getByLabelText("任務範圍"), "private");
   await user.selectOptions(screen.getByLabelText("指定專案"), "1");
-  await user.selectOptions(screen.getByLabelText("關聯目標"), "1");
   await user.selectOptions(screen.getByLabelText("預設星數"), "5");
   await user.selectOptions(screen.getByLabelText("提醒"), "none");
   await user.type(screen.getByLabelText("任務標題"), "專案任務");
   await user.type(screen.getByLabelText("預計完成日"), "2026-11-22");
   await user.click(screen.getByRole("button", { name: "建立任務" }));
   await waitFor(() => expect(bodies).toHaveLength(1));
-  expect(bodies[0]).toMatchObject({ project_id: 1, goal_id: 1, expected_stars: 5, remind: "none" });
+  expect(bodies[0]).toMatchObject({ project_id: 1, expected_stars: 5, remind: "none" });
+  expect(bodies[0]).not.toHaveProperty("goal_id");
   expect(bodies[0]).not.toHaveProperty("scope");
   expect(bodies[0]).not.toHaveProperty("suggested_stars");
   await waitFor(() => expect(client.getQueryState(keys.gantt(1))?.isInvalidated).toBe(true));
@@ -130,7 +129,8 @@ test("零專案仍能建立私人單點任務；首頁入口可到新增頁", as
   await user.click(screen.getByRole("button", { name: "建立任務" }));
   expect(await screen.findByRole("heading", { name: "今日", level: 1 })).toBeInTheDocument();
   expect(await screen.findByText("已建立任務 #222。")).toBeInTheDocument();
-  expect(bodies[0]).toMatchObject({ project_id: null, scope: "private", goal_id: null });
+  expect(bodies[0]).toMatchObject({ project_id: null, scope: "private" });
+  expect(bodies[0]).not.toHaveProperty("goal_id");
 });
 
 test("空庫入口流程：專案清單引導匯入，首頁建立單點任務後今日頁能看到", async () => {
