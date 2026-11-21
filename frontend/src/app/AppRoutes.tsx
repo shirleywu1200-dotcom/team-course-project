@@ -8,6 +8,7 @@ import { ImportPage } from "../features/import/ImportPage";
 import { InboxPage } from "../features/inbox/InboxPage";
 import { OnboardingPage } from "../features/settings/OnboardingPage";
 import { ProjectOverviewPage } from "../features/project-overview/ProjectOverviewPage";
+import { ProjectListPage } from "../features/project-list/ProjectListPage";
 import { ProjectHistoryPage } from "../features/project-history/ProjectHistoryPage";
 import { SettingsPage } from "../features/settings/SettingsPage";
 import { WeeklyReportPage } from "../features/weekly-report/WeeklyReportPage";
@@ -16,10 +17,13 @@ import { TimeManagementPage } from "../features/time-management/TimeManagementPa
 import { TodayPage } from "../features/today/TodayPage";
 import { TaskFeedbackPage } from "../features/today/TaskFeedbackPage";
 import { GoalsPage } from "../features/goals/GoalsPage";
+import { TaskCreatePage } from "../features/task-create/TaskCreatePage";
 import { AppLayout } from "./AppLayout";
 import { navigationRoutes, pageRoutes } from "./routeDefinitions";
 
 const featurePages: Record<string, ComponentType> = {
+  "/projects": ProjectListPage,
+  "/tasks/new": TaskCreatePage,
   "/import": ImportPage,
   "/inbox": InboxPage,
   [ONBOARDING_PATH]: OnboardingPage,

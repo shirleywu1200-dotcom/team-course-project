@@ -51,7 +51,8 @@ def list_tasks(project_id: str | None = Query(None, pattern=r"^(none|\d+)$"), ow
 
 @router.post("", status_code=201, response_model=TaskOut)
 def create_task(body: TaskCreate, db: Database = Depends(get_db)):
-    return task_out(db.run(lambda c: tasks.create_task(c, **body.model_dump())))
+    # goal_id 照收、一律忽略（#47 Q5 裁定 A；spec 5.13）
+    return task_out(db.run(lambda c: tasks.create_task(c, **body.model_dump(exclude={"goal_id"}))))
 
 
 @router.get("/{task_id}", response_model=TaskDetailOut)

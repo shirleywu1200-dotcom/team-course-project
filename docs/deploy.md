@@ -40,7 +40,7 @@ Node.js 26 跑前端測試時，jsdom 的 `localStorage` 會是 undefined，有 
 AI 供應商（todo 13.4，`docs/dev-b/13-4-sdd.md` D-2～D-4）：
 - 預設關閉。要開時在 `env/local.env` 設 `AI_PROVIDER=anthropic` 與 `ANTHROPIC_API_KEY`，重啟後端。
 - 設成 `anthropic` 但沒有 key 或 key 無效時，後端照常啟動，AI 呼叫一律視為不可用、走退路（FR-AI-03）。
-- 會把收件摘錄、任務清單等送往供應商（私人範圍在送出前排除）。正式使用前，先確認 spec 8.2「供應商資料處理條件須在上線前確認」〔待決〕已定案【待複核：法規解讀】。
+- 會把收件摘錄、任務清單等送往供應商（私人範圍在送出前排除）。本版只送虛構範例資料，Demo 可開（#125 PO 裁定）；接真實資料前（13.9 前）須先確認供應商資料處理條件（spec 8.2）【待複核：法規解讀】。
 - 要停用（例如 13.3 演練、key 外流時）：改回 `AI_PROVIDER=off` 或拿掉 key，重啟後端。key 外流時同時到供應商主控台撤銷該 key。
 
 ## 3. 第一次安裝
@@ -115,7 +115,20 @@ git pull
   ```bash
   pg_restore --clean --if-exists --dbname=<目標資料庫> /path/to/backups/g4-YYYYMMDD-HHMMSS.dump
   ```
-- 還原演練（todo 13.6）由 QC-1 主導，Dev-A 支援。
+  - 還原到**全新的空資料庫**時不需要 `--clean`：先 `CREATE DATABASE`，再 `pg_restore --dbname=<新資料庫>`。
+  - 本機沒有 PostgreSQL 用戶端時，可經容器執行：`docker exec -i g4-pg pg_restore -U g4 --clean --if-exists --dbname=<目標資料庫> < 備份檔`。
+- 還原演練（todo 13.6，Dev-A；#98）：`cd backend && .venv/bin/python ../scripts/drills/backup_restore_drill.py`（Windows：`.venv\Scripts\python.exe ..\scripts\drills\backup_restore_drill.py`）。
+  用兩個暫時資料庫（`g4_drill_src`、`g4_drill_dst`），不碰正式資料；結束時自動刪除。驗證兩條路徑：
+  A. 還原到全新空資料庫；B. 在已有資料（多一筆）的資料庫上照上方指令以 `--clean --if-exists` 覆蓋。
+  兩條路徑都比對每張表筆數、遷移版本、觸發器，並確認 `events`、`rubrics` 防改觸發器仍有效、序號接續。
+  種子要含 `events` 資料，否則防改觸發器無法驗證（列層級觸發器在 0 列時不觸發），腳本會判為不符。
+
+  | 日期 | 環境 | 資料 | 結果 | 耗時 |
+  | --- | --- | --- | --- | --- |
+  | 2026-11-20 | macOS、Docker `postgres:17`、遷移 0005 | `scripts/e2e_seeds/weekly.sql`：18 張表、19 筆、觸發器 6 個；備份檔約 50 KB | A、B 皆一致 | 備份 0.11 秒、A 0.14 秒、B 0.16 秒 |
+  | 2026-11-20 | Windows、Docker `g4-pg`；Dev-B 實跑（#105 審查） | 同上 | A、B 皆一致 | 總共約 10 秒 |
+
+  資料量很小，耗時只代表流程可行；真實試用（13.9）累積資料後再演練一次，記下備份與還原時間。
 
 ## 7. 對外開放前的條件（spec 8.2）
 

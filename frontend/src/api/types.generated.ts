@@ -2470,7 +2470,10 @@ export interface components {
              * @enum {string}
              */
             remind?: "morning" | "eve_before" | "none";
-            /** Goal Id */
+            /**
+             * Goal Id
+             * @description 一律忽略、不存（#47 Q5）；關聯請走 POST /goal-links
+             */
             goal_id?: number | null;
             /**
              * Expected Stars

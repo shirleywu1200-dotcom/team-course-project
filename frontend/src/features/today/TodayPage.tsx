@@ -30,10 +30,11 @@ export function TodayPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const [savedFeedback] = useState(() => (location.state as { feedbackSaved?: FeedbackOut } | null)?.feedbackSaved);
+  const [createdTaskId] = useState(() => (location.state as { createdTaskId?: number } | null)?.createdTaskId);
   const [completed, setCompleted] = useState<CompleteOut | null>(null);
   useEffect(() => {
-    if (savedFeedback) navigate(".", { replace: true, state: null });
-  }, [navigate, savedFeedback]);
+    if (savedFeedback || createdTaskId) navigate(".", { replace: true, state: null });
+  }, [navigate, savedFeedback, createdTaskId]);
   const today = useQuery({ queryKey: keys.today, queryFn: () => api<TodayOut>("/meta/today") });
   const dueBefore = today.data ? nextCalendarDay(today.data.today) : undefined;
   const tasks = useQuery({ queryKey: keys.taskList({ due_before: dueBefore }),
@@ -42,6 +43,9 @@ export function TodayPage() {
 
   return <main className="wide">
     <h1>今日</h1>
+    {createdTaskId && <p className="banner banner-ok" role="status"><span>已建立任務 #{createdTaskId}。</span>{" "}
+      <Link to={`/tasks/${createdTaskId}`}>查看任務</Link>
+    </p>}
     {savedFeedback && <p className="banner banner-ok" role="status">
       完成回報已儲存。伺服器計算逾期天數：{savedFeedback.overdue_days} 天
     </p>}

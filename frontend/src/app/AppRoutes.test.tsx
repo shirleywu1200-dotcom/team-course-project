@@ -86,7 +86,7 @@ test.each([
       expect(await screen.findByText(timeManagementFixtures.insufficient.judgement_note)).toBeInTheDocument();
       expect(screen.queryByText("此功能尚未開放。")).not.toBeInTheDocument();
       expect(fetchSpy).toHaveBeenCalled();
-    } else if (["/import", "/inbox", "/setup", "/settings", "/reports", "/data-control", "/projects/1", "/history", "/projects/1/history", "/today", "/tasks/4/feedback", "/goals"].includes(path)) {
+    } else if (["/projects", "/tasks/new", "/import", "/inbox", "/setup", "/settings", "/reports", "/data-control", "/projects/1", "/history", "/projects/1/history", "/today", "/tasks/4/feedback", "/goals"].includes(path)) {
       expect(screen.queryByText("此功能尚未開放。")).not.toBeInTheDocument();
       expect(fetchSpy).toHaveBeenCalled();
     } else {
