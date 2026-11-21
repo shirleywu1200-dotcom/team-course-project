@@ -30,10 +30,10 @@ def _ensure_not_done(task: dict) -> None:
 
 def create_task(conn: Connection, *, title: str, due: date, owner: str = OWNER_ME, scope: str | None = None,
                 project_id: int | None = None, start: date | None = None, done_when: str = "",
-                remind: str = "morning", goal_id: int | None = None, expected_stars: int = 3,
+                remind: str = "morning", expected_stars: int = 3,
                 suggested_stars: int | None = None, origin: str = "manual", origin_ref: int | None = None,
                 source_id: int | None = None) -> dict:
-    """建立任務並寫 created 事件。
+    """建立任務並寫 created 事件。不收 goal_id：關聯一律走 POST /goal-links（#47 Q5，2026-11-21 裁定 A）。
 
     origin、origin_ref、source_id 記錄建立依據（FR-HIS-04）；例如收件匣從待配對候選建立任務時，
     帶 origin="candidate"、origin_ref=候選 id、source_id=原句來源（Issue #2、FR-INB-14）。
@@ -51,7 +51,7 @@ def create_task(conn: Connection, *, title: str, due: date, owner: str = OWNER_M
     task = TaskRepo(conn).insert({
         "project_id": project_id, "title": title, "owner_name": owner, "scope": scope or "work",
         "start_date": start, "orig_due": due, "latest_due": due, "done_when": done_when or "",
-        "remind": remind, "goal_id": goal_id, "expected_stars": expected_stars,
+        "remind": remind, "expected_stars": expected_stars,
         "star_source": star_source_for(expected_stars, suggested_stars),
         "rubric_id": misc_repo.active_rubric_id(conn),
     })

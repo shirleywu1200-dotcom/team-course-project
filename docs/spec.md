@@ -1111,7 +1111,7 @@ CREATE TABLE idempotency_keys (
 - 同一交易寫事件並更新任務：事件 `kind='goal'`、`field='goal_id'`、`task_id` 為該任務、`from_value` 為原本的 `goal_id`（沒有時為 null）、`to_value` 為新的 `goal_id`（不關聯為 null），`origin='manual'`；`tasks.goal_id` 改為新值、`version` 加 1。改選、改成不關聯都是新增一筆事件（FR-GOL-03、歷程只增）。
 - 輸出 200：`{ "task": TaskOut, "event": EventOut }`。
 - 私人與工作範圍的任務都可以關聯、都進統計（目標是你自己的）；AI-03 送出前排除私人範圍（5.3a）。
-- 建立任務（`POST /tasks`）時帶的 `goal_id` 算不算關聯決定〔待決：#47，產品負責人裁定〕；裁定前維持現行：照存、不算決定。
+- 建立任務（`POST /tasks`）時帶的 `goal_id` 一律忽略、不存（2026-11-21 產品負責人裁定 Q5 A，#47）：關聯決定只有一條路徑，就是完成回報後的 `POST /goal-links`，避免任務同時算進目標統計又留在待關聯清單。
 
 `GET /goal-links/pending`（9.6）：
 - 輸出 `{ "items": [PendingLinkItem], "total": n }`，列出 `status='done'`、有完成回報、而且**從來沒有做過關聯決定**的任務；選過「不關聯」的不再列。工作與私人範圍都列，已封存專案底下的任務也列。依 `done_date`、`task_id` 由新到舊，不分頁。

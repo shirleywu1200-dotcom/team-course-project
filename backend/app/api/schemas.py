@@ -36,7 +36,7 @@ class TaskCreate(Strict):
     start: date | None = None
     done_when: str = ""
     remind: Literal["morning", "eve_before", "none"] = "morning"
-    goal_id: int | None = None
+    goal_id: int | None = Field(None, description="一律忽略、不存（#47 Q5）；關聯請走 POST /goal-links")
     expected_stars: int = Field(3, ge=1, le=5)
     suggested_stars: int | None = Field(None, ge=1, le=5)
 
