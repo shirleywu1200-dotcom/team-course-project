@@ -56,7 +56,7 @@ SELECT setval(pg_get_serial_sequence('sources', 'id'), 100);
 
 INSERT INTO candidates (id, source_id, kind, certainty, task_id, project_id, proposed, suggest, note, state, created_at) VALUES
   (1, 1, 'delay', 'sure',       3, 1, '{"new_due":"2026-11-24"}', NULL, NULL, 'open', now()),
-  (2, 2, 'done',  'to_clarify', 2, 1, NULL, '{"kind":"status","to":"doing"}', '像是進行中而非完成，你判斷。', 'open', now());
+  (2, 2, 'done',  'to_clarify', 2, 1, NULL, NULL, '像是進行中而非完成，你判斷。', 'open', now());
 SELECT setval(pg_get_serial_sequence('candidates', 'id'), 100);
 
 -- 歷程事件（只增）：匯入基準、改期、狀態、目標關聯、完成回報
