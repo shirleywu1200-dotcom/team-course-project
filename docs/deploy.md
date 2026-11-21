@@ -40,7 +40,7 @@ Node.js 26 跑前端測試時，jsdom 的 `localStorage` 會是 undefined，有 
 AI 供應商（todo 13.4，`docs/dev-b/13-4-sdd.md` D-2～D-4）：
 - 預設關閉。要開時在 `env/local.env` 設 `AI_PROVIDER=anthropic` 與 `ANTHROPIC_API_KEY`，重啟後端。
 - 設成 `anthropic` 但沒有 key 或 key 無效時，後端照常啟動，AI 呼叫一律視為不可用、走退路（FR-AI-03）。
-- 會把收件摘錄、任務清單等送往供應商（私人範圍在送出前排除）。正式使用前，先確認 spec 8.2「供應商資料處理條件須在上線前確認」〔待決〕已定案【待複核：法規解讀】。
+- 會把收件摘錄、任務清單等送往供應商（私人範圍在送出前排除）。本版只送虛構範例資料，Demo 可開（#125 PO 裁定）；接真實資料前（13.9 前）須先確認供應商資料處理條件（spec 8.2）【待複核：法規解讀】。
 - 要停用（例如 13.3 演練、key 外流時）：改回 `AI_PROVIDER=off` 或拿掉 key，重啟後端。key 外流時同時到供應商主控台撤銷該 key。
 
 ## 3. 第一次安裝
