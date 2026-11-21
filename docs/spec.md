@@ -259,7 +259,7 @@
   - AI 有回應但格式不對或對帳失敗，記為 `invalid_output`，當作失敗；AI 逾時或其他錯誤記為 `unavailable`。（#18 J2、J3；2026-11-17 定案）
   - 已知限制（J9）：基準更正後 `draft` 文字仍是舊的原訂日；`draft` 文字提到、但不在 `items` 裡的任務，事後改私人偵測不到；`items` 為空但 `draft` 有文字依 G8 算通過；重複項目合併。
 - FR-RPT-04 AI 初稿與人工版分開保存。人工版由你修改。每週一列；重新產生只更新 AI 初稿，人工版不動（AC-51）。重新產生時 AI 失敗，保留上一次成功的初稿，整列不動（`excluded_private`、`updated_at` 也不更新）；第一次產生就失敗時建一列，AI 欄位為 null。（#18 H2、J4；2026-11-17 定案）
-- FR-RPT-05 **P1 系統不代發週報**，只提供文字供你複製；送出功能為預留〔待決〕。
+- FR-RPT-05 **P1 系統不代發週報**，只提供文字供你複製（12.13 週報頁人工版的「複製」按鈕）；送出功能 P1 不做（2026-11-20 裁定，D-04、#82）。
 
 ### 3.15 FR-GOV 資料控制（P1）
 
@@ -567,6 +567,7 @@ CREATE TABLE idempotency_keys (
 | 0003 系統種子 | 寫入 `settings`（id=1，三句精力定義，其餘欄位用 DDL 預設值）與 `rubrics`（version=0、`source='default'`、五句量表），冪等（`ON CONFLICT DO NOTHING`）；降級不刪除種子 | PR #1 審查 B2（種子文字經產品負責人確認，修改文字屬規格變更）；AC-59 |
 | 0004 候選記住收件專案 | `candidates` 加 `project_id BIGINT REFERENCES projects(id)`（可為 NULL，NULL 表示收件時沒有指定專案）與索引 `ix_candidates_project`。只新增欄位與索引 | PR #20 審查 B5（2026-11-16 產品負責人裁定）；FR-INB-14 |
 | 0005 週報存檔 | `reports` 加 `ai_items JSONB`（AI 回傳的結構化項目）與 `ai_status TEXT`（`ok`、`unavailable`、`invalid_output`，可為 NULL）；加部分唯一索引「每週一列」（`period_start`，`WHERE kind = 'weekly'`）；加 CHECK「週報列一定要有 `period_start`」（NULL 不受唯一索引約束）（#18 J8；2026-11-17 定案）。只新增欄位、索引與 CHECK | 2026-11-16 產品負責人裁定（#18 第 1 點 (b)）；FR-RPT-03、04 |
+| 0006 目標回報存檔 | `reports` 加部分唯一索引「每個目標一列」（`goal_id`，`WHERE kind = 'goal'`）與 CHECK「目標回報列一定要有 `goal_id`」。`ai_items` 沿用 0005 的欄位，目標回報存驗證後的 `figures`。只新增索引與 CHECK | 2026-11-20 產品負責人裁定（#47、#86）；spec 5.13「目標回報」第 1 點 |
 
 系統種子相關規則（2026-11-15 產品負責人裁定）：
 
@@ -739,6 +740,13 @@ CREATE TABLE idempotency_keys (
   2. `draft` 裡出現的每個數字都在允許名單內：`stats` 的值，以及 payload 文字本來就有的數字（`goal.title`、`goal.period`、各任務 `title`，以及 `done_date` 拆出的年、月、日）。
   - 比對前正規化：`4.0`＝`4`、`100%`＝`100`、全形數字轉半形。
   - 誤判率由 Dev-B 在 #50 的評估實測；太高時調整允許名單，不放寬規則本身。
+  - 數字的切法與比較（2026-11-20 產品負責人裁定，#47、#86 第 8 點；Dev-B 確認）：
+    - 先把全形數字（U+FF10～FF19）、全形「．」「％」轉成半形，不做 NFKC（`①`、`²` 不算數字）。
+    - 數字＝連續的阿拉伯數字，後面可接「.」加數字當小數；以數值比較（`05`＝`5`、`4.0`＝`4`、`100%`＝`100`）。不認負號（`2026-11-12` 切成 2026、11、12）、千分位（`1,000` 切成 1 與 000）與科學記號；句尾的 `3.` 算 3。
+    - 允許名單從 payload 文字取數字時，用和草稿同一套切法，所以照抄標題、期間一定通過。
+    - 第 1 點比較數值，不比型別（`4`＝`4.0`）；沒有容差（3.25 不等於 3.3）。同一個鍵列兩次，兩次都要相等。
+    - 已知限制（不檢查）：國字數字（「三件」）；數字寫在哪一段（統計值互換位置仍會通過）；與允許名單撞號的錯數字（SDD 已記錄）。
+  - 輸出格式的細節（2026-11-20 產品負責人裁定，#47、#86 第 9 點；Dev-B 確認）：`figures` 每項只能有 `key`、`value`，多出來的鍵與 `key` 不在 `FIGURE_KEYS`（節點定義）都算格式不合（`invalid_output`，可重試），不算 R3 失敗；`value` 必須是 JSON 數字，`true`、`"3"`、null 都算格式不合：由節點 schema（嚴格數字，Dev-B PR #87）擋下，因為 `AnthropicAIClient` 回傳的是轉型後的值，呼叫端分不出原始型別；呼叫端的格式檢查仍要求 `value` 為數字、不是 bool（`FakeAIClient` 不套節點 schema）。`draft` 的字數以 Unicode 字元（code point）計，同 AI-05。
 - 重試與紀錄同 AI-05：總共最多 3 次，`AIUnavailable` 與 R3 失敗立刻停；R3 失敗記 `status='invalid_output'`、`error='R3_MISMATCH'`；不存 `raw_output`。存在 `reports` 表 `kind='goal'`，比照週報（5.14）。
 
 ### 5.4 設定與量表
@@ -1067,6 +1075,7 @@ CREATE TABLE idempotency_keys (
 | POST | `/goal-links/suggest` | AI-03 關聯建議；使用者按「請 AI 建議」才呼叫（#47 G3） |
 | POST | `/goal-links` | 你確認關聯（`{ task_id, goal_id, expected_version }`，`goal_id=null` 表示不關聯；2026-11-18 裁定統一端點，#47 B1；2026-11-19 G1） |
 | POST | `/goals/{id}/report/draft` | AI-04 草稿 |
+| GET | `/goals/{id}/report` | 取得既有目標回報（不產生） |
 | PUT | `/goals/{id}/report/manual` | 儲存人工版 |
 
 目標的建立、編輯、封存（9.5；比照專案 FR-PRJ-01～03，#47 B4、B7 與第二片提案）：
@@ -1142,6 +1151,38 @@ CREATE TABLE idempotency_keys (
   - 回饋只記任務的**第一次**關聯決定；之後改選即使帶 `ai_run_id` 也不寫，因為那已不是對建議的回應。
   - 不寫回饋的情況（關聯照常完成）：該筆 `raw_output` 已清除（6.7）；建議裡沒有這個任務（例如任務是私人範圍，或建議之後才完成）；這個任務已做過關聯決定。AI-03 不寫 `ignored`。
   - 回饋列：`node_id='AI-03'`、`target_type='goal_link'`、`target_id` 為這次寫入的 `goal` 事件 id；`detail`＝`{ ai_run_id, task_id, ai, final }`，只含整數或 null，不含 `reason` 或任何標題。與事件、任務更新在同一交易。
+
+目標回報（9.10；AI-04，payload 與驗證見 5.3a；2026-11-20 產品負責人裁定照提案，#47、#86）：
+
+| Method | Path | 說明 |
+| --- | --- | --- |
+| POST | `/goals/{id}/report/draft` | 產生 AI-04 草稿，不帶 body |
+| GET | `/goals/{id}/report` | 取得既有回報（不產生；新增，第 2 點） |
+| PUT | `/goals/{id}/report/manual` | 儲存人工版 |
+
+1. **每個目標一列**：存在 `reports`（`kind='goal'`、`goal_id`）。遷移只新增：`reports (goal_id) WHERE kind='goal'` 的部分唯一索引，以及 `CHECK (kind <> 'goal' OR goal_id IS NOT NULL)`（比照 0005，#18 J8）。
+2. **讀取**：`GET /goals/{id}/report` 不呼叫 AI、不寫入。目標存在但還沒有回報列時回 404 `NOT_FOUND`，`details` 只放 `goal_id`：代表「尚未產生」，前端顯示空狀態，不顯示錯誤橫幅（比照 5.14，#23）。
+3. **三個端點輸出相同**：
+   ```json
+   { "id": 9, "goal_id": 2, "ai_status": "ok", "excluded_private": 1,
+     "draft": "【目標】學會 SQL 視窗函式（能力成長，2026Q4，預期精力：高）…",
+     "validated": true, "manual_text": null, "updated_at": "2026-11-20T10:00:00+08:00" }
+   ```
+   - `validated=false` 時 `draft=null`，前端改用 `GET /goals/{id}/stats` 顯示統計表；回應不重複附統計（單一事實來源）。
+4. **產生**：
+   - payload 的 `stats` 與 `GET /goals/{id}/stats` 同一份計算；`progress_pct` 取 `progress.pct`，`progress` 為 null（time）時送 null。
+   - `tasks`：stats 母體中 `scope='work'` 的任務（依任務本身的範圍，同 AI-03），依 `done_date`、`task_id` 由新到舊，不設筆數上限；標題用任務現值。`excluded_private`＝母體中私人範圍的件數。
+   - 封存的目標照常可產生（封存照常可讀、可查統計）。
+   - `linked=0` 時不呼叫 AI、不寫 `ai_runs`，回 `ai_status="unavailable"`、`validated=false`（5.3「依規則刻意不呼叫」，同 AI-03）。存檔照下一點的失敗規則。
+   - 存檔比照 FR-RPT-04：成功時更新 `ai_draft`、`ai_items`（存驗證後的 `figures`）、`ai_status`、`excluded_private`、`updated_at`，`manual_text` 不動；失敗時已有成功初稿整列不動，回應仍是這次的退路（`validated=false`）；第一次就失敗時建一列、AI 欄位為 null。
+5. **讀取時重新對帳**：`GET`、`PUT`（以及產生成功時）的 `validated` 由存下的 `ai_draft`、`figures` 對**目前**的統計與 payload 重跑 R3 得出（比照 5.14 R4 重新對帳）。之後新增關聯、改了完成回報或任務標題，草稿的數字對不上就改回統計表。
+   - 已知限制（2026-11-20 產品負責人裁定 Q7，#47：維持現狀）：R3 只比數字、不比 `task_id`。產生回報之後任務才改成私人範圍、且標題不含數字時，重算 `validated` 仍可能通過，畫面會續顯示該任務標題。產生當下送 AI 是合法的（當時 `scope='work'`），不是洩漏。週報靠 R4 比對 `task_id` 可擋（5.14）。日後要補時：`ai_items` 加存送出的 `task_ids`，`validated` 時比對目前範圍（照週報 R4），不需遷移、不改契約；目前不排。
+6. **人工版**：`PUT /goals/{id}/report/manual` 輸入 `{ "manual_text": "…" }`，規則同 5.14（不帶 `expected_version`、後寫蓋先寫；可為 null 或空字串；超過 20,000 字回 413 `PAYLOAD_TOO_LARGE`；含 NUL 回 `VALIDATION_ERROR`；內容相同照常儲存）。還沒有回報列時建一列（AI 欄位為 null）。封存的目標也可儲存。
+7. 其他：
+   - 目標不存在回 `NOT_FOUND`。週報端點讀到 `kind='goal'` 的列回 404（5.14 J10 已定）。
+   - `POST draft`、`PUT manual` 不存冪等快取（同 5.14 J7）。
+   - 不寫 `ai_feedback`（同 AI-05）。匯出：`ai_draft` 不帶、`manual_text` 照帶（#54），`ai_items` 只含鍵名與數字、照帶。清除範圍隨 #64 的裁定，週報與目標回報一致。
+   - 綁私人專案的 expectation 目標：Q6 已裁定 AI-03 排除（#92）；AI-04 同一原則，這類目標的產生比照 `linked=0` 不呼叫 AI（payload 的 `goal.title` 即該目標標題）。
 
 ### 5.14 週報
 
@@ -1224,7 +1265,7 @@ CREATE TABLE idempotency_keys (
 | 重複訊息 | 計入 `duplicates`，不重複建候選 |
 | 候選對應任務在確認前已完成 | 確認時回 `TASK_DONE`，候選維持 `open`，前端提示改為忽略 |
 | 候選對應任務在確認前被改期 | `expected_version` 不符回 `STALE_VERSION`，前端重新載入候選與任務 |
-| 同一則訊息同時含延期與完成 | 本版只取一種：完成優先於延期；另一個留給使用者手動處理〔假設〕 |
+| 同一則訊息同時含延期與完成 | 本版只取一種：完成優先於延期；另一個留給使用者手動處理（2026-11-20 裁定，D-07、#82） |
 | 輪詢超過 60 秒 | 前端停止輪詢，顯示「仍在處理，稍後回收件匣查看」，工作持續 |
 | 服務重啟時有 `running` 工作 | 啟動時將 `running` 重設為 `queued` 續跑，嘗試次數保留 |
 
@@ -1469,7 +1510,7 @@ P1 完成 = AC-01 至 AC-42、AC-48 至 AC-53、AC-55 至 AC-57 全數通過，�
 - 日期只到「日」，不含時間；工作日與假日曆不納入（延後 3 天就是日曆上 3 天）。
 - 資料量假設：單一使用者，任務 ≤ 數千筆、事件 ≤ 數萬筆。
 - AI：不得要求 AI 輸出自由文字後直接寫入資料；所有 AI 輸出皆須通過結構驗證與規則檢查。
-- 隱私：送進 AI 的內容為必要摘錄與任務清單；私人範圍不進週報；供應商資料處理條件須在上線前確認〔待決〕。
+- 隱私：送進 AI 的內容為必要摘錄與任務清單；私人範圍不進週報；供應商資料處理條件須在接真實資料前確認（13.9 前；#125 PO 裁定：本版單機、只送虛構範例資料，記為已知限制）。
 - 安全：API 預設只綁 `127.0.0.1`；對外開放前須加 TLS 與 token 輪替。
 - 備份：每日以 `pg_dump`（custom 格式）備份，保留 14 份〔假設〕。
 - 可觀測性：記錄每次 AI 呼叫、重試與失敗（`ai_runs`）；以 `ai_feedback` 與事件推導評估指標，不另建分析資料庫。
@@ -1503,10 +1544,10 @@ frontend/
 | --- | --- | --- |
 | D-01 | AI-02 星數提議是否進 P1 | ✅ 2026-11-19 裁定：**P1 不上**（避免錨定自評，與不可破原則 4 一致） |
 | D-03 | 送進 AI 前是否遮蔽姓名 | ✅ 2026-11-19 裁定：**不遮蔽**（單一使用者、範例資料；接真實客戶資料時再評估） |
-| D-04 | 週報是否由系統代發 | 徵詢 Dev-B 中（#82）；傾向 P1 不代發、只產文字 |
+| D-04 | 週報是否由系統代發 | ✅ 2026-11-20 裁定（#82）：**P1 不代發**，只產文字供複製；P1 替代＝12.13 週報頁「複製」按鈕 |
 | D-05 | 完成回報儲存後是否允許修改 | 本期不做（#47 A1：回 `FEEDBACK_EXISTS`），長期允許延 9.3 |
-| D-06 | LINE 群組綁定是否放 P1（P1b） | 徵詢 Dev-B 中（#82）；貼上入口 P1 必要、LINE 視開發量 |
-| D-07 | 同一則訊息含延期與完成時的處理 | 徵詢 Dev-B 中（#82）；傾向完成優先、延期手動 |
+| D-06 | LINE 群組綁定是否放 P1（P1b） | ✅ 2026-11-20 裁定（#82）：**P1 不做 LINE**，延到 P1b；P1 只有貼上入口（webhook 須對公網開放，不符部署的信任邊界） |
+| D-07 | 同一則訊息含延期與完成時的處理 | ✅ 2026-11-20 裁定（#82）：**完成優先**，延期留給使用者手動處理（已實作，`test_spec61_delay_and_done_in_one_message_keeps_only_done`） |
 
 ### 9.2 已裁定（本規格依此撰寫）
 

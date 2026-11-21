@@ -41,7 +41,24 @@ beforeEach(() => {
   viewport(false);
   server.use(http.get(`${API}/reports/weekly`, () => HttpResponse.json({ error: { code: "NOT_FOUND", message: "未產生", details: {} } }, { status: 404 })));
 });
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
+
+test("展示旗標開啟才在每頁頂端顯示範例資料橫幅", async () => {
+  vi.stubEnv("VITE_DEMO_MODE", "true");
+  const view = open("/");
+  const banner = screen.getByText("展示實例・資料皆為範例・請勿輸入真實資料");
+  expect(banner).toBeInTheDocument();
+  expect(banner.compareDocumentPosition(screen.getByRole("banner"))).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+  view.unmount();
+  open("/import");
+  expect(screen.getByText("展示實例・資料皆為範例・請勿輸入真實資料")).toBeInTheDocument();
+});
+
+test("一般開發與未開啟展示旗標時不顯示橫幅", () => {
+  vi.stubEnv("VITE_DEMO_MODE", "false");
+  open("/");
+  expect(screen.queryByText("展示實例・資料皆為範例・請勿輸入真實資料")).not.toBeInTheDocument();
+});
 
 test.each([
   ["/projects", "專案現況"],

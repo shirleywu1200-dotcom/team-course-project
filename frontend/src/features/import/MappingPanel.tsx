@@ -20,9 +20,10 @@ interface Props {
   busy: boolean;
   onConfirm: () => void;
   onApply: (map: ColumnIndexes) => void;
+  privateTarget: boolean;
 }
 
-export function MappingPanel({ preview, confirmed, busy, onConfirm, onApply }: Props) {
+export function MappingPanel({ preview, confirmed, busy, onConfirm, onApply, privateTarget }: Props) {
   const { mapped_by, title, owner, start, end } = preview.column_map;
   // 只保留四欄索引，ai_run_id 是 commit metadata，不能混入 Strict ColumnMap。
   const current = { title, owner, start, end };
@@ -36,7 +37,9 @@ export function MappingPanel({ preview, confirmed, busy, onConfirm, onApply }: P
         <h2>欄位對應</h2>
         <span className="tag">{mapped_by ? SOURCE[mapped_by] : "需手動指定"}</span>
       </div>
-      {mapped_by === null && <p className="hint">AI 無法判斷欄位，請手動指定任務名稱與結束欄位。</p>}
+      {mapped_by === null && <p className="hint">{privateTarget
+        ? "私人專案不送 AI，請手動指定"
+        : "AI 無法判斷欄位，請手動指定任務名稱與結束欄位。"}</p>}
       {mapped_by === "ai" && !confirmed && (
         <p className="hint">表頭不是標準名稱，以下是 AI 的建議。請確認或修改後才能保存。</p>
       )}

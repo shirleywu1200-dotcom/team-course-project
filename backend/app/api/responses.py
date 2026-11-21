@@ -206,6 +206,19 @@ class WeeklyReportOut(Out):
     updated_at: datetime
 
 
+class GoalReportOut(Out):
+    """目標回報（spec 5.13「目標回報」第 3 點）：產生、讀取、存人工版的輸出相同；不附統計。"""
+    id: int
+    goal_id: int
+    ai_status: Literal["ok", "unavailable", "invalid_output"] | None = Field(
+        description="最近一次產生的結果；只存過人工版、從未產生時為 null")
+    excluded_private: int = Field(description="產生當下母體中私人範圍的件數（只進統計，不列標題）")
+    draft: str | None = Field(description="validated=false 時為 null，前端改讀 GET /goals/{id}/stats 顯示統計表")
+    validated: bool = Field(description="存下的草稿對目前資料重跑 R3 的結果（第 5 點）")
+    manual_text: str | None
+    updated_at: datetime
+
+
 # ---------- 註記、統計、選項、健康檢查 ----------
 
 class AnnotationOut(Out):

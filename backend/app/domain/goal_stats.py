@@ -72,10 +72,15 @@ def summarize(goal: dict, rows: list[dict], project_counts: tuple[int, int] | No
     }
 
 
-def stats(conn: Connection, goal_id: int) -> dict:
+def load(conn: Connection, goal_id: int) -> tuple[dict, list[dict], tuple[int, int] | None]:
+    """讀出計算統計所需的資料：(目標, 母體逐筆, expectation 的專案完成數與總數)。"""
     goal = goals_repo.get(conn, goal_id)          # 不存在：NOT_FOUND；封存照常可查
     counts = goal_links_repo.project_progress(conn, goal["project_id"]) if goal["type"] == "expectation" else None
-    return summarize(goal, goal_links_repo.linked_rows(conn, goal_id), counts)
+    return goal, goal_links_repo.linked_rows(conn, goal_id), counts
+
+
+def stats(conn: Connection, goal_id: int) -> dict:
+    return summarize(*load(conn, goal_id))
 
 
 def matrix(conn: Connection) -> list[dict]:

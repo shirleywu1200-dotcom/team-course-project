@@ -9,10 +9,10 @@
 from datetime import date
 
 from app.ai.client import AIInvalidOutput
+from app.domain.text import TEXT_MAX_CHARS  # AI 初稿與人工版共用的上限（#18 J5、K8）
 from app.domain.weekly_report import SECTIONS, WeekData
 
 NODE = "AI-05"
-TEXT_MAX_CHARS = 20_000   # AI 初稿與人工版共用的上限（#18 J5、K8）
 
 
 def _iso(value):

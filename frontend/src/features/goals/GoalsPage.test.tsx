@@ -5,7 +5,7 @@ import { MemoryRouter } from "react-router-dom";
 
 import { App } from "../../App";
 import { AppRoutes } from "../../app/AppRoutes";
-import { goalFixtures } from "../../test/goalFixtures";
+import { goalFixtures, goalReportFixtures } from "../../test/goalFixtures";
 import { API, apiError, makeSettings, renderWithClient, server } from "../../test/server";
 
 function open() {
@@ -31,7 +31,26 @@ test("12.12 路由顯示目標管理、統計、矩陣與待關聯四區；不�
   expect(await screen.findByRole("region", { name: "目標統計" })).toBeInTheDocument();
   expect(await screen.findByRole("region", { name: "目標精力矩陣" })).toBeInTheDocument();
   expect(await screen.findByRole("region", { name: "待關聯任務" })).toBeInTheDocument();
+  expect(await screen.findByRole("region", { name: "目標回報：練習規格分析" })).toBeInTheDocument();
   expect(screen.queryByText("此功能尚未開放。")).not.toBeInTheDocument();
+});
+
+test("階段 2：切換目標時回報區只讀新目標，不沿用前一目標草稿", async () => {
+  const user = userEvent.setup();
+  const requested: string[] = [];
+  server.use(http.get(`${API}/goals/:goalId/report`, ({ params }) => {
+    const id = Number(params.goalId);
+    requested.push(String(id));
+    return HttpResponse.json({ ...goalReportFixtures.ready, goal_id: id,
+      draft: id === 1 ? "第一個目標初稿" : "第二個目標初稿" });
+  }));
+  open();
+  expect(await screen.findByText("第一個目標初稿")).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "查看安排確認時間統計" }));
+  expect(await screen.findByRole("region", { name: "目標回報：安排確認時間" })).toBeInTheDocument();
+  expect(await screen.findByText("第二個目標初稿")).toBeInTheDocument();
+  expect(screen.queryByText("第一個目標初稿")).not.toBeInTheDocument();
+  expect(requested).toContain("2");
 });
 
 test("FR-GOL-01／02：停用類型不能新增，既有目標仍可讀；類型與預期精力不預選", async () => {
@@ -250,6 +269,40 @@ test("A1：STALE_VERSION 後列從 pending 消失時，區塊保留處理提示"
   expect(within(pending).getByText("沒有待關聯任務。")).toBeInTheDocument();
   expect(within(pending).queryByLabelText("範例已完成任務的關聯目標")).not.toBeInTheDocument();
   expect(posts).toBe(1);
+});
+
+test("#89 fast-follow：STALE_VERSION 使矩陣與各目標統計重讀", async () => {
+  const user = userEvent.setup();
+  let matrix = 0; let stats = 0;
+  server.use(http.get(`${API}/goals/matrix`, () => { matrix++; return HttpResponse.json(goalFixtures.matrix); }),
+    http.get(`${API}/goals/1/stats`, () => { stats++; return HttpResponse.json(goalFixtures.insufficient); }),
+    http.post(`${API}/goal-links`, () => apiError(409, "STALE_VERSION")));
+  open();
+  await user.selectOptions(await screen.findByLabelText("範例已完成任務的關聯目標"), "1");
+  await waitFor(() => expect(matrix).toBe(1));
+  await waitFor(() => expect(stats).toBe(1));
+  await user.click(screen.getByRole("button", { name: "確認範例已完成任務關聯" }));
+  await waitFor(() => expect(matrix).toBeGreaterThanOrEqual(2));
+  await waitFor(() => expect(stats).toBeGreaterThanOrEqual(2));
+});
+
+test("#89 fast-follow：新一次確認時清掉上次列消失的提示", async () => {
+  const user = userEvent.setup();
+  let posts = 0;
+  server.use(http.get(`${API}/goal-links/pending`, () => HttpResponse.json({ ...goalFixtures.pending,
+    items: posts === 0 ? goalFixtures.pending.items : [{ ...goalFixtures.pending.items[0], task_id: 102, title: "第二項範例任務" }],
+  })), http.post(`${API}/goal-links`, () => {
+    posts++;
+    return apiError(posts === 1 ? 409 : 422, posts === 1 ? "STALE_VERSION" : "NO_CHANGE");
+  }));
+  open();
+  await user.selectOptions(await screen.findByLabelText("範例已完成任務的關聯目標"), "1");
+  await user.click(screen.getByRole("button", { name: "確認範例已完成任務關聯" }));
+  expect(await screen.findByText("待關聯任務已在其他地方處理，清單已更新。")).toBeInTheDocument();
+  await user.selectOptions(screen.getByLabelText("第二項範例任務的關聯目標"), "1");
+  await user.click(screen.getByRole("button", { name: "確認第二項範例任務關聯" }));
+  expect(screen.queryByText("待關聯任務已在其他地方處理，清單已更新。")).not.toBeInTheDocument();
+  expect(await screen.findByText("目前關聯未變更。")).toBeInTheDocument();
 });
 
 test("四區載入狀態分離，清單尚未回來時統計不虛構零值", async () => {

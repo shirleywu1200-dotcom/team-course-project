@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import { DatePicker } from "../../components/DatePicker";
 import { AIFallback } from "../../components/ai/AIFallback";
@@ -46,10 +46,26 @@ export function ManualWeeklySection({ draft, onChange, onSave, saving, saveStatu
   saving: boolean;
   saveStatus?: string;
 }) {
+  const [copyStatus, setCopyStatus] = useState("");
+  useEffect(() => {
+    if (copyStatus !== "已複製") return;
+    const timeout = window.setTimeout(() => setCopyStatus(""), 2000);
+    return () => window.clearTimeout(timeout);
+  }, [copyStatus]);
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(draft);
+      setCopyStatus("已複製");
+    } catch {
+      setCopyStatus("無法複製，請手動選取文字。");
+    }
+  };
   return <div>
     <label htmlFor="weekly-manual">人工版</label>
     <textarea id="weekly-manual" value={draft} disabled={saving} onChange={(event) => onChange(event.target.value)} />
-    <div className="actions"><button type="button" disabled={saving} onClick={onSave}>{saving ? "儲存中…" : "儲存人工版"}</button></div>
+    <div className="actions"><button type="button" disabled={saving} onClick={onSave}>{saving ? "儲存中…" : "儲存人工版"}</button>
+      <button type="button" disabled={!draft} onClick={() => { void copy(); }}>複製</button></div>
+    {copyStatus && <p role="status">{copyStatus}</p>}
     {saveStatus && <p role="status">{saveStatus}</p>}
   </div>;
 }

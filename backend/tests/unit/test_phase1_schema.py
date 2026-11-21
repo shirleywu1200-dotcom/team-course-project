@@ -89,12 +89,14 @@ CHECKS = [
     ("events", {"origin": "'bulk'"}, {"origin": "'x'"}),
     ("events", {"mark": "'none'"}, {"mark": "'x'"}),
     ("ai_feedback", {"outcome": "'changed'"}, {"outcome": "'x'"}),
-    ("reports", {"kind": "'goal'"}, {"kind": "'x'"}),
+    ("reports", {"kind": "'goal'", "goal_id": "1"}, {"kind": "'x'"}),   # 0006：goal 列要有 goal_id
 ]
 
 PARENTS = BASE + RUBRIC + """
 INSERT INTO sources (id, channel, speaker, excerpt_hash, received_at, expires_at)
   VALUES (1, 'paste', '阿德', 'h1', now(), now());
+INSERT INTO goals (id, type, title, period, energy_plan, created_at)
+  VALUES (1, 'growth', 'g', '2026Q4', 'high', now());
 """
 
 

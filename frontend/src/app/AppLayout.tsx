@@ -27,6 +27,8 @@ export function AppLayout() {
   return (
     <div className="app-shell" data-layout={compact ? "compact" : "wide"} data-testid="app-shell">
       <a className="app-skip" href="#page-content">跳至內容</a>
+      {import.meta.env.VITE_DEMO_MODE === "true" &&
+        <div className="app-demo-banner" role="status">展示實例・資料皆為範例・請勿輸入真實資料</div>}
       <header className="app-header">
         <Link className="app-brand" to="/">個人大總管</Link>
         <span className="muted">AI 只提議，你決定</span>

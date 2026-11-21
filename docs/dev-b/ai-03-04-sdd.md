@@ -170,7 +170,9 @@ FR-GOL-06 只說「對內草稿」，人工版另存。
 
 - **第 2 輪（#74 審查建議 1、2 後重跑，同模型）**：AI-03 拿掉「完成日不在期間內填 null」，`period`、`period_boundary` 兩案預期改成依內容配對（14→5、310→2）；AI-04 開頭改「對內」。結果：AI-03 準確 29/29、困難案例 15/15，格式、id 合法、覆蓋皆全過，最慢 9.5 秒；AI-04 格式、R3 第 1 點、第 2 點皆 6/6，最慢 3.3 秒。費用約 $0.09。之後以第 2 輪為基準線。
 - 第 1 輪就全過，**不再調 prompt**。限制：案例是 Dev-B 自擬、標題語意清楚，準確率 100% 不代表真實任務標題也一樣；上線後以 `ai_feedback` 的 `accepted` 比例觀察。
-- 未做：驗收第 3 點（端對端）與用正式 R3 函式重跑，等 Dev-A 呼叫端。
+- ~~未做：驗收第 3 點（端對端）與用正式 R3 函式重跑，等 Dev-A 呼叫端。~~ → 2026-11-21 完成（AI-03 已在 #88 完成）：
+  - **AI-04 正式函式重跑**（`eval_ai04` 用 `app.domain.ai04` 的 `parse_output`、`reconcile`，#124）：格式、R3 第 1 點、第 2 點皆 6/6，最慢 3.3 秒，與第 2 輪基準線一致；約 $0.041。
+  - **AI-04 API 端對端**（獨立庫＋`scripts/demo_seed.sql`，`AI_PROVIDER=anthropic`）：`POST /goals/1/report/draft` 回 200、`ai_status=ok`、`validated=true`（3.2 秒），`GET /goals/1/report` 重跑 R3 仍 `validated=true`，`ai_runs` 一筆 ok。目標 2 沒有關聯任務，依 spec 5.13 不呼叫 AI、回 `unavailable`、不寫 `ai_runs`。
 
 ## 8. 時程
 
