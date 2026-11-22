@@ -5,6 +5,7 @@ AI 輸出的其他欄位（例如原因推測）一律不讀（FR-DUE-05a、AC-1
 """
 
 import re
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import date
 
@@ -50,7 +51,8 @@ def _pick_per_message(items: list[dict]) -> dict[int, dict]:
     return picked
 
 
-def _draft(source_id: int, it: dict, text: str, task_ids: set[int], today: date) -> Draft | None:
+def _draft(source_id: int, it: dict, text: str, task_ids: set[int], today: date,
+           latest_due: Mapping[int, date]) -> Draft | None:
     kind = it["kind"]
     if kind == "none":
         return None
@@ -58,6 +60,8 @@ def _draft(source_id: int, it: dict, text: str, task_ids: set[int], today: date)
     if type(task_id) is not int or task_id not in task_ids:   # 不猜（AC-37）
         return Draft(source_id, "unmatched", "to_match", None, None, {"kind": kind})
     new_due = to_date(it.get("new_due"), today) if kind == "delay" else None
+    if new_due is not None and new_due == latest_due.get(task_id):   # 日期沒變，沒有東西可確認（#138）
+        return None
     bad_date = kind == "delay" and not in_date_range(new_due, today)
     suggest = {"kind": kind, "new_due": new_due.isoformat() if new_due and not bad_date else None}
     if bad_date or is_hedged(text) or it.get("certainty", "sure") != "sure":
@@ -66,8 +70,12 @@ def _draft(source_id: int, it: dict, text: str, task_ids: set[int], today: date)
     return Draft(source_id, kind, "sure", task_id, proposed, None)
 
 
-def apply(output, messages: dict[int, str], task_ids: set[int], today: date) -> list[Draft]:
-    """messages：source_id → 原句。整體格式不對時丟 AIInvalidOutput（觸發重試）。"""
+def apply(output, messages: dict[int, str], task_ids: set[int], today: date, *,
+          latest_due: Mapping[int, date] | None = None) -> list[Draft]:
+    """messages：source_id → 原句；latest_due：task_id → 目前預計完成日（#138）。
+
+    整體格式不對時丟 AIInvalidOutput（觸發重試）。
+    """
     picked = _pick_per_message(_valid_items(output, set(messages)))
-    drafts = [_draft(ref, it, messages[ref], task_ids, today) for ref, it in sorted(picked.items())]
+    drafts = [_draft(ref, it, messages[ref], task_ids, today, latest_due or {}) for ref, it in sorted(picked.items())]
     return [d for d in drafts if d is not None]

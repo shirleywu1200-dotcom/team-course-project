@@ -97,7 +97,7 @@ def result_summary(outcome: Outcome, duplicates: int, unparsed_lines: list[int])
             "duplicates": duplicates, "unparsed_lines": unparsed_lines}
 
 
-def _payload(conn: Connection, source_ids: list[int], project_id: int | None) -> tuple[dict, dict, set[int]]:
+def _payload(conn: Connection, source_ids: list[int], project_id: int | None) -> tuple[dict, dict, dict]:
     # 排隊期間原文可能已被清除（FR-GOV-01、03），這些訊息不送 AI，計入略過
     sources = [s for s in sources_repo.get_many(conn, source_ids) if s["excerpt"] is not None]
     tasks = candidates_repo.tasks_for_matching(conn, project_id)
@@ -108,7 +108,7 @@ def _payload(conn: Connection, source_ids: list[int], project_id: int | None) ->
         "tasks": [{"id": t["id"], "title": t["title"], "owner": t["owner_name"],
                    "latest_due": t["latest_due"].isoformat()} for t in tasks],
     }
-    return payload, {s["id"]: s["excerpt"] for s in sources}, {t["id"] for t in tasks}
+    return payload, {s["id"]: s["excerpt"] for s in sources}, {t["id"]: t["latest_due"] for t in tasks}
 
 
 def process_sources(db: Database, ai: AIClient, source_ids: list[int], project_id: int | None, *,
@@ -123,7 +123,7 @@ def process_sources(db: Database, ai: AIClient, source_ids: list[int], project_i
         if done is not None:
             log.info("AI-01 已完成，續跑不重呼叫 job=%s candidates=%s", job_id, len(done))
             return Outcome("ok", attempts_done, done, skipped=len(source_ids) - len(done))
-    payload, texts, task_ids = db.run(lambda c: _payload(c, source_ids, project_id))
+    payload, texts, latest_due = db.run(lambda c: _payload(c, source_ids, project_id))
     ai_status, attempt = "unavailable", attempts_done
     while attempt < MAX_ATTEMPTS:
         attempt += 1
@@ -133,7 +133,7 @@ def process_sources(db: Database, ai: AIClient, source_ids: list[int], project_i
         output, drafts, error = None, [], None
         try:
             output = ai.call(NODE, payload, timeout_s=timeout_s)
-            drafts = r2.apply(output, texts, task_ids, get_clock().today())
+            drafts = r2.apply(output, texts, set(latest_due), get_clock().today(), latest_due=latest_due)
         except Exception as exc:   # 供應商可能丟出非 AIError 的例外，一律算這次失敗（FR-INB-08）
             error = exc
         run = {"node_id": NODE, "job_id": job_id, "attempt": attempt, "created_at": get_clock().now(),
