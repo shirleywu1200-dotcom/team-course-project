@@ -2,7 +2,8 @@
 
 可對外＝任務範圍是工作，且沒有專案或專案範圍是工作。專案封存與否不影響。
 呼叫端以送出當下讀到的 tasks.scope 與 projects.scope 判定（延續 FR-INB-08a）。
-AI-01、AI-03、AI-05 共用這一份；查詢任務時 LEFT JOIN projects 帶出 project_scope（無專案為 None）。
+目前 AI-03 已採用；AI-01、AI-05 收斂時引用這一份，不另寫（Dev-B，#143）。
+查詢任務時 LEFT JOIN projects 帶出 project_scope（無專案為 None）。
 """
 
 

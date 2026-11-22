@@ -712,7 +712,7 @@ CREATE TABLE idempotency_keys (
   { "goals": [{ "goal_id": 2, "type": "growth", "title": "學會 SQL 視窗函式", "period": "2026Q4" }],
     "tasks": [{ "task_id": 7, "title": "報表查詢改寫", "done_date": "2026-11-12" }] }
   ```
-  - `goals` 只送未封存的目標，並排除綁私人專案（`projects.scope='private'`）的 `expectation` 目標，以送出當下的專案範圍判定；這類目標仍可手動關聯（2026-11-20 產品負責人裁定 Q6，#92）。`tasks` 只送**可對外任務**的待關聯任務：`tasks.scope='work'`，且無專案或專案 `scope='work'`（專案封存與否不影響），以送出當下的範圍判定（延續 FR-INB-08a）；私人任務與私人專案底下的工作任務都不送、也不建議（資安規則 2、FR-GOV-05；2026-11-21 產品負責人裁定 #93 第 3 題 B，13.9 前收斂）。判斷寫在 domain 層的共用函式，AI-01、AI-05 也引用同一份（todo 13.9）。
+  - `goals` 只送未封存的目標，並排除綁私人專案（`projects.scope='private'`）的 `expectation` 目標，以送出當下的專案範圍判定；這類目標仍可手動關聯（2026-11-20 產品負責人裁定 Q6，#92）。`tasks` 只送**可對外任務**的待關聯任務：`tasks.scope='work'`，且無專案或專案 `scope='work'`（專案封存與否不影響），以送出當下的範圍判定（延續 FR-INB-08a）；私人任務與私人專案底下的工作任務都不送、也不建議（資安規則 2、FR-GOV-05；2026-11-21 產品負責人裁定 #93 第 3 題 B，13.9 前收斂）。判斷寫在 domain 層的共用函式；AI-01、AI-05 尚未收斂（見 FR-RPT-01 已知限制），收斂時引用同一份（Dev-B，todo 13.9、#143）。
   - 待關聯超過 20 筆時，送完成日最新的 20 筆；其餘再按一次。
   - 明確不送：完成回報的星數與精力（FR-AI-06）、目標的 `definition`、`energy_plan`、任務負責人、原句。
 - 輸出：`{ "items": [{ "task_id": 7, "goal_id": 2, "reason": "任務內容與 SQL 學習相關" }] }`
