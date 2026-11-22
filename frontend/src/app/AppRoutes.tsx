@@ -1,4 +1,4 @@
-import { Link, Route, Routes } from "react-router-dom";
+import { Link, Navigate, Route, Routes } from "react-router-dom";
 import type { ComponentType } from "react";
 
 import { BulkShiftPage } from "../features/bulk-shift/BulkShiftPage";
@@ -84,6 +84,11 @@ export function AppRoutes() {
       <Route element={<AppLayout />}>
         <Route index element={<Home />} />
         {pageRoutes.map(({ path, title }) => {
+          // #137 A：導覽「任務」入口先連到新增任務頁；任務清單頁本期不做，
+          // 避免點進預留頁。詳情 /tasks/:taskId 與新增 /tasks/new 仍各自落在實頁。
+          if (path === "/tasks") {
+            return <Route key={path} path={path} element={<Navigate to="/tasks/new" replace />} />;
+          }
           const Page = featurePages[path];
           return <Route key={path} path={path} element={Page ? <Page /> : <ReservedPage title={title} />} />;
         })}
