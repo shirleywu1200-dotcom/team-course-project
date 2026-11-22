@@ -181,3 +181,32 @@ def test_r2_question_mark_inside_url_is_not_a_question():
 def test_parse_url_line_continues_previous_message():
     r = parse_text("[10:12] 阿德：規格在這\nhttps://docs.example.com/spec")
     assert [(m.speaker, m.text) for m in r.messages] == [("阿德", "規格在這\nhttps://docs.example.com/spec")]
+
+
+# ---------- #138：延期的新日期等於目前期限 → 略過 ----------
+
+SAME_DUE = {2: date(2026, 11, 18)}
+
+
+def _apply_due(items, texts=None, latest_due=SAME_DUE):
+    texts = texts or {1: "畫面規格 v1 確定延到 11/18"}
+    return r2.apply({"items": items}, texts, {2, 3}, TODAY, latest_due=latest_due)
+
+
+def test_issue138_delay_to_same_due_is_skipped():
+    assert _apply_due([{"ref": 1, "kind": "delay", "task_id": 2, "new_due": "11/18"}]) == []
+
+
+def test_issue138_hedged_delay_to_same_due_is_skipped_not_unclear():
+    assert _apply_due([{"ref": 1, "kind": "delay", "task_id": 2, "new_due": "11/18"}],
+                      {1: "畫面規格可能延到 11/18"}) == []
+
+
+def test_issue138_delay_one_day_later_is_still_sure_delay():
+    [d] = _apply_due([{"ref": 1, "kind": "delay", "task_id": 2, "new_due": "11/19"}])
+    assert (d.kind, d.certainty, d.proposed) == ("delay", "sure", {"new_due": "2026-11-19"})
+
+
+def test_issue138_without_latest_due_behaves_as_before():
+    [d] = apply([{"ref": 1, "kind": "delay", "task_id": 2, "new_due": "11/18"}])
+    assert (d.kind, d.certainty) == ("delay", "sure")
