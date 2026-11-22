@@ -14,7 +14,7 @@ REASON_MAX_CHARS = 200
 
 def build_payload(goals: list[dict], tasks: list[dict]) -> dict:
     """goals：goals_repo.list_sendable_to_ai 的結果（未封存、不含綁私人專案的目標，#92）；
-    tasks：工作範圍的待關聯任務（已依完成日由新到舊）。只取允許的欄位。"""
+    tasks：可對外的待關聯任務（domain/shareable.py；已依完成日由新到舊）。只取允許的欄位。"""
     return {
         "goals": [{"goal_id": g["id"], "type": g["type"], "title": g["title"], "period": g["period"]} for g in goals],
         "tasks": [{"task_id": t["task_id"], "title": t["title"], "done_date": t["done_date"].isoformat()}
