@@ -2,7 +2,7 @@
 
 可對外任務＝`tasks.scope='work'`，且無專案或專案 `scope='work'`，以送出當下判定。
 Dev-A 依 DA-27 暫代撰寫；只經 HTTP、SQL 種子與 FakeAIClient 操作，不讀實作。
-測試清單與子代理審查紀錄：.scratch/13-9/testlist-shareable.md（U、A 系列；B 系列 AI-04 待 PO 裁定）。
+測試清單與子代理審查結果的摘要見 PR #144 說明；待 PO 裁定事項（AI-04、excluded_private 等）見 #143。
 種子沿用 test_phase9_ai03 的 BASE 與任務（可送的 21、23；私人任務 22），另加私人專案與其底下的工作任務。
 FakeAIClient 排的回傳值不放標記字串，避免格式不合的嘗試存下 AI 原始輸出造成誤判。
 """
