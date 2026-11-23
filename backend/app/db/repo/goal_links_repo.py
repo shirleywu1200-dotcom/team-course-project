@@ -23,10 +23,14 @@ def has_decision(conn: Connection, task_id: int) -> bool:
 
 
 def pending(conn: Connection) -> list[dict]:
-    """已完成、有回報、從未做過關聯決定的任務；依完成日、任務 id 由新到舊，不篩選範圍或專案。"""
+    """已完成、有回報、從未做過關聯決定的任務；依完成日、任務 id 由新到舊，不篩選範圍或專案。
+
+    project_scope 供 AI-03 判斷可對外任務（domain/shareable.py）；無專案時為 None。
+    """
     return [dict(r) for r in conn.execute(text("""
-        SELECT t.id AS task_id, t.title, t.project_id, t.scope, t.done_date, t.version
+        SELECT t.id AS task_id, t.title, t.project_id, t.scope, p.scope AS project_scope, t.done_date, t.version
           FROM tasks t
+          LEFT JOIN projects p ON p.id = t.project_id
          WHERE t.status = 'done'
            AND EXISTS (SELECT 1 FROM completion_feedback cf WHERE cf.task_id = t.id)
            AND NOT EXISTS (SELECT 1 FROM events e

@@ -1,7 +1,8 @@
 """AI-03 目標關聯建議的輸入與輸出格式（FR-GOL-03；spec 5.3a〈AI-03〉、5.13）。
 
 格式以 spec 5.3a 為準（2026-11-18 #72、#73 定案；契約擁有者 Dev-B）。格式要改時先改 spec，再改這個檔。
-- 輸入只放白名單欄位：目標的 id、類型、名稱、期間，任務的 id、名稱、完成日；私人任務不送（資安規則 2）。
+- 輸入只放白名單欄位：目標的 id、類型、名稱、期間，任務的 id、名稱、完成日。
+  只送可對外任務（domain/shareable.py）：私人任務與私人專案底下的工作任務都不送（資安規則 2）。
 - 輸出驗證分三步：先查結構（任一項不合整次 invalid_output），再丟不在 payload 的項目，最後同一任務留第一項。
 """
 
@@ -14,7 +15,7 @@ REASON_MAX_CHARS = 200
 
 def build_payload(goals: list[dict], tasks: list[dict]) -> dict:
     """goals：goals_repo.list_sendable_to_ai 的結果（未封存、不含綁私人專案的目標，#92）；
-    tasks：工作範圍的待關聯任務（已依完成日由新到舊）。只取允許的欄位。"""
+    tasks：可對外的待關聯任務（domain/shareable.py；已依完成日由新到舊）。只取允許的欄位。"""
     return {
         "goals": [{"goal_id": g["id"], "type": g["type"], "title": g["title"], "period": g["period"]} for g in goals],
         "tasks": [{"task_id": t["task_id"], "title": t["title"], "done_date": t["done_date"].isoformat()}

@@ -712,7 +712,7 @@ CREATE TABLE idempotency_keys (
   { "goals": [{ "goal_id": 2, "type": "growth", "title": "學會 SQL 視窗函式", "period": "2026Q4" }],
     "tasks": [{ "task_id": 7, "title": "報表查詢改寫", "done_date": "2026-11-12" }] }
   ```
-  - `goals` 只送未封存的目標，並排除綁私人專案（`projects.scope='private'`）的 `expectation` 目標，以送出當下的專案範圍判定；這類目標仍可手動關聯（2026-11-20 產品負責人裁定 Q6，#92）。`tasks` 只送工作範圍（`scope='work'`）的待關聯任務，私人任務不送、也不建議（資安規則 2、FR-GOV-05）。已知限制（2026-11-21 產品負責人裁定 #93 第 3 題 B）：私人專案底下、範圍為「工作」的任務（`tasks.scope='work'` 且 `projects.scope='private'`）目前依任務自身的 `scope` 判定，仍會送 AI-03；接真實資料前（13.9 前）收斂為共用的「可對外任務」條件：`tasks.scope='work'`，且無專案或專案 `scope='work'`，以送出當下判定（延續 FR-INB-08a）。
+  - `goals` 只送未封存的目標，並排除綁私人專案（`projects.scope='private'`）的 `expectation` 目標，以送出當下的專案範圍判定；這類目標仍可手動關聯（2026-11-20 產品負責人裁定 Q6，#92）。`tasks` 只送**可對外任務**的待關聯任務：`tasks.scope='work'`，且無專案或專案 `scope='work'`（專案封存與否不影響），以送出當下的範圍判定（延續 FR-INB-08a）；私人任務與私人專案底下的工作任務都不送、也不建議（資安規則 2、FR-GOV-05；2026-11-21 產品負責人裁定 #93 第 3 題 B，13.9 前收斂）。判斷寫在 domain 層的共用函式；AI-01、AI-05 尚未收斂（見 FR-RPT-01 已知限制），收斂時引用同一份（Dev-B，todo 13.9、#143）。
   - 待關聯超過 20 筆時，送完成日最新的 20 筆；其餘再按一次。
   - 明確不送：完成回報的星數與精力（FR-AI-06）、目標的 `definition`、`energy_plan`、任務負責人、原句。
 - 輸出：`{ "items": [{ "task_id": 7, "goal_id": 2, "reason": "任務內容與 SQL 學習相關" }] }`
@@ -1110,7 +1110,7 @@ CREATE TABLE idempotency_keys (
 - 「做過關聯決定」是指這個任務有過 `field='goal_id'` 的 `goal` 事件。第一次選「不關聯」時，目前值和新值都是 null，仍寫事件以記下這個決定，不回 `NO_CHANGE`。
 - 同一交易寫事件並更新任務：事件 `kind='goal'`、`field='goal_id'`、`task_id` 為該任務、`from_value` 為原本的 `goal_id`（沒有時為 null）、`to_value` 為新的 `goal_id`（不關聯為 null），`origin='manual'`；`tasks.goal_id` 改為新值、`version` 加 1。改選、改成不關聯都是新增一筆事件（FR-GOL-03、歷程只增）。
 - 輸出 200：`{ "task": TaskOut, "event": EventOut }`。
-- 私人與工作範圍的任務都可以關聯、都進統計（目標是你自己的）；AI-03 送出前排除私人範圍（5.3a）。
+- 私人與工作範圍的任務都可以關聯、都進統計（目標是你自己的）；AI-03 送出前排除不屬可對外任務的任務（5.3a）。
 - 建立任務（`POST /tasks`）時帶的 `goal_id` 一律忽略、不存（2026-11-21 產品負責人裁定 Q5 A，#47）：關聯決定只有一條路徑，就是完成回報後的 `POST /goal-links`，避免任務同時算進目標統計又留在待關聯清單。
 
 `GET /goal-links/pending`（9.6）：
@@ -1135,11 +1135,11 @@ CREATE TABLE idempotency_keys (
 `GET /goals/matrix`（9.9；FR-GOL-04）：輸出 `{ "items": [{ "goal_id": 2, "title": "學會 SQL 視窗函式", "energy_plan": "high", "energy": { "high": 2, "mid": 1, "low": 0 }, "linked": 3 }] }`。每個未封存的目標一列，依 id 排序；`energy`、`linked` 的母體與 stats 相同。路由要排在 `/goals/{id}` 之前。
 
 `POST /goal-links/suggest`（AI-03，payload 與驗證見 5.3a；2026-11-19 裁定，#47 G3）：
-- 不帶 body。伺服器依 5.3a 組 payload：未封存的目標（排除綁私人專案的 expectation 目標，#92），以及工作範圍、完成日最新的 20 筆待關聯任務。
+- 不帶 body。伺服器依 5.3a 組 payload：未封存的目標（排除綁私人專案的 expectation 目標，#92），以及可對外任務（5.3a）中完成日最新的 20 筆待關聯任務；先排除、再取 20 筆。
 - 輸出：`{ "ai_status": "ok", "ai_run_id": 12, "items": [{ "task_id": 7, "goal_id": 2, "reason": "任務內容與 SQL 學習相關" }] }`
   - `items` 是通過 5.3a 驗證的建議（重複項與不在 payload 的項目已丟棄）；AI 沒有建議的任務不列。`goal_id=null` 表示 AI 認為沒有合適的目標。
   - AI 不可用或輸出不合格式時照樣回 200：`ai_status` 為 `unavailable` 或 `invalid_output`，`ai_run_id=null`、`items=[]`，由使用者自己選（AC-50）。
-  - 沒有可送的目標（未封存、且不是綁私人專案的 expectation 目標，#92），或沒有可送的工作範圍任務時，不呼叫 AI、不寫 `ai_runs`，回 `ai_status="unavailable"`、`ai_run_id=null`、`items=[]`（5.3「依規則刻意不呼叫」）。
+  - 沒有可送的目標（未封存、且不是綁私人專案的 expectation 目標，#92），或沒有可送的可對外任務時，不呼叫 AI、不寫 `ai_runs`，回 `ai_status="unavailable"`、`ai_run_id=null`、`items=[]`（5.3「依規則刻意不呼叫」）。
 - 輸出驗證的順序（9.7 實作定案，#84 後子代理審查）：
   1. 先查結構：`items` 為陣列，每項為物件，`task_id` 為 JSON 整數、`goal_id` 為 JSON 整數或 null、`reason` 為字串（可為空，不超過 200 字、不含 NUL）。任一項不合（包括之後會被丟掉的項目）整次算 `invalid_output`；項目多帶的鍵丟掉，不算錯誤。（這句只對 `FakeAIClient` 成立：真實供應商的輸出先經節點 schema（`additionalProperties: false`）檢查，多帶鍵在那一層就算格式不合。）
   2. 再丟掉 `task_id` 不在 payload，或 `goal_id` 非 null 且不在 payload 的項目。

@@ -13,6 +13,7 @@ from app.clock import get_clock
 from app.db.database import Database
 from app.db.repo import ai_runs_repo, goal_links_repo, goals_repo
 from app.domain import ai03
+from app.domain.shareable import is_shareable
 
 log = logging.getLogger("g4")
 MAX_ATTEMPTS = 3   # 任何失敗都算一次、最多 3 次；AI 不可用立刻停（spec 5.3a「重試比照 AI-01」）
@@ -25,7 +26,8 @@ def _fallback(ai_status: str = "unavailable") -> dict:
 
 def _collect(conn) -> dict:
     goals = goals_repo.list_sendable_to_ai(conn)   # 綁私人專案的 expectation 目標不送（#92）
-    tasks = [t for t in goal_links_repo.pending(conn) if t["scope"] == "work"]   # 私人任務不送（資安規則 2）
+    # 只送可對外任務：私人任務與私人專案底下的工作任務都不送（資安規則 2；#93 第 3 題 B）；先排除再取 20 筆
+    tasks = [t for t in goal_links_repo.pending(conn) if is_shareable(t["scope"], t["project_scope"])]
     return ai03.build_payload(goals, tasks)
 
 
